@@ -6,6 +6,8 @@ Nolphin ist ein eigenständiger Dateimanager auf Basis von Nemo 6.7.7 (GTK3, C11
 
 > **Hinweis:** Nolphin ist ein unabhängiges Open-Source-Projekt und kein offizielles Projekt von Linux Mint.
 
+![Nolphin mit Hauptansicht und rechtem Arbeitsbereich, der die Vorschau des Persönlichen Ordners zeigt](docs/screenshots/uebersicht.png)
+
 ---
 
 ## Projektphilosophie
@@ -88,6 +90,32 @@ Ein Panel wird im Arbeitsbereich wiederverwendet, es öffnet kein zusätzliches 
 
 ---
 
+### So sehen die Panels aus
+
+**Eigenschaften** – Berechtigungen, Besitzer, zusätzliche Benutzer und Gruppen (ACL) und „Öffnen mit“, ohne das Hauptfenster zu verlassen:
+
+![Eigenschaften-Panel für eine ausgewählte Zertifikatsdatei mit Berechtigungen und ACL-Bereich](docs/screenshots/panel-eigenschaften.png)
+
+**Symbol auswählen** – eigene Symbole für Ordner und Dateien, durchsuchbar und nach Kategorien sortiert:
+
+![Panel zur Symbolauswahl mit Kategorien und Suchfeld](docs/screenshots/panel-symbol-waehlen.png)
+
+**Git** – Änderungen anzeigen, speichern (Commit), mit dem Server abgleichen, Verlauf und Unterschiede. Außerhalb eines Repositorys meldet das Panel das ehrlich:
+
+![Git-Panel mit den Schritten Änderungen, Speichern und Server, Hinweis dass der Ort kein Git-Repository ist](docs/screenshots/panel-git.png)
+
+**Archiv** – Name, Format und Zielort wählen. Passwort und Teilarchive stehen unter „Erweiterte Optionen“:
+
+| Grundansicht | Erweiterte Optionen |
+| ------------ | ------------------- |
+| ![Archiv-Panel mit Dateiname, Format ZIP und Ort](docs/screenshots/panel-archiv.png) | ![Archiv-Panel mit aufgeklappten erweiterten Optionen für Passwort und Teilarchive](docs/screenshots/panel-archiv-erweitert.png) |
+
+**DEB-Ersteller** – Paketname, Version, Beschreibung und Ersteller eintragen, Dateien und Ordner mit Zielpfad hinzufügen und das Paket erstellen:
+
+![DEB-Ersteller-Panel mit Eingabefeldern und leerer Dateiliste](docs/screenshots/panel-deb-ersteller.png)
+
+---
+
 ## Funktionen im Überblick
 
 ### Dateiverwaltung
@@ -125,6 +153,25 @@ Der Ersteller (`src/nolphin-deb-builder.c`) schreibt das Paket (`debian-binary`,
 ### Papierkorb und Auswahlen
 
 Papierkorb-Bereinigung nach Aufbewahrungsdauer (`trash-retention-days`) und Warnung bei Größenlimit (`trash-size-limit-mb`). Benannte Dateiauswahlen lassen sich speichern und wiederherstellen.
+
+---
+
+## Einstellungen und Anpassung
+
+Nolphin lässt sich weitgehend anpassen: Verhalten, Anzeige, Listenspalten, Vorschau, Werkzeugleiste, Kontextmenüs, Dokumentvorlagen und Plugins/Aktionen haben jeweils eine eigene Seite.
+
+> **Bekannt:** Einige Texte der Einstellungsseiten sind noch englisch (aus dem Nemo-Ursprung) und noch nicht ins Deutsche übersetzt.
+
+| | |
+| --- | --- |
+| **Verhalten** – Navigation, Papierkorb, Medien ![Einstellungen: Verhalten](docs/screenshots/einstellungen-verhalten.png) | **Anzeige** – Symbolbeschriftung, Datum, Dateigrößen ![Einstellungen: Anzeige](docs/screenshots/einstellungen-anzeige.png) |
+| **Listenspalten** – Reihenfolge und Auswahl ![Einstellungen: Listenspalten](docs/screenshots/einstellungen-listenspalten.png) | **Vorschau** – Vorschaubilder, Ordnerzähler, Tooltips ![Einstellungen: Vorschau](docs/screenshots/einstellungen-vorschau.png) |
+| **Werkzeugleiste** – sichtbare Schaltflächen ![Einstellungen: Werkzeugleiste](docs/screenshots/einstellungen-werkzeugleiste.png) | **Kontextmenüs** – sichtbare Einträge ![Einstellungen: Kontextmenüs](docs/screenshots/einstellungen-kontextmenues.png) |
+| **Dokumentvorlagen** ![Einstellungen: Dokumentvorlagen](docs/screenshots/einstellungen-vorlagen.png) | **Plugins und Aktionen** ![Einstellungen: Aktionen](docs/screenshots/einstellungen-aktionen.png) |
+
+Die Reihenfolge und das Aussehen der Aktionen in den Menüs bearbeitest du im Layout-Editor:
+
+![Nolphin Actions Layout Editor mit Liste der Aktionen und Schaltflächen zum Verschieben](docs/screenshots/aktionen-layout-editor.png)
 
 ---
 
@@ -220,7 +267,7 @@ libnolphin-private/     interne Bibliothek (Archiv, Checksum, ACL, GPG, Schemas)
 libnolphin-extension/   Erweiterungs-Schnittstelle
 gresources/             UI-Beschreibungen
 test/                   Tests
-docs/                   Referenzdokumente
+docs/                   Referenzdokumente und Screenshots (docs/screenshots/)
 debian/                 Debian-Paketierung
 po/                     Übersetzungsdateien
 ```
