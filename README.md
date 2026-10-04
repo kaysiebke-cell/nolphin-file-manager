@@ -6,7 +6,7 @@ Nolphin ist ein eigenständiger Dateimanager auf Basis von Nemo 6.7.7 (GTK3, C11
 
 > **Hinweis:** Nolphin ist ein unabhängiges Open-Source-Projekt und kein offizielles Projekt von Linux Mint.
 
-![Nolphin mit Hauptansicht mit Dateien des Ordners Bilder und rechtem Arbeitsbereich mit Ordner-Informationen](docs/screenshots/uebersicht.png)
+![Nolphin mit Hauptansicht mit Dateien des Ordners Bilder und rechtem Arbeitsbereich mit Ordner-Informationen](docs/screenshots/uebersicht-v2.png)
 
 ---
 
@@ -94,27 +94,27 @@ Ein Panel wird im Arbeitsbereich wiederverwendet, es öffnet kein zusätzliches 
 
 **Eigenschaften** – Zugriffsrechte, Besitzer und Gruppe sowie zusätzliche Benutzer und Gruppen (ACL), ohne das Hauptfenster zu verlassen:
 
-![Eigenschaften-Panel für den Ordner Bilder mit Zugriffsrechten und ACL-Bereich](docs/screenshots/panel-eigenschaften.png)
+![Eigenschaften-Panel für den Ordner Bilder mit Zugriffsrechten und ACL-Bereich](docs/screenshots/panel-eigenschaften-v2.png)
 
 **Symbol auswählen** – eigene Symbole für Ordner und Dateien, durchsuchbar und nach Kategorien sortiert:
 
-![Panel zur Symbolauswahl mit Kategorien und Suchfeld](docs/screenshots/panel-symbol-waehlen.png)
+![Panel zur Symbolauswahl mit Kategorien und Suchfeld](docs/screenshots/panel-symbol-waehlen-v2.png)
 
 **Git** – Änderungen anzeigen, speichern (Commit), mit dem Server abgleichen, Verlauf und Unterschiede. Außerhalb eines Repositorys meldet das Panel das ehrlich:
 
-![Git-Panel mit den Schritten Änderungen, Speichern und Server, Hinweis dass der Ort kein Git-Repository ist](docs/screenshots/panel-git.png)
+![Git-Panel mit den Schritten Änderungen, Speichern und Server, Hinweis dass der Ort kein Git-Repository ist](docs/screenshots/panel-git-v2.png)
 
 **Archiv** – Name, Format und Zielort wählen. Passwort und Teilarchive stehen unter „Erweiterte Optionen“:
 
-![Archiv-Panel mit Dateiname, Format ZIP, Ort und aufgeklappten erweiterten Optionen für Passwort und Teilarchive](docs/screenshots/panel-archiv.png)
+![Archiv-Panel mit Dateiname, Format ZIP, Ort und aufgeklappten erweiterten Optionen für Passwort und Teilarchive](docs/screenshots/panel-archiv-v2.png)
 
 **DEB-Ersteller** – Paketname, Version, Beschreibung und Ersteller eintragen, Dateien und Ordner mit Zielpfad hinzufügen und das Paket erstellen:
 
-![DEB-Ersteller-Panel mit Eingabefeldern und leerer Dateiliste](docs/screenshots/panel-deb-ersteller.png)
+![DEB-Ersteller-Panel mit Eingabefeldern und leerer Dateiliste](docs/screenshots/panel-deb-ersteller-v2.png)
 
 **Terminal (F4)** – das eingebettete VTE-Terminal öffnet im aktuellen Ordner und bleibt neben der Hauptansicht:
 
-![Terminal-Panel neben der Dateiansicht des Ordners Bilder](docs/screenshots/panel-terminal.png)
+![Terminal-Panel neben der Dateiansicht des Ordners Bilder](docs/screenshots/panel-terminal-v2.png)
 
 ---
 
@@ -166,14 +166,14 @@ Nolphin lässt sich weitgehend anpassen: Verhalten, Anzeige, Listenspalten, Vors
 
 | | |
 | --- | --- |
-| **Verhalten** – Navigation, Papierkorb, Medien ![Einstellungen: Verhalten](docs/screenshots/einstellungen-verhalten.png) | **Anzeige** – Symbolbeschriftung, Datum, Dateigrößen ![Einstellungen: Anzeige](docs/screenshots/einstellungen-anzeige.png) |
-| **Listenspalten** – Reihenfolge und Auswahl ![Einstellungen: Listenspalten](docs/screenshots/einstellungen-listenspalten.png) | **Vorschau** – Vorschaubilder, Ordnerzähler, Tooltips ![Einstellungen: Vorschau](docs/screenshots/einstellungen-vorschau.png) |
-| **Werkzeugleiste** – sichtbare Schaltflächen ![Einstellungen: Werkzeugleiste](docs/screenshots/einstellungen-werkzeugleiste.png) | **Kontextmenüs** – sichtbare Einträge ![Einstellungen: Kontextmenüs](docs/screenshots/einstellungen-kontextmenues.png) |
-| **Dokumentvorlagen** ![Einstellungen: Dokumentvorlagen](docs/screenshots/einstellungen-vorlagen.png) | **Plugins und Aktionen** ![Einstellungen: Aktionen](docs/screenshots/einstellungen-aktionen.png) |
+| **Verhalten** – Navigation, Papierkorb, Medien ![Einstellungen: Verhalten](docs/screenshots/einstellungen-verhalten-v2.png) | **Anzeige** – Symbolbeschriftung, Datum, Dateigrößen ![Einstellungen: Anzeige](docs/screenshots/einstellungen-anzeige-v2.png) |
+| **Listenspalten** – Reihenfolge und Auswahl ![Einstellungen: Listenspalten](docs/screenshots/einstellungen-listenspalten-v2.png) | **Vorschau** – Vorschaubilder, Ordnerzähler, Tooltips ![Einstellungen: Vorschau](docs/screenshots/einstellungen-vorschau-v2.png) |
+| **Werkzeugleiste** – sichtbare Schaltflächen ![Einstellungen: Werkzeugleiste](docs/screenshots/einstellungen-werkzeugleiste-v2.png) | **Kontextmenüs** – sichtbare Einträge ![Einstellungen: Kontextmenüs](docs/screenshots/einstellungen-kontextmenues-v2.png) |
+| **Dokumentvorlagen** ![Einstellungen: Dokumentvorlagen](docs/screenshots/einstellungen-vorlagen-v2.png) | **Plugins und Aktionen** ![Einstellungen: Aktionen](docs/screenshots/einstellungen-aktionen-v2.png) |
 
 Die Reihenfolge und das Aussehen der Aktionen in den Menüs bearbeitest du im Layout-Editor:
 
-![Nolphin Actions Layout Editor mit Liste der Aktionen und Schaltflächen zum Verschieben](docs/screenshots/aktionen-layout-editor.png)
+![Nolphin Actions Layout Editor mit Liste der Aktionen und Schaltflächen zum Verschieben](docs/screenshots/aktionen-layout-editor-v2.png)
 
 ---
 
