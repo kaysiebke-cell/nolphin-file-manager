@@ -46,6 +46,7 @@ nolphinCommon_sources = [
   'nolphin-list-model.c',
   'nolphin-list-view.c',
   'nolphin-location-bar.c',
+  'nolphin-location-stats.c',
   'nolphin-location-entry.c',
   'nolphin-mime-actions.c',
   'nolphin-navigation-action.c',
