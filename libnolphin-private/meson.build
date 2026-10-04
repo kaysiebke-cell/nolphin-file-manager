@@ -12,6 +12,7 @@ nolphin_private_sources = [
   'nolphin-action-manager.c',
   'nolphin-action.c',
   'nolphin-archive.c',
+  'nolphin-archive-manage.c',
   'nolphin-bookmark.c',
   'nolphin-cad.c',
   'nolphin-cell-renderer-disk.c',
