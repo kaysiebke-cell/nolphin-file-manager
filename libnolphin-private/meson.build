@@ -49,6 +49,7 @@ nolphin_private_sources = [
   'nolphin-file.c',
   'nolphin-git.c',
   'nolphin-global-preferences.c',
+  'nolphin-git-overlay.c',
   'nolphin-icon-canvas-item.c',
   'nolphin-icon-container.c',
   'nolphin-icon-dnd.c',

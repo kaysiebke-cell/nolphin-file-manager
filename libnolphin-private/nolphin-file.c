@@ -78,6 +78,7 @@
 
 #define DEBUG_FLAG NOLPHIN_DEBUG_FILE
 #include <libnolphin-private/nolphin-debug.h>
+#include <libnolphin-private/nolphin-git-overlay.h>
 
 /* Time in seconds to cache getpwuid results */
 #define GETPWUID_CACHE_TIME (5*60)
@@ -7741,6 +7742,17 @@ nolphin_file_get_emblem_icons (NolphinFile *file,
 	}
 
 	g_list_free_full (keywords, g_free);
+
+	/* Git-Overlay: Status-Emblem für Dateien in einem Repository. */
+	if (!nolphin_file_is_in_trash (file)) {
+		GFile *location = nolphin_file_get_location (file);
+		const gchar * const *names = nolphin_git_overlay_get_emblem_names (nolphin_git_overlay_get_status (location));
+
+		if (names != NULL) {
+			icons = g_list_prepend (icons, g_themed_icon_new_from_names ((char **) names, -1));
+		}
+		g_object_unref (location);
+	}
 
 	return icons;
 }
