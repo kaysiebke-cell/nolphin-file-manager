@@ -590,7 +590,7 @@ nolphin_preview_init (NolphinPreview *preview)
     content_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
     gtk_widget_set_margin_start (content_box, 8);
     gtk_widget_set_margin_end (content_box, 8);
-    gtk_widget_set_margin_top (content_box, 8);
+    gtk_widget_set_margin_top (content_box, 28);
     gtk_widget_set_margin_bottom (content_box, 8);
 
     preview->image = gtk_image_new ();

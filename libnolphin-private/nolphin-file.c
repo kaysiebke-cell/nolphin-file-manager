@@ -4805,6 +4805,22 @@ is_local_favorite (NolphinFile *file)
     return ret;
 }
 
+static gboolean
+file_is_cad_model (NolphinFile *file)
+{
+	g_autofree gchar *mime_type = nolphin_file_get_mime_type (file);
+	g_autofree gchar *name = g_ascii_strdown (nolphin_file_peek_display_name (file), -1);
+
+	if (g_str_has_suffix (name, ".fcstd") || g_str_has_suffix (name, ".fcbak")) {
+		return TRUE;
+	}
+	return mime_type != NULL &&
+	       (g_str_has_prefix (mime_type, "model/") ||
+	        g_str_equal (mime_type, "application/vnd.step") ||
+	        g_str_equal (mime_type, "application/vnd.brep") ||
+	        g_str_equal (mime_type, "application/sla"));
+}
+
 gboolean
 nolphin_file_should_show_thumbnail (NolphinFile *file)
 {
@@ -4822,9 +4838,12 @@ nolphin_file_should_show_thumbnail (NolphinFile *file)
 		return FALSE;
 	}
     
-    /* Only care about the file size, if the thumbnail has not been created yet */
+    /* Only care about the file size, if the thumbnail has not been created yet.
+     * 3D/CAD-Dateien sind ausgenommen: sie sind fast immer größer als das
+     * Bildlimit, werden aber extern gerendert und nicht im Prozess dekodiert. */
 	if (file->details->thumbnail_path == NULL &&
-	    nolphin_file_get_size (file) > cached_thumbnail_limit) {
+	    nolphin_file_get_size (file) > cached_thumbnail_limit &&
+	    !file_is_cad_model (file)) {
 		return FALSE;
 	}
 
@@ -5359,7 +5378,7 @@ nolphin_file_get_icon (NolphinFile *file,
                                                      GDK_INTERP_BILINEAR);
 
             /* Only apply frame if icon has no transparency, and is large enough */
-            if (!gdk_pixbuf_get_has_alpha (raw_pixbuf) && s >= 128 * scale) {
+            if (!gdk_pixbuf_get_has_alpha (raw_pixbuf) && s >= 128 * scale && !file_is_cad_model (file)) {
                 nolphin_thumbnail_frame_image (&scaled_pixbuf);
             }
 

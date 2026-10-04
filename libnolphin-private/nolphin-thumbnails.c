@@ -38,6 +38,7 @@
 #include <eel/eel-vfs-extensions.h>
 #include <gtk/gtk.h>
 #include <errno.h>
+#include <glib/gstdio.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -310,6 +311,126 @@ remove_from_hash_table (NolphinThumbnailInfo *info)
     free_thumbnail_info (info);
 }
 
+/* Fallback-Vorschauen für CAD-Formate, für die der Systemthumbnailer
+ * nichts liefert: FreeCAD (.FCStd/.FCBak) trägt sein Vorschaubild im Zip
+ * (thumbnails/Thumbnail.png); STEP/IGES/BREP rendert f3d ohne die
+ * "thumbnail"-Konfiguration, die bei manchen Dateien scheitert. */
+static gboolean
+has_suffix_ci (const char *uri, const char *suffix)
+{
+    g_autofree gchar *lower = g_ascii_strdown (uri, -1);
+
+    return g_str_has_suffix (lower, suffix);
+}
+
+static gboolean
+is_freecad_uri (const char *uri)
+{
+    return has_suffix_ci (uri, ".fcstd") || has_suffix_ci (uri, ".fcbak");
+}
+
+static gboolean
+is_f3d_cad_mime (const char *mime_type)
+{
+    return mime_type != NULL &&
+           (g_str_equal (mime_type, "application/vnd.step") ||
+            g_str_equal (mime_type, "model/iges") ||
+            g_str_equal (mime_type, "application/vnd.brep"));
+}
+
+/* stl-thumb öffnet pro Aufruf einen GL-Kontext; mehrere parallele Aufrufe
+ * aus dem Thumbnail-Threadpool scheitern teilweise, daher serialisiert. */
+static gboolean
+is_stl_mime (const char *mime_type)
+{
+    return mime_type != NULL &&
+           (g_str_equal (mime_type, "model/stl") ||
+            g_str_equal (mime_type, "model/x.stl-ascii") ||
+            g_str_equal (mime_type, "model/x.stl-binary") ||
+            g_str_equal (mime_type, "application/sla"));
+}
+
+G_LOCK_DEFINE_STATIC (fallback_render);
+
+static gboolean
+can_thumbnail_cad_fallback (const char *uri, const char *mime_type)
+{
+    if (is_freecad_uri (uri)) {
+        return g_find_program_in_path ("unzip") != NULL;
+    }
+    if (is_stl_mime (mime_type)) {
+        return g_find_program_in_path ("stl-thumb") != NULL;
+    }
+    return is_f3d_cad_mime (mime_type) && g_find_program_in_path ("f3d") != NULL;
+}
+
+static GdkPixbuf *
+generate_cad_fallback_thumbnail (const char *uri, const char *mime_type)
+{
+    g_autofree gchar *path = g_filename_from_uri (uri, NULL, NULL);
+    g_autofree gchar *dir = g_dir_make_tmp ("nolphin-thumb-XXXXXX", NULL);
+    g_autofree gchar *png = NULL;
+    GdkPixbuf *pixbuf = NULL;
+
+    if (path == NULL || dir == NULL) {
+        return NULL;
+    }
+    png = g_build_filename (dir, "thumb.png", NULL);
+
+    if (is_freecad_uri (uri)) {
+        /* Bevorzugt die größte Body-/Feature-Shape (BREP) per f3d rendern -
+         * das zeigt das ganze Bauteil; das eingebettete Thumbnail ist nur
+         * ein kleiner, oft abgeschnittener Bildschirmausschnitt. */
+        g_autofree gchar *qpath = g_shell_quote (path);
+        g_autofree gchar *qdir = g_shell_quote (dir);
+        g_autofree gchar *qpng = g_shell_quote (png);
+        g_autofree gchar *cmd = g_strdup_printf (
+            "cd %s && member=$(unzip -l %s | awk '$4 ~ /\\.Shape\\.brp$/ && $4 !~ /AddSub|Suppressed|Internal|Sketch/ {print ($4 ~ /^Body/ ? 1 : 0), $1, $4}'"
+            " | sort -k1,1n -k2,2n | tail -1 | cut -d' ' -f3-)"
+            " && [ -n \"$member\" ] && unzip -p %s \"$member\" > part.brep"
+            " && f3d --no-config --load-plugins=occt --verbose=quiet --resolution=256,256 --output=%s part.brep",
+            qdir, qpath, qpath, qpng);
+        g_autofree gchar *qembedded = g_shell_quote (png);
+        const gchar *argv[] = { "/bin/sh", "-c", cmd, NULL };
+
+        g_spawn_sync (NULL, (gchar **) argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                      NULL, NULL, NULL, NULL, NULL, NULL);
+
+        if (!g_file_test (png, G_FILE_TEST_EXISTS)) {
+            g_autofree gchar *cmd2 = g_strdup_printf ("unzip -p %s thumbnails/Thumbnail.png > %s", qpath, qembedded);
+            const gchar *argv2[] = { "/bin/sh", "-c", cmd2, NULL };
+
+            g_spawn_sync (NULL, (gchar **) argv2, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                          NULL, NULL, NULL, NULL, NULL, NULL);
+        }
+    } else if (is_stl_mime (mime_type)) {
+        const gchar *argv[] = { "stl-thumb", "-f", "png", "-s", "256", path, png, NULL };
+
+        G_LOCK (fallback_render);
+        g_spawn_sync (NULL, (gchar **) argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL |
+                      G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+        G_UNLOCK (fallback_render);
+    } else if (is_f3d_cad_mime (mime_type)) {
+        const gchar *argv[] = { "f3d", "--no-config", "--load-plugins=occt", "--verbose=quiet",
+                                "--resolution=256,256", NULL, NULL, NULL };
+        g_autofree gchar *out = g_strdup_printf ("--output=%s", png);
+
+        argv[5] = out;
+        argv[6] = path;
+        g_spawn_sync (NULL, (gchar **) argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL |
+                      G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    }
+
+    pixbuf = gdk_pixbuf_new_from_file (png, NULL);
+    g_unlink (png);
+    {
+        g_autofree gchar *brep = g_build_filename (dir, "part.brep", NULL);
+        g_unlink (brep);
+    }
+    g_rmdir (dir);
+    return pixbuf;
+}
+
 /* Thumbnail thread */
 static void
 thumbnail_thread (gpointer data,
@@ -372,6 +493,10 @@ thumbnail_thread (gpointer data,
                                                                  info->mime_type);
     if (free_uri) {
         g_free (image_uri);
+    }
+
+    if (pixbuf == NULL) {
+        pixbuf = generate_cad_fallback_thumbnail (info->image_uri, info->mime_type);
     }
 
     if (pixbuf) {
@@ -677,6 +802,9 @@ nolphin_can_thumbnail (NolphinFile *file)
                                                          uri,
                                                          mime_type,
                                                          mtime);
+    if (!res && !nolphin_file_is_directory (file)) {
+        res = can_thumbnail_cad_fallback (uri, mime_type);
+    }
     return res;
 }
 
