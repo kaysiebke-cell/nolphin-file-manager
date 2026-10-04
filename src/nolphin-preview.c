@@ -25,8 +25,11 @@
 #include <glib/gi18n.h>
 #include <libnolphin-private/nolphin-global-preferences.h>
 #include <libnolphin-private/nolphin-cad.h>
+#include <libnolphin-private/nolphin-metadata.h>
 
 #define PREVIEW_IMAGE_SIZE 256
+#define RATING_STARS 5
+
 
 /* Obergrenze für den Textinhalt, den die Vorschau-Leiste lädt und
  * anzeigt - größere Textdateien bekommen weiterhin Icon/Metadaten,
@@ -41,6 +44,17 @@ struct _NolphinPreview
     GtkWidget *name_label;
     GtkWidget *info_grid;
     GtkWidget *fallback_label;
+
+    /* Semantisches Tagging: Sternebewertung (1-5), Tags und
+     * Kommentar der einzelnen Datei (nolphin_file_get/set_rating,
+     * _keywords, _comment - dieselben Daten wie die Kontextmenü-Dialoge).
+     * Eigene, dauerhafte Widgets (nicht im info_grid), damit ein
+     * "changed" der Datei die Eingabe nicht mitten im Tippen zerstört. */
+    GtkWidget *meta_box;
+    GtkWidget *star_buttons[RATING_STARS];
+    GtkWidget *tags_entry;
+    GtkWidget *comment_entry;
+    gboolean meta_updating;
 
     /* Echter, markier- und kopierbarer Dateiinhalt für Textdateien
      * (siehe TEXT_PREVIEW_MAX_SIZE) - anders als die restliche
@@ -297,6 +311,207 @@ text_load_ready_cb (GObject *source, GAsyncResult *result, gpointer user_data)
 }
 
 static void
+update_rating_buttons (NolphinPreview *preview, int rating)
+{
+    int i;
+
+    for (i = 0; i < RATING_STARS; i++) {
+        gtk_button_set_label (GTK_BUTTON (preview->star_buttons[i]), i < rating ? "★" : "☆");
+    }
+}
+
+static void
+star_clicked_cb (GtkButton *button, gpointer user_data)
+{
+    NolphinPreview *preview = NOLPHIN_PREVIEW (user_data);
+    int n = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (button), "star-index")) + 1;
+
+    if (preview->watched_file == NULL || preview->meta_updating) {
+        return;
+    }
+
+    /* Erneuter Klick auf den aktuellen Stern nimmt die Bewertung zurück. */
+    if (n == nolphin_file_get_rating (preview->watched_file)) {
+        n = 0;
+    }
+
+    nolphin_file_set_rating (preview->watched_file, n);
+    update_rating_buttons (preview, n);
+}
+
+/* Tags kommagetrennt, wie im Tag-Dialog der Ansicht: nur die vom Nutzer
+ * vergebenen (metadata::emblems), nicht die automatisch erzeugten. */
+static gchar *
+tags_to_string (NolphinFile *file)
+{
+    GList *tags = nolphin_file_get_metadata_list (file, NOLPHIN_METADATA_KEY_EMBLEMS);
+    GString *joined = g_string_new (NULL);
+    GList *l;
+
+    for (l = tags; l != NULL; l = l->next) {
+        if (joined->len > 0) {
+            g_string_append (joined, ", ");
+        }
+        g_string_append (joined, l->data);
+    }
+    g_list_free_full (tags, g_free);
+
+    return g_string_free (joined, FALSE);
+}
+
+static void
+save_tags (NolphinPreview *preview)
+{
+    gchar **parts;
+    GList *new_tags = NULL;
+    gchar *old;
+    guint i;
+
+    if (preview->watched_file == NULL || preview->meta_updating) {
+        return;
+    }
+
+    parts = g_strsplit (gtk_entry_get_text (GTK_ENTRY (preview->tags_entry)), ",", -1);
+    for (i = 0; parts[i] != NULL; i++) {
+        gchar *tag = g_strstrip (parts[i]);
+
+        if (tag[0] != '\0' && g_list_find_custom (new_tags, tag, (GCompareFunc) g_strcmp0) == NULL) {
+            new_tags = g_list_append (new_tags, tag);
+        }
+    }
+
+    /* Nur schreiben, wenn sich etwas geändert hat (sonst "changed"-Rauschen). */
+    old = tags_to_string (preview->watched_file);
+    {
+        GString *now = g_string_new (NULL);
+        GList *l;
+
+        for (l = new_tags; l != NULL; l = l->next) {
+            if (now->len > 0) {
+                g_string_append (now, ", ");
+            }
+            g_string_append (now, l->data);
+        }
+        if (g_strcmp0 (old, now->str) != 0) {
+            nolphin_file_set_keywords (preview->watched_file, new_tags);
+        }
+        g_string_free (now, TRUE);
+    }
+
+    g_free (old);
+    g_list_free (new_tags);
+    g_strfreev (parts);
+}
+
+static void
+save_comment (NolphinPreview *preview)
+{
+    const gchar *text;
+    gchar *old;
+
+    if (preview->watched_file == NULL || preview->meta_updating) {
+        return;
+    }
+
+    text = gtk_entry_get_text (GTK_ENTRY (preview->comment_entry));
+    old = nolphin_file_get_comment (preview->watched_file);
+    if (g_strcmp0 (old, text) != 0) {
+        nolphin_file_set_comment (preview->watched_file, text);
+    }
+    g_free (old);
+}
+
+static void
+meta_entry_activate_cb (GtkEntry *entry, gpointer user_data)
+{
+    NolphinPreview *preview = NOLPHIN_PREVIEW (user_data);
+
+    if (GTK_WIDGET (entry) == preview->tags_entry) {
+        save_tags (preview);
+    } else {
+        save_comment (preview);
+    }
+}
+
+static gboolean
+meta_entry_focus_out_cb (GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+    meta_entry_activate_cb (GTK_ENTRY (widget), user_data);
+    return FALSE;
+}
+
+/* Gleicht Sterne/Tags/Kommentar mit den Metadaten von @file ab; ein
+ * gerade fokussiertes Eingabefeld wird nicht überschrieben. */
+static void
+refresh_meta_box (NolphinPreview *preview, NolphinFile *file)
+{
+    gchar *text;
+
+    if (file == NULL) {
+        gtk_widget_hide (preview->meta_box);
+        return;
+    }
+
+    preview->meta_updating = TRUE;
+
+    update_rating_buttons (preview, nolphin_file_get_rating (file));
+
+    if (!gtk_widget_has_focus (preview->tags_entry)) {
+        text = tags_to_string (file);
+        gtk_entry_set_text (GTK_ENTRY (preview->tags_entry), text);
+        g_free (text);
+    }
+    if (!gtk_widget_has_focus (preview->comment_entry)) {
+        text = nolphin_file_get_comment (file);
+        gtk_entry_set_text (GTK_ENTRY (preview->comment_entry), text);
+        g_free (text);
+    }
+
+    preview->meta_updating = FALSE;
+    gtk_widget_show (preview->meta_box);
+}
+
+static GtkWidget *
+build_meta_box (NolphinPreview *preview)
+{
+    GtkWidget *box, *row, *label;
+    guint i;
+
+    box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 4);
+
+    row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+    label = gtk_label_new (_("Bewertung:"));
+    gtk_style_context_add_class (gtk_widget_get_style_context (label), "dim-label");
+    gtk_box_pack_start (GTK_BOX (row), label, FALSE, FALSE, 8);
+    for (i = 0; i < RATING_STARS; i++) {
+        GtkWidget *b = gtk_button_new_with_label ("☆");
+
+        gtk_button_set_relief (GTK_BUTTON (b), GTK_RELIEF_NONE);
+        gtk_widget_set_can_focus (b, FALSE);
+        gtk_widget_set_tooltip_text (b, _("Bewertung setzen (erneuter Klick entfernt sie)"));
+        g_object_set_data (G_OBJECT (b), "star-index", GINT_TO_POINTER (i));
+        g_signal_connect (b, "clicked", G_CALLBACK (star_clicked_cb), preview);
+        gtk_box_pack_start (GTK_BOX (row), b, FALSE, FALSE, 0);
+        preview->star_buttons[i] = b;
+    }
+    gtk_box_pack_start (GTK_BOX (box), row, FALSE, FALSE, 0);
+
+    preview->tags_entry = gtk_entry_new ();
+    gtk_entry_set_placeholder_text (GTK_ENTRY (preview->tags_entry), _("Tags, durch Komma getrennt …"));
+    g_signal_connect (preview->tags_entry, "activate", G_CALLBACK (meta_entry_activate_cb), preview);
+    g_signal_connect (preview->tags_entry, "focus-out-event", G_CALLBACK (meta_entry_focus_out_cb), preview);
+    gtk_box_pack_start (GTK_BOX (box), preview->tags_entry, FALSE, FALSE, 0);
+
+    preview->comment_entry = gtk_entry_new ();
+    gtk_entry_set_placeholder_text (GTK_ENTRY (preview->comment_entry), _("Kommentar hinzufügen …"));
+    g_signal_connect (preview->comment_entry, "activate", G_CALLBACK (meta_entry_activate_cb), preview);
+    g_signal_connect (preview->comment_entry, "focus-out-event", G_CALLBACK (meta_entry_focus_out_cb), preview);
+    gtk_box_pack_start (GTK_BOX (box), preview->comment_entry, FALSE, FALSE, 0);
+
+    return box;
+}
+
+static void
 display_single_file (NolphinPreview *preview, NolphinFile *file)
 {
     GtkGrid *grid = GTK_GRID (preview->info_grid);
@@ -473,6 +688,8 @@ display_single_file (NolphinPreview *preview, NolphinFile *file)
         clear_text_state (preview);
     }
 
+    refresh_meta_box (preview, file);
+
     if (is_dir) {
         nolphin_file_recompute_deep_counts (file);
     }
@@ -501,6 +718,7 @@ display_multi_selection (NolphinPreview *preview, GList *selection)
     g_free (text);
 
     clear_grid (grid);
+    refresh_meta_box (preview, NULL);
 
     text = g_format_size (total_size);
     add_info_row (grid, 0, _("Gesamtgröße:"), text);
@@ -557,6 +775,7 @@ nolphin_preview_clear (NolphinPreview *preview)
     stop_watching_file (preview);
     gtk_label_set_text (GTK_LABEL (preview->name_label), "");
     clear_grid (GTK_GRID (preview->info_grid));
+    refresh_meta_box (preview, NULL);
     gtk_image_clear (GTK_IMAGE (preview->image));
 }
 
@@ -607,6 +826,9 @@ nolphin_preview_init (NolphinPreview *preview)
     gtk_grid_set_row_spacing (GTK_GRID (preview->info_grid), 4);
     gtk_grid_set_column_spacing (GTK_GRID (preview->info_grid), 8);
     gtk_box_pack_start (GTK_BOX (content_box), preview->info_grid, FALSE, FALSE, 0);
+
+    preview->meta_box = build_meta_box (preview);
+    gtk_box_pack_start (GTK_BOX (content_box), preview->meta_box, FALSE, FALSE, 0);
 
     preview->text_view = gtk_text_view_new ();
     gtk_text_view_set_editable (GTK_TEXT_VIEW (preview->text_view), TRUE);
@@ -661,6 +883,7 @@ nolphin_preview_init (NolphinPreview *preview)
 
     gtk_widget_show_all (stack);
     gtk_widget_hide (preview->text_scrolled);
+    gtk_widget_hide (preview->meta_box);
 }
 
 GtkWidget *
