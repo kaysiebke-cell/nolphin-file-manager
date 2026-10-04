@@ -244,6 +244,63 @@ static const char * const icon_captions_components[] = {
 
 static GtkWidget *preferences_dialog = NULL;
 
+/* Embedded mode: the preferences replace the file area of the main window. */
+static GtkWidget *preferences_page = NULL;
+static GtkWidget *preferences_host = NULL;
+static gulong     preferences_key_handler = 0;
+
+static void
+close_preferences (void)
+{
+	GtkWidget *page = preferences_page;
+	GtkWidget *host = preferences_host;
+
+	if (preferences_dialog != NULL) {
+		gtk_widget_destroy (preferences_dialog);
+		return;
+	}
+	if (page == NULL) {
+		return;
+	}
+	if (host != NULL && preferences_key_handler != 0) {
+		g_signal_handler_disconnect (host, preferences_key_handler);
+	}
+	preferences_key_handler = 0;
+	preferences_host = NULL;
+	preferences_page = NULL;
+
+	if (host != NULL) {
+		GtkWidget *stack = g_object_get_data (G_OBJECT (host), "nolphin-content-stack");
+
+		if (stack != NULL) {
+			gtk_stack_set_visible_child_name (GTK_STACK (stack), "files");
+		}
+	}
+	gtk_widget_destroy (page);
+}
+
+static gboolean
+on_prefs_key_press (GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+{
+	if (event->keyval == GDK_KEY_Escape) {
+		close_preferences ();
+		return GDK_EVENT_STOP;
+	}
+	return GDK_EVENT_PROPAGATE;
+}
+
+static void
+on_prefs_close_clicked (GtkButton *button, gpointer user_data)
+{
+	close_preferences ();
+}
+
+static void
+on_prefs_page_destroy (GtkWidget *widget, gpointer user_data)
+{
+	g_object_unref (GTK_BUILDER (user_data));
+}
+
 static void
 nolphin_file_management_properties_size_group_create (GtkBuilder *builder,
 						       char *prefix,
@@ -865,12 +922,222 @@ set_gtk_filechooser_sort_first (GObject *object,
 				gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (object)));
 }
 
+
+/* --- Einstellungen exportieren / importieren / zurücksetzen (§31, §48) ----
+ * Alle Nolphin-Einstellungen liegen unter /org/nolphin/ in dconf; das
+ * Systemwerkzeug dconf sichert und lädt sie als Textdatei. Fehlt dconf,
+ * wird das gemeldet statt eine Funktion vorzutäuschen. */
+
+#define SETTINGS_DCONF_PATH "/org/nolphin/"
+
+static void
+settings_io_message (GtkWidget *parent, GtkMessageType type, const gchar *text, const gchar *secondary)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (parent);
+	GtkWidget *dialog = gtk_message_dialog_new (GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+						    GTK_DIALOG_DESTROY_WITH_PARENT, type, GTK_BUTTONS_OK, "%s", text);
+
+	if (secondary != NULL) {
+		gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), "%s", secondary);
+	}
+	gtk_dialog_run (GTK_DIALOG (dialog));
+	gtk_widget_destroy (dialog);
+}
+
+static gboolean
+settings_io_confirm (GtkWidget *parent, const gchar *text, const gchar *secondary, const gchar *accept)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (parent);
+	GtkWidget *dialog = gtk_message_dialog_new (GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+						    GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
+						    GTK_BUTTONS_NONE, "%s", text);
+	gboolean ok;
+
+	gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), "%s", secondary);
+	gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("_Abbrechen"), GTK_RESPONSE_CANCEL, accept, GTK_RESPONSE_OK, NULL);
+	ok = gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK;
+	gtk_widget_destroy (dialog);
+	return ok;
+}
+
+/* Führt dconf aus; @input (optional) wird auf stdin geschrieben. */
+static gboolean
+settings_io_run_dconf (const gchar * const *argv, const gchar *input, gchar **out, GError **error)
+{
+	GSubprocess *proc;
+	GBytes *in_bytes = NULL, *out_bytes = NULL, *err_bytes = NULL;
+	gboolean ok;
+	gchar *tool = g_find_program_in_path ("dconf");
+
+	if (tool == NULL) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+			     _("Das Systemwerkzeug »dconf« ist nicht installiert."));
+		return FALSE;
+	}
+	g_free (tool);
+
+	proc = g_subprocess_newv (argv, G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_PIPE |
+				  G_SUBPROCESS_FLAGS_STDERR_PIPE, error);
+	if (proc == NULL) {
+		return FALSE;
+	}
+	in_bytes = g_bytes_new (input != NULL ? input : "", input != NULL ? strlen (input) : 0);
+	ok = g_subprocess_communicate (proc, in_bytes, NULL, &out_bytes, &err_bytes, error);
+	g_bytes_unref (in_bytes);
+	if (ok && !g_subprocess_get_successful (proc)) {
+		gsize len = 0;
+		const gchar *e = err_bytes != NULL ? g_bytes_get_data (err_bytes, &len) : NULL;
+
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "%s",
+			     (e != NULL && len > 0) ? e : _("dconf wurde mit einem Fehler beendet."));
+		ok = FALSE;
+	}
+	if (ok && out != NULL) {
+		gsize len = 0;
+		const gchar *data = out_bytes != NULL ? g_bytes_get_data (out_bytes, &len) : NULL;
+
+		*out = g_strndup (data != NULL ? data : "", len);
+	}
+	g_clear_pointer (&out_bytes, g_bytes_unref);
+	g_clear_pointer (&err_bytes, g_bytes_unref);
+	g_object_unref (proc);
+	return ok;
+}
+
+static void
+on_settings_export_clicked (GtkButton *button, gpointer user_data)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (GTK_WIDGET (button));
+	GtkWidget *chooser = gtk_file_chooser_dialog_new (_("Einstellungen exportieren"),
+							  GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+							  GTK_FILE_CHOOSER_ACTION_SAVE,
+							  _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+							  _("_Exportieren"), GTK_RESPONSE_ACCEPT, NULL);
+	const gchar *dump[] = { "dconf", "dump", SETTINGS_DCONF_PATH, NULL };
+
+	gtk_file_chooser_set_do_overwrite_confirmation (GTK_FILE_CHOOSER (chooser), TRUE);
+	gtk_file_chooser_set_current_name (GTK_FILE_CHOOSER (chooser), "nolphin-einstellungen.ini");
+
+	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
+		gchar *path = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
+		gchar *text = NULL;
+		GError *error = NULL;
+
+		if (settings_io_run_dconf (dump, NULL, &text, &error) &&
+		    g_file_set_contents (path, text, -1, &error)) {
+			settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_INFO, _("Einstellungen exportiert."), path);
+		} else {
+			settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_ERROR,
+					     _("Die Einstellungen konnten nicht exportiert werden."),
+					     error != NULL ? error->message : NULL);
+			g_clear_error (&error);
+		}
+		g_free (text);
+		g_free (path);
+	}
+	gtk_widget_destroy (chooser);
+}
+
+static void
+on_settings_import_clicked (GtkButton *button, gpointer user_data)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (GTK_WIDGET (button));
+	GtkWidget *chooser = gtk_file_chooser_dialog_new (_("Einstellungen importieren"),
+							  GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+							  GTK_FILE_CHOOSER_ACTION_OPEN,
+							  _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+							  _("_Importieren"), GTK_RESPONSE_ACCEPT, NULL);
+	const gchar *load[] = { "dconf", "load", SETTINGS_DCONF_PATH, NULL };
+
+	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
+		gchar *path = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
+		gchar *text = NULL;
+		GError *error = NULL;
+		GKeyFile *check = g_key_file_new ();
+
+		/* Nur eine gültige Einstellungsdatei (INI-Aufbau) wird eingespielt. */
+		if (!g_file_get_contents (path, &text, NULL, &error) ||
+		    !g_key_file_load_from_data (check, text, -1, G_KEY_FILE_NONE, &error)) {
+			settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_ERROR,
+					     _("Das ist keine gültige Einstellungsdatei."),
+					     error != NULL ? error->message : NULL);
+			g_clear_error (&error);
+		} else if (settings_io_confirm (GTK_WIDGET (button),
+						_("Einstellungen importieren?"),
+						_("Die gespeicherten Werte aus der Datei ersetzen die entsprechenden aktuellen Einstellungen."),
+						_("_Importieren"))) {
+			if (settings_io_run_dconf (load, text, NULL, &error)) {
+				settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_INFO, _("Einstellungen importiert."),
+						     _("Manche Änderungen greifen erst nach einem Neustart von Nolphin."));
+			} else {
+				settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_ERROR,
+						     _("Die Einstellungen konnten nicht importiert werden."),
+						     error != NULL ? error->message : NULL);
+				g_clear_error (&error);
+			}
+		}
+		g_key_file_free (check);
+		g_free (text);
+		g_free (path);
+	}
+	gtk_widget_destroy (chooser);
+}
+
+static void
+on_settings_reset_clicked (GtkButton *button, gpointer user_data)
+{
+	const gchar *reset[] = { "dconf", "reset", "-f", SETTINGS_DCONF_PATH, NULL };
+	GError *error = NULL;
+
+	if (!settings_io_confirm (GTK_WIDGET (button),
+				  _("Alle Einstellungen zurücksetzen?"),
+				  _("Alle Nolphin-Einstellungen gehen auf die Werkseinstellungen zurück. Das lässt sich nicht rückgängig machen; vorher exportieren sichert sie."),
+				  _("_Zurücksetzen"))) {
+		return;
+	}
+	if (settings_io_run_dconf (reset, NULL, NULL, &error)) {
+		settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_INFO, _("Einstellungen zurückgesetzt."),
+				     _("Manche Änderungen greifen erst nach einem Neustart von Nolphin."));
+	} else {
+		settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_ERROR,
+				     _("Die Einstellungen konnten nicht zurückgesetzt werden."),
+				     error != NULL ? error->message : NULL);
+		g_clear_error (&error);
+	}
+}
+
+/* Leiste mit den drei Knöpfen für die Einstellungsseite bzw. den Dialog. */
+static GtkWidget *
+build_settings_io_box (void)
+{
+	GtkWidget *box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+	GtkWidget *b;
+
+	b = gtk_button_new_with_label (_("Exportieren …"));
+	gtk_widget_set_tooltip_text (b, _("Alle Einstellungen in eine Datei sichern"));
+	g_signal_connect (b, "clicked", G_CALLBACK (on_settings_export_clicked), NULL);
+	gtk_box_pack_start (GTK_BOX (box), b, FALSE, FALSE, 0);
+
+	b = gtk_button_new_with_label (_("Importieren …"));
+	gtk_widget_set_tooltip_text (b, _("Einstellungen aus einer zuvor exportierten Datei laden"));
+	g_signal_connect (b, "clicked", G_CALLBACK (on_settings_import_clicked), NULL);
+	gtk_box_pack_start (GTK_BOX (box), b, FALSE, FALSE, 0);
+
+	b = gtk_button_new_with_label (_("Zurücksetzen …"));
+	gtk_widget_set_tooltip_text (b, _("Alle Einstellungen auf die Werkseinstellungen zurücksetzen"));
+	g_signal_connect (b, "clicked", G_CALLBACK (on_settings_reset_clicked), NULL);
+	gtk_box_pack_start (GTK_BOX (box), b, FALSE, FALSE, 0);
+
+	return box;
+}
+
 static  void
 nolphin_file_management_properties_dialog_setup (GtkBuilder  *builder,
                                               GtkWindow   *window,
                                               const gchar *initial_page)
 {
 	GtkWidget *dialog;
+	GtkWidget *content_stack;
 
 	/* setup UI */
 	nolphin_file_management_properties_size_group_create (builder,
@@ -1155,29 +1422,73 @@ nolphin_file_management_properties_dialog_setup (GtkBuilder  *builder,
 
     dialog = GTK_WIDGET (gtk_builder_get_object (builder, "file_management_dialog"));
 
-	g_signal_connect (dialog, "delete-event",
-			  G_CALLBACK (gtk_widget_destroy), NULL);
+	if (initial_page != NULL) {
+		GtkStack *stack;
 
-    g_signal_connect (dialog, "destroy",
-                      G_CALLBACK (on_dialog_destroy), builder);
+		stack = GTK_STACK (gtk_builder_get_object (builder, "page_stack"));
 
-	gtk_window_set_icon_name (GTK_WINDOW (dialog), "folder");
-
-	if (window) {
-		gtk_window_set_transient_for (GTK_WINDOW (dialog), window);
+		gtk_stack_set_visible_child_name (stack, initial_page);
 	}
 
+	content_stack = window != NULL ? g_object_get_data (G_OBJECT (window), "nolphin-content-stack") : NULL;
+
+	if (content_stack != NULL) {
+		GtkWidget *page = gtk_bin_get_child (GTK_BIN (dialog));
+		GtkWidget *bar, *close_button;
+
+		/* Detach the page from the dialog window and host it in the main window. */
+		g_object_ref (page);
+		gtk_container_remove (GTK_CONTAINER (dialog), page);
+		gtk_widget_destroy (dialog);
+
+		/* Bottom bar with the close button (back to the file view). */
+		bar = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+		gtk_widget_set_margin_start (bar, 24);
+		gtk_widget_set_margin_end (bar, 24);
+		gtk_widget_set_margin_top (bar, 12);
+		gtk_widget_set_margin_bottom (bar, 12);
+		gtk_box_pack_start (GTK_BOX (bar), build_settings_io_box (), FALSE, FALSE, 0);
+		close_button = gtk_button_new_with_label (_("Close"));
+		gtk_widget_set_size_request (close_button, 120, -1);
+		g_signal_connect (close_button, "clicked", G_CALLBACK (on_prefs_close_clicked), NULL);
+		gtk_box_pack_end (GTK_BOX (bar), close_button, FALSE, FALSE, 0);
+		gtk_widget_show_all (bar);
+		gtk_box_pack_end (GTK_BOX (page), bar, FALSE, FALSE, 0);
+
+		g_signal_connect (page, "destroy", G_CALLBACK (on_prefs_page_destroy), builder);
+		gtk_stack_add_named (GTK_STACK (content_stack), page, "preferences");
+		g_object_unref (page);
+
+		preferences_page = page;
+		preferences_host = GTK_WIDGET (window);
+		preferences_key_handler = g_signal_connect (window, "key-press-event",
+							    G_CALLBACK (on_prefs_key_press), NULL);
+		gtk_stack_set_visible_child_name (GTK_STACK (content_stack), "preferences");
+		return;
+	}
+
+	/* Fallback: stand-alone dialog (no main window available). */
+	{
+		GtkWidget *page = gtk_bin_get_child (GTK_BIN (dialog));
+
+		if (GTK_IS_BOX (page)) {
+			GtkWidget *io_box = build_settings_io_box ();
+
+			gtk_widget_set_margin_start (io_box, 24);
+			gtk_widget_set_margin_bottom (io_box, 12);
+			gtk_widget_show_all (io_box);
+			gtk_box_pack_end (GTK_BOX (page), io_box, FALSE, FALSE, 0);
+		}
+	}
+	g_signal_connect (dialog, "delete-event",
+			  G_CALLBACK (gtk_widget_destroy), NULL);
+	g_signal_connect (dialog, "destroy",
+			  G_CALLBACK (on_dialog_destroy), builder);
+	g_signal_connect (dialog, "key-press-event",
+			  G_CALLBACK (on_prefs_key_press), NULL);
+	gtk_window_set_icon_name (GTK_WINDOW (dialog), "folder");
 	preferences_dialog = dialog;
 	g_object_add_weak_pointer (G_OBJECT (dialog), (gpointer *) &preferences_dialog);
-
-    if (initial_page != NULL) {
-        GtkStack *stack;
-
-        stack = GTK_STACK (gtk_builder_get_object (builder, "page_stack"));
-
-        gtk_stack_set_visible_child_name (stack, initial_page);
-    }
-
 	gtk_widget_show (dialog);
 }
 
@@ -1189,6 +1500,16 @@ nolphin_file_management_properties_dialog_show (GtkWindow   *window,
 
 	if (preferences_dialog != NULL) {
 		gtk_window_present (GTK_WINDOW (preferences_dialog));
+		return;
+	}
+	if (preferences_page != NULL) {
+		if (preferences_host != NULL) {
+			GtkWidget *stack = g_object_get_data (G_OBJECT (preferences_host), "nolphin-content-stack");
+
+			if (stack != NULL) {
+				gtk_stack_set_visible_child_name (GTK_STACK (stack), "preferences");
+			}
+		}
 		return;
 	}
 

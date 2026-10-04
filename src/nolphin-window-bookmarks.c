@@ -40,9 +40,16 @@
 #include <eel/eel-vfs-extensions.h>
 #include <eel/eel-gtk-extensions.h>
 #include <glib/gi18n.h>
+#include "nolphin-location-stats.h"
+#include <libnolphin-private/nolphin-query.h>
+#include <libnolphin-private/nolphin-search-directory.h>
 
 #define MENU_ITEM_MAX_WIDTH_CHARS 32
 #define MENU_PATH_BOOKMARKS_PLACEHOLDER	 "/MenuBar/Other Menus/Bookmarks/Bookmarks Placeholder"
+#define MENU_PATH_HISTORY_PLACEHOLDER	 "/MenuBar/Other Menus/Go/HistoryMenu/History Placeholder"
+#define MENU_PATH_FREQUENT_PLACEHOLDER	 "/MenuBar/Other Menus/Go/FrequentMenu/Frequent Placeholder"
+#define STATS_MENU_HISTORY_MAX 15
+#define STATS_MENU_FREQUENT_MAX 10
 
 static GtkWindow *bookmarks_window = NULL;
 
@@ -137,6 +144,95 @@ nolphin_bookmarks_exiting (void)
  * Add a bookmark for the displayed location to the bookmarks menu.
  * Does nothing if there's already a bookmark for the displayed location.
  */
+/* Aktuelle Suche als Datei speichern und als Lesezeichen (Seitenleiste)
+ * ablegen. Rückgabe FALSE: aktueller Ort ist keine Suche. */
+static gboolean
+add_saved_search_bookmark (NolphinWindow *window, NolphinWindowSlot *slot)
+{
+	gchar *uri, *readable, *dir, *safe, *path, *file_name;
+	NolphinDirectory *directory;
+	NolphinQuery *query;
+	GtkWidget *dialog, *entry;
+	GFile *location;
+	NolphinBookmark *bookmark;
+	gchar *name = NULL;
+	guint i;
+
+	uri = nolphin_window_slot_get_current_uri (slot);
+	if (uri == NULL || !eel_uri_is_search (uri)) {
+		g_free (uri);
+		return FALSE;
+	}
+
+	directory = nolphin_directory_get_by_uri (uri);
+	g_free (uri);
+	query = directory != NULL ? nolphin_search_directory_get_query (NOLPHIN_SEARCH_DIRECTORY (directory)) : NULL;
+	nolphin_directory_unref (directory);
+	if (query == NULL) {
+		return FALSE;
+	}
+
+	readable = nolphin_query_to_readable_string (query);
+	dialog = gtk_dialog_new_with_buttons (_("Suche speichern"), GTK_WINDOW (window),
+					      GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+					      _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+					      _("_Speichern"), GTK_RESPONSE_OK, NULL);
+	gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
+	entry = gtk_entry_new ();
+	gtk_entry_set_text (GTK_ENTRY (entry), readable);
+	gtk_entry_set_activates_default (GTK_ENTRY (entry), TRUE);
+	gtk_container_set_border_width (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), 12);
+	gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), entry, TRUE, TRUE, 0);
+	gtk_widget_show_all (dialog);
+
+	if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK) {
+		name = g_strstrip (g_strdup (gtk_entry_get_text (GTK_ENTRY (entry))));
+	}
+	gtk_widget_destroy (dialog);
+	g_free (readable);
+
+	if (name == NULL || name[0] == '\0') {
+		g_free (name);
+		g_object_unref (query);
+		return TRUE;
+	}
+
+	/* Dateiname: nur unkritische Zeichen, Eindeutigkeit über Zähler. */
+	safe = g_strdup (name);
+	for (i = 0; safe[i] != '\0'; i++) {
+		if (safe[i] == '/' || safe[i] == '\\' || g_ascii_iscntrl (safe[i])) {
+			safe[i] = '_';
+		}
+	}
+	dir = g_build_filename (g_get_user_config_dir (), "nolphin", "saved-searches", NULL);
+	g_mkdir_with_parents (dir, 0700);
+	path = NULL;
+	for (i = 0; i < 1000; i++) {
+		g_free (path);
+		file_name = i == 0 ? g_strdup_printf ("%s.nsearch", safe) : g_strdup_printf ("%s-%u.nsearch", safe, i);
+		path = g_build_filename (dir, file_name, NULL);
+		g_free (file_name);
+		if (!g_file_test (path, G_FILE_TEST_EXISTS)) {
+			break;
+		}
+	}
+
+	if (nolphin_query_save (query, path)) {
+		location = g_file_new_for_path (path);
+		bookmark = nolphin_bookmark_new (location, name, "xsi-folder-saved-search-symbolic", NULL);
+		nolphin_bookmark_list_append (window->details->bookmark_list, bookmark);
+		g_object_unref (bookmark);
+		g_object_unref (location);
+	}
+
+	g_free (path);
+	g_free (dir);
+	g_free (safe);
+	g_free (name);
+	g_object_unref (query);
+	return TRUE;
+}
+
 void
 nolphin_window_add_bookmark_for_current_location (NolphinWindow *window)
 {
@@ -145,6 +241,11 @@ nolphin_window_add_bookmark_for_current_location (NolphinWindow *window)
 	NolphinBookmarkList *list;
 
 	slot = nolphin_window_get_active_slot (window);
+
+	if (add_saved_search_bookmark (window, slot)) {
+		return;
+	}
+
 	bookmark = slot->current_location_bookmark;
 	list = window->details->bookmark_list;
 
@@ -395,6 +496,74 @@ refresh_bookmarks_menu (NolphinWindow *window)
  * Fill in bookmarks menu with stored bookmarks, and wire up signals
  * so we'll be notified when bookmark list changes.
  */
+/* Verlauf und "Häufig verwendet" im Gehe-zu-Menü: aus nolphin-location-stats,
+ * als dynamische Einträge nach dem Muster der Lesezeichen. */
+static void
+stats_menu_noop_refresh (NolphinWindow *window)
+{
+}
+
+static void
+fill_stats_menu (NolphinWindow *window, GList *uris, const char *path, const char *id,
+		 GtkActionGroup *group, guint merge_id)
+{
+	GList *l;
+	guint index = 0;
+
+	for (l = uris; l != NULL; l = l->next, index++) {
+		GFile *location = g_file_new_for_uri (l->data);
+		gchar *label = g_file_get_parse_name (location);
+		NolphinBookmark *bookmark = nolphin_bookmark_new (location, label, NULL, NULL);
+
+		nolphin_menus_append_bookmark_to_menu (window, bookmark, path, id, index, group, merge_id,
+						       G_CALLBACK (stats_menu_noop_refresh), NULL);
+		g_object_unref (bookmark);
+		g_object_unref (location);
+		g_free (label);
+	}
+}
+
+static void
+refresh_stats_menus (NolphinWindow *window)
+{
+	GtkUIManager *ui_manager = nolphin_window_get_ui_manager (window);
+	NolphinLocationStats *stats = nolphin_location_stats_get_default ();
+	GtkActionGroup *old_group = g_object_get_data (G_OBJECT (window), "nolphin-stats-group");
+	GtkActionGroup *group;
+	guint old_id = GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (window), "nolphin-stats-merge-id"));
+	guint merge_id;
+	GList *recent, *frequent;
+	GtkAction *clear_action;
+
+	if (old_id != 0) {
+		gtk_ui_manager_remove_ui (ui_manager, old_id);
+	}
+	if (old_group != NULL) {
+		gtk_ui_manager_remove_action_group (ui_manager, old_group);
+	}
+
+	merge_id = gtk_ui_manager_new_merge_id (ui_manager);
+	group = gtk_action_group_new ("LocationStatsGroup");
+	g_signal_connect (group, "connect-proxy", G_CALLBACK (connect_proxy_cb), NULL);
+	gtk_ui_manager_insert_action_group (ui_manager, group, -1);
+
+	recent = nolphin_location_stats_get_recent (stats, STATS_MENU_HISTORY_MAX);
+	frequent = nolphin_location_stats_get_frequent (stats, STATS_MENU_FREQUENT_MAX);
+	fill_stats_menu (window, recent, MENU_PATH_HISTORY_PLACEHOLDER, "hist", group, merge_id);
+	fill_stats_menu (window, frequent, MENU_PATH_FREQUENT_PLACEHOLDER, "freq", group, merge_id);
+
+	clear_action = gtk_action_group_get_action (nolphin_window_get_main_action_group (window), "ClearHistory");
+	if (clear_action != NULL) {
+		gtk_action_set_sensitive (clear_action, recent != NULL);
+	}
+
+	g_list_free_full (recent, g_free);
+	g_list_free_full (frequent, g_free);
+
+	g_object_set_data_full (G_OBJECT (window), "nolphin-stats-group", group, g_object_unref);
+	g_object_set_data (G_OBJECT (window), "nolphin-stats-merge-id", GUINT_TO_POINTER (merge_id));
+}
+
 void 
 nolphin_window_initialize_bookmarks_menu (NolphinWindow *window)
 {
@@ -405,5 +574,10 @@ nolphin_window_initialize_bookmarks_menu (NolphinWindow *window)
 	/* Recreate dynamic part of menu if bookmark list changes */
 	g_signal_connect_object (window->details->bookmark_list, "changed",
 				 G_CALLBACK (refresh_bookmarks_menu),
+				 window, G_CONNECT_SWAPPED);
+
+	refresh_stats_menus (window);
+	g_signal_connect_object (nolphin_location_stats_get_default (), "changed",
+				 G_CALLBACK (refresh_stats_menus),
 				 window, G_CONNECT_SWAPPED);
 }

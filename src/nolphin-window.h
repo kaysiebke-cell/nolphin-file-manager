@@ -122,6 +122,14 @@ void             nolphin_window_go_to_full           (NolphinWindow    *window,
 void             nolphin_window_new_tab              (NolphinWindow    *window);
 void             nolphin_window_duplicate_tab        (NolphinWindow    *window);
 void             nolphin_window_close_all_tabs       (NolphinWindow    *window);
+void             nolphin_window_toggle_lock_tab      (NolphinWindow    *window);
+void             nolphin_window_workspace_capture    (NolphinWindow    *window, GKeyFile *kf);
+gboolean         nolphin_window_workspace_apply      (NolphinWindow    *window, GKeyFile *kf);
+void             nolphin_window_split_view_add_pane  (NolphinWindow    *window);
+void             nolphin_window_close_active_pane    (NolphinWindow    *window);
+void             nolphin_window_toggle_maximize_pane (NolphinWindow    *window);
+void             nolphin_window_rename_tab           (NolphinWindow    *window);
+void             nolphin_window_sync_tab_actions     (NolphinWindow    *window);
 gboolean         nolphin_window_has_closed_tab_history (NolphinWindow  *window);
 void             nolphin_window_restore_closed_tab   (NolphinWindow    *window);
 

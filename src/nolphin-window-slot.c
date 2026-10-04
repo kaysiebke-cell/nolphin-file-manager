@@ -118,6 +118,33 @@ create_new_search (NolphinWindowSlot *slot)
 	g_free (uri);
 }
 
+/* Öffnet eine gespeicherte Suche (.nsearch): Suchleiste einblenden,
+ * Muster aus der Datei einsetzen und die Suche starten. */
+gboolean
+nolphin_window_slot_open_saved_search (NolphinWindowSlot *slot, const char *path)
+{
+	NolphinQuery *query;
+	GtkAction *search;
+
+	query = nolphin_query_load ((char *) path);
+	if (query == NULL) {
+		return FALSE;
+	}
+
+	search = gtk_action_group_get_action (slot->pane->toolbar_action_group, NOLPHIN_ACTION_SEARCH);
+	if (search != NULL && !gtk_toggle_action_get_active (GTK_TOGGLE_ACTION (search))) {
+		gtk_toggle_action_set_active (GTK_TOGGLE_ACTION (search), TRUE);
+	} else {
+		nolphin_window_slot_set_query_editor_visible (slot, TRUE);
+	}
+
+	nolphin_query_editor_set_query (slot->query_editor, query);
+	g_object_unref (query);
+
+	create_new_search (slot);
+	return TRUE;
+}
+
 static void
 query_editor_cancel_callback (NolphinQueryEditor *editor,
 			      NolphinWindowSlot *slot)
@@ -628,6 +655,9 @@ nolphin_window_slot_dispose (GObject *object)
 
 	g_free (slot->title);
 	slot->title = NULL;
+
+	g_free (slot->custom_title);
+	slot->custom_title = NULL;
 
 	g_free (slot->status_text);
 	slot->status_text = NULL;

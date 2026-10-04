@@ -48,6 +48,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
@@ -7774,6 +7775,332 @@ action_extract_here_callback (GtkAction *action,
     nolphin_file_list_free (selection);
 }
 
+/* Bearbeiten ▸ Kopieren als ▸ Pfad / Dateiname */
+static void
+copy_selection_text (NolphinView *view, gboolean full_path)
+{
+	GList *selection, *l;
+	GString *text;
+
+	selection = nolphin_view_get_selection (view);
+	if (selection == NULL) {
+		return;
+	}
+
+	text = g_string_new (NULL);
+	for (l = selection; l != NULL; l = l->next) {
+		gchar *item;
+
+		if (full_path) {
+			GFile *location = nolphin_file_get_location (NOLPHIN_FILE (l->data));
+
+			item = g_file_is_native (location) ? g_file_get_path (location) : g_file_get_uri (location);
+			g_object_unref (location);
+		} else {
+			item = nolphin_file_get_display_name (NOLPHIN_FILE (l->data));
+		}
+
+		if (text->len > 0) {
+			g_string_append_c (text, '\n');
+		}
+		g_string_append (text, item);
+		g_free (item);
+	}
+
+	gtk_clipboard_set_text (gtk_clipboard_get_for_display (gtk_widget_get_display (GTK_WIDGET (view)),
+							       GDK_SELECTION_CLIPBOARD),
+				text->str, -1);
+
+	g_string_free (text, TRUE);
+	nolphin_file_list_free (selection);
+}
+
+static void
+action_copy_path_callback (GtkAction *action, gpointer callback_data)
+{
+	copy_selection_text (NOLPHIN_VIEW (callback_data), TRUE);
+}
+
+static void
+action_copy_filename_callback (GtkAction *action, gpointer callback_data)
+{
+	copy_selection_text (NOLPHIN_VIEW (callback_data), FALSE);
+}
+
+static void
+show_view_error (NolphinView *view, const gchar *message)
+{
+	GtkWidget *dialog = gtk_message_dialog_new (nolphin_view_get_containing_window (view),
+						     GTK_DIALOG_DESTROY_WITH_PARENT,
+						     GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+						     "%s", message);
+
+	gtk_dialog_run (GTK_DIALOG (dialog));
+	gtk_widget_destroy (dialog);
+}
+
+/* Datei ▸ Verknüpfung erstellen ▸ Hardlink: nur Dateien, nur innerhalb
+ * desselben Dateisystems (link(2)); sonst verständliche Meldung. */
+static void
+action_create_hardlink_callback (GtkAction *action, gpointer callback_data)
+{
+	NolphinView *view = NOLPHIN_VIEW (callback_data);
+	GList *selection, *l;
+	gchar *first_error = NULL;
+	guint created = 0;
+
+	selection = nolphin_view_get_selection (view);
+
+	for (l = selection; l != NULL; l = l->next) {
+		NolphinFile *file = NOLPHIN_FILE (l->data);
+		GFile *src = nolphin_file_get_location (file);
+		gchar *display = nolphin_file_get_display_name (file);
+		gchar *src_path = g_file_get_path (src);
+		const gchar *problem = NULL;
+
+		if (nolphin_file_is_directory (file)) {
+			problem = _("Hardlinks sind nur für Dateien möglich, nicht für Ordner.");
+		} else if (src_path == NULL) {
+			problem = _("Hardlinks sind nur für lokale Dateien möglich.");
+		} else {
+			GFile *parent = g_file_get_parent (src);
+			gchar *link_name = g_strdup_printf (_("Hardlink zu %s"), display);
+			GFile *dest = parent != NULL ? find_unique_destination (parent, link_name, "") : NULL;
+
+			if (dest == NULL) {
+				problem = _("Es konnte kein freier Name für den Hardlink gefunden werden.");
+			} else {
+				gchar *dest_path = g_file_get_path (dest);
+
+				if (link (src_path, dest_path) == 0) {
+					created++;
+				} else if (errno == EXDEV) {
+					problem = _("Hardlinks sind nur innerhalb desselben Dateisystems möglich.");
+				} else {
+					problem = g_strerror (errno);
+				}
+				g_free (dest_path);
+				g_object_unref (dest);
+			}
+			g_free (link_name);
+			g_clear_object (&parent);
+		}
+
+		if (problem != NULL && first_error == NULL) {
+			first_error = g_strdup_printf ("%s: %s", display, problem);
+		}
+
+		g_free (src_path);
+		g_free (display);
+		g_object_unref (src);
+	}
+
+	if (first_error != NULL) {
+		show_view_error (view, first_error);
+		g_free (first_error);
+	}
+	(void) created;
+
+	nolphin_file_list_free (selection);
+}
+
+/* Bearbeiten ▸ Zwischenablage als Datei einfügen: Bild oder Text der
+ * Zwischenablage wird als neue Datei im aktuellen Ordner angelegt. */
+static void
+action_paste_clipboard_as_file_callback (GtkAction *action, gpointer callback_data)
+{
+	NolphinView *view = NOLPHIN_VIEW (callback_data);
+	GtkClipboard *clipboard;
+	gchar *uri;
+	GFile *folder, *dest = NULL;
+	GError *error = NULL;
+
+	clipboard = gtk_clipboard_get_for_display (gtk_widget_get_display (GTK_WIDGET (view)),
+						   GDK_SELECTION_CLIPBOARD);
+	uri = nolphin_view_get_backing_uri (view);
+	if (uri == NULL) {
+		return;
+	}
+	folder = g_file_new_for_uri (uri);
+	g_free (uri);
+
+	if (gtk_clipboard_wait_is_image_available (clipboard)) {
+		GdkPixbuf *pixbuf = gtk_clipboard_wait_for_image (clipboard);
+
+		dest = find_unique_destination (folder, _("Zwischenablage.png"), ".png");
+		if (pixbuf != NULL && dest != NULL) {
+			GFileOutputStream *stream = g_file_create (dest, G_FILE_CREATE_NONE, NULL, &error);
+
+			if (stream != NULL) {
+				gdk_pixbuf_save_to_stream (pixbuf, G_OUTPUT_STREAM (stream), "png", NULL, &error, NULL);
+				g_output_stream_close (G_OUTPUT_STREAM (stream), NULL, error == NULL ? &error : NULL);
+				g_object_unref (stream);
+			}
+		}
+		g_clear_object (&pixbuf);
+	} else if (gtk_clipboard_wait_is_text_available (clipboard)) {
+		gchar *text = gtk_clipboard_wait_for_text (clipboard);
+
+		dest = find_unique_destination (folder, _("Zwischenablage.txt"), ".txt");
+		if (text != NULL && dest != NULL) {
+			g_file_replace_contents (dest, text, strlen (text), NULL, FALSE,
+						 G_FILE_CREATE_NONE, NULL, NULL, &error);
+		}
+		g_free (text);
+	} else {
+		show_view_error (view, _("Die Zwischenablage enthält weder Text noch ein Bild."));
+		g_object_unref (folder);
+		return;
+	}
+
+	if (error != NULL) {
+		show_view_error (view, error->message);
+		g_clear_error (&error);
+	} else if (dest == NULL) {
+		show_view_error (view, _("Es konnte kein freier Dateiname gefunden werden."));
+	} else {
+		send_archive_notification (_("Zwischenablage einfügen"), TRUE, NULL);
+	}
+
+	g_clear_object (&dest);
+	g_object_unref (folder);
+}
+
+/* Bearbeiten ▸ Nach Größe/Datum auswählen … (ergänzt Muster und Typ). */
+static void
+criteria_select_response_cb (GtkWidget *dialog, int response, gpointer user_data)
+{
+	NolphinView *view = NOLPHIN_VIEW (user_data);
+
+	if (response == GTK_RESPONSE_OK) {
+		goffset min_size = (goffset) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (dialog), "min"))) * 1024;
+		goffset max_size = (goffset) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (dialog), "max"))) * 1024;
+		gint days = (gint) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (dialog), "days")));
+		time_t cutoff = days > 0 ? time (NULL) - (time_t) days * 86400 : 0;
+		GList *all, *l, *matches = NULL;
+
+		all = nolphin_directory_get_file_list (nolphin_view_get_model (view));
+		for (l = all; l != NULL; l = l->next) {
+			NolphinFile *file = NOLPHIN_FILE (l->data);
+
+			if (nolphin_file_is_directory (file)) {
+				continue;
+			}
+			if (nolphin_file_get_size (file) < min_size) {
+				continue;
+			}
+			if (max_size > 0 && nolphin_file_get_size (file) > max_size) {
+				continue;
+			}
+			if (cutoff > 0 && nolphin_file_get_mtime (file) < cutoff) {
+				continue;
+			}
+			matches = g_list_prepend (matches, nolphin_file_ref (file));
+		}
+		nolphin_file_list_free (all);
+
+		if (matches != NULL) {
+			nolphin_view_call_set_selection (view, matches);
+			nolphin_file_list_free (matches);
+			nolphin_view_reveal_selection (view);
+		}
+	}
+
+	gtk_widget_destroy (dialog);
+}
+
+static void
+action_select_criteria_callback (GtkAction *action, gpointer callback_data)
+{
+	NolphinView *view = NOLPHIN_VIEW (callback_data);
+	GtkWidget *dialog, *grid, *label, *min, *max, *days;
+
+	dialog = gtk_dialog_new_with_buttons (_("Nach Größe und Datum auswählen"),
+					      nolphin_view_get_containing_window (view),
+					      GTK_DIALOG_DESTROY_WITH_PARENT,
+					      _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+					      _("_OK"), GTK_RESPONSE_OK, NULL);
+	gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
+
+	grid = gtk_grid_new ();
+	g_object_set (grid, "border-width", 12, "row-spacing", 6, "column-spacing", 12, NULL);
+
+	min = gtk_spin_button_new_with_range (0, 100000000, 1);
+	max = gtk_spin_button_new_with_range (0, 100000000, 1);
+	days = gtk_spin_button_new_with_range (0, 36500, 1);
+
+	label = gtk_label_new (_("Mindestgröße (KiB):"));
+	gtk_widget_set_halign (label, GTK_ALIGN_START);
+	gtk_grid_attach (GTK_GRID (grid), label, 0, 0, 1, 1);
+	gtk_grid_attach (GTK_GRID (grid), min, 1, 0, 1, 1);
+	label = gtk_label_new (_("Höchstgröße (KiB, 0 = unbegrenzt):"));
+	gtk_widget_set_halign (label, GTK_ALIGN_START);
+	gtk_grid_attach (GTK_GRID (grid), label, 0, 1, 1, 1);
+	gtk_grid_attach (GTK_GRID (grid), max, 1, 1, 1, 1);
+	label = gtk_label_new (_("Geändert in den letzten (Tage, 0 = beliebig):"));
+	gtk_widget_set_halign (label, GTK_ALIGN_START);
+	gtk_grid_attach (GTK_GRID (grid), label, 0, 2, 1, 1);
+	gtk_grid_attach (GTK_GRID (grid), days, 1, 2, 1, 1);
+
+	gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), grid);
+	g_object_set_data (G_OBJECT (dialog), "min", min);
+	g_object_set_data (G_OBJECT (dialog), "max", max);
+	g_object_set_data (G_OBJECT (dialog), "days", days);
+	g_signal_connect (dialog, "response", G_CALLBACK (criteria_select_response_cb), view);
+	gtk_widget_show_all (dialog);
+}
+
+/* Archiv öffnen: Inhalt im Archiv-Panel anzeigen und verwalten. */
+static void
+action_archive_manage_callback (GtkAction *action, gpointer callback_data)
+{
+	NolphinView *view = NOLPHIN_VIEW (callback_data);
+	GList *selection = nolphin_view_get_selection (view);
+
+	if (g_list_length (selection) == 1) {
+		NolphinWindow *window = NOLPHIN_WINDOW (nolphin_view_get_containing_window (view));
+		GFile *archive = nolphin_file_get_location (NOLPHIN_FILE (selection->data));
+
+		nolphin_workspace_panel_show_archive_manager (nolphin_window_get_workspace_panel (window), window, archive);
+		g_object_unref (archive);
+	}
+	nolphin_file_list_free (selection);
+}
+
+/* Archiv entpacken nach … (Zielordner wählen). */
+static void
+action_extract_to_callback (GtkAction *action, gpointer callback_data)
+{
+	NolphinView *view = NOLPHIN_VIEW (callback_data);
+	GList *selection = nolphin_view_get_selection (view);
+	GtkWidget *chooser;
+
+	if (g_list_length (selection) == 1) {
+		GFile *archive = nolphin_file_get_location (NOLPHIN_FILE (selection->data));
+
+		if (nolphin_archive_detect_format (archive) != NOLPHIN_ARCHIVE_FORMAT_UNKNOWN) {
+			chooser = gtk_file_chooser_dialog_new (_("Entpacken nach …"),
+							       nolphin_view_get_containing_window (view),
+							       GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+							       _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+							       _("_Entpacken"), GTK_RESPONSE_ACCEPT, NULL);
+			if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
+				GFile *destination = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (chooser));
+
+				if (destination != NULL) {
+					nolphin_archive_extract_async (archive, destination, NULL,
+								       extract_here_finished_cb, NULL);
+					g_object_unref (destination);
+				}
+			}
+			gtk_widget_destroy (chooser);
+		}
+		g_object_unref (archive);
+	}
+
+	nolphin_file_list_free (selection);
+}
+
 static void
 test_archive_finished_cb (GObject *source, GAsyncResult *result, gpointer user_data)
 {
@@ -10034,6 +10361,35 @@ static const GtkActionEntry directory_view_entries[] = {
   /* label, accelerator */       N_("Hier _entpacken"), NULL,
   /* tooltip */                  N_("Das Archiv in einen neuen, danebenliegenden Ordner entpacken"),
                  G_CALLBACK (action_extract_here_callback) },
+  /* name, stock id */         { "ArchiveManage", NULL,
+  /* label, accelerator */       N_("Archiv _öffnen …"), NULL,
+  /* tooltip */                  N_("Inhalt des Archivs anzeigen; Dateien entpacken, hinzufügen, ersetzen und entfernen"),
+                 G_CALLBACK (action_archive_manage_callback) },
+  /* name, stock id */         { "ExtractTo", NULL,
+  /* label, accelerator */       N_("Entpacken _nach …"), NULL,
+  /* tooltip */                  N_("Das Archiv in einen frei gewählten Ordner entpacken"),
+                 G_CALLBACK (action_extract_to_callback) },
+  /* name, stock id, label */  { "CopyAsMenu", NULL, N_("Kopieren _als") },
+  /* name, stock id */         { "CopyPath", NULL,
+  /* label, accelerator */       N_("_Pfad"), NULL,
+  /* tooltip */                  N_("Den vollständigen Pfad der ausgewählten Objekte in die Zwischenablage kopieren"),
+                 G_CALLBACK (action_copy_path_callback) },
+  /* name, stock id */         { "CopyFileName", NULL,
+  /* label, accelerator */       N_("_Dateiname"), NULL,
+  /* tooltip */                  N_("Den Namen der ausgewählten Objekte in die Zwischenablage kopieren"),
+                 G_CALLBACK (action_copy_filename_callback) },
+  /* name, stock id */         { "CreateHardlink", NULL,
+  /* label, accelerator */       N_("_Hardlink anlegen"), NULL,
+  /* tooltip */                  N_("Einen Hardlink für jede gewählte Datei im selben Ordner anlegen"),
+                 G_CALLBACK (action_create_hardlink_callback) },
+  /* name, stock id */         { "PasteClipboardAsFile", NULL,
+  /* label, accelerator */       N_("Zwischenablage als _Datei einfügen"), NULL,
+  /* tooltip */                  N_("Text oder Bild aus der Zwischenablage als neue Datei im aktuellen Ordner anlegen"),
+                 G_CALLBACK (action_paste_clipboard_as_file_callback) },
+  /* name, stock id */         { "SelectCriteria", NULL,
+  /* label, accelerator */       N_("Nach _Größe und Datum auswählen …"), NULL,
+  /* tooltip */                  N_("Dateien nach Größe und Änderungsdatum auswählen"),
+                 G_CALLBACK (action_select_criteria_callback) },
   /* name, stock id */         { NOLPHIN_ACTION_TEST_ARCHIVE, NULL,
   /* label, accelerator */       N_("Archiv _prüfen"), NULL,
   /* tooltip */                  N_("Das Archiv auf Fehler prüfen, ohne es zu entpacken"),
@@ -11765,6 +12121,13 @@ real_update_menus (NolphinView *view)
 	action = gtk_action_group_get_action (view->details->dir_action_group,
 					      NOLPHIN_ACTION_CREATE_LINK);
 	gtk_action_set_sensitive (action, can_link_files);
+
+	action = gtk_action_group_get_action (view->details->dir_action_group, "CreateHardlink");
+	gtk_action_set_sensitive (action, can_link_files);
+	gtk_action_set_visible (action, !selection_contains_recent && !selection_contains_favorites);
+
+	action = gtk_action_group_get_action (view->details->dir_action_group, "CopyAsMenu");
+	gtk_action_set_sensitive (action, selection_count > 0);
     gtk_action_set_visible (action, !selection_contains_recent && !selection_contains_favorites);
 	g_object_set (action, "label",
 		      ngettext ("_Verknüpfung anlegen",
@@ -11913,6 +12276,12 @@ real_update_menus (NolphinView *view)
 
         action = gtk_action_group_get_action (view->details->dir_action_group,
                                               NOLPHIN_ACTION_TEST_ARCHIVE);
+        gtk_action_set_visible (action, is_archive);
+
+        action = gtk_action_group_get_action (view->details->dir_action_group, "ExtractTo");
+        gtk_action_set_visible (action, is_archive);
+
+        action = gtk_action_group_get_action (view->details->dir_action_group, "ArchiveManage");
         gtk_action_set_visible (action, is_archive);
     }
 

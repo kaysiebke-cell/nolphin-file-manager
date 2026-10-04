@@ -1259,6 +1259,11 @@ nolphin_window_pane_close_slot (NolphinWindowPane *pane,
 	if (!window)
 		return;
 
+	/* Gesperrte Reiter lassen sich nicht (versehentlich) schließen. */
+	if (slot->locked) {
+		return;
+	}
+
 	if (slot->location != NULL) {
 		const guint max_closed_tab_history = 10;
 

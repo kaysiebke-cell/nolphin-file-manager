@@ -31,6 +31,7 @@
 
 #include "nolphin-window-menus.h"
 #include "nolphin-actions.h"
+#include "nolphin-location-stats.h"
 #include "nolphin-application.h"
 #include "nolphin-workspace-panel.h"
 #include "nolphin-connect-server-dialog.h"
@@ -119,6 +120,119 @@ action_close_all_tabs_callback (GtkAction *action,
 	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
 		nolphin_window_close_all_tabs (NOLPHIN_WINDOW (user_data));
 	}
+}
+
+static void
+action_workspace_callback (GtkAction *action, gpointer user_data)
+{
+	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		NolphinWindow *window = NOLPHIN_WINDOW (user_data);
+
+		nolphin_workspace_panel_show_workspaces (nolphin_window_get_workspace_panel (window), window,
+							  g_strcmp0 (gtk_action_get_name (action), "Workspace Save") == 0);
+	}
+}
+
+static void
+action_duplicate_pane_callback (GtkAction *action, gpointer user_data)
+{
+	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		nolphin_window_split_view_add_pane (NOLPHIN_WINDOW (user_data));
+	}
+}
+
+static void
+action_maximize_pane_callback (GtkAction *action, gpointer user_data)
+{
+	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		nolphin_window_toggle_maximize_pane (NOLPHIN_WINDOW (user_data));
+	}
+}
+
+static void
+action_close_pane_callback (GtkAction *action, gpointer user_data)
+{
+	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		nolphin_window_close_active_pane (NOLPHIN_WINDOW (user_data));
+	}
+}
+
+static void
+action_lock_tab_callback (GtkAction *action,
+			  gpointer   user_data)
+{
+	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		nolphin_window_toggle_lock_tab (NOLPHIN_WINDOW (user_data));
+	}
+}
+
+static void
+action_rename_tab_callback (GtkAction *action,
+			    gpointer   user_data)
+{
+	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		nolphin_window_rename_tab (NOLPHIN_WINDOW (user_data));
+	}
+}
+
+/* Bearbeiten ▸ Zwischenablage ▸ Inhalt anzeigen / Leeren */
+static void
+action_show_clipboard_callback (GtkAction *action,
+				gpointer   user_data)
+{
+	GtkClipboard *clipboard = gtk_clipboard_get_for_display (gtk_widget_get_display (GTK_WIDGET (user_data)),
+								 GDK_SELECTION_CLIPBOARD);
+	GString *text = g_string_new (NULL);
+	GtkWidget *dialog;
+	gchar **uris = gtk_clipboard_wait_for_uris (clipboard);
+
+	if (uris != NULL && uris[0] != NULL) {
+		guint i;
+
+		for (i = 0; uris[i] != NULL; i++) {
+			gchar *name = g_uri_unescape_string (uris[i], NULL);
+
+			g_string_append_printf (text, "%s\n", name != NULL ? name : uris[i]);
+			g_free (name);
+		}
+	} else if (gtk_clipboard_wait_is_text_available (clipboard)) {
+		gchar *content = gtk_clipboard_wait_for_text (clipboard);
+
+		if (content != NULL) {
+			g_string_append (text, content);
+			g_free (content);
+		}
+	} else if (gtk_clipboard_wait_is_image_available (clipboard)) {
+		g_string_append (text, _("Ein Bild"));
+	}
+	g_strfreev (uris);
+
+	if (text->len == 0) {
+		g_string_assign (text, _("Die Zwischenablage ist leer."));
+	} else if (text->len > 2000) {
+		g_string_truncate (text, 2000);
+		g_string_append (text, " …");
+	}
+
+	dialog = gtk_message_dialog_new (GTK_WINDOW (user_data), GTK_DIALOG_DESTROY_WITH_PARENT,
+					 GTK_MESSAGE_INFO, GTK_BUTTONS_OK, "%s", _("Inhalt der Zwischenablage"));
+	gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), "%s", text->str);
+	gtk_dialog_run (GTK_DIALOG (dialog));
+	gtk_widget_destroy (dialog);
+	g_string_free (text, TRUE);
+}
+
+static void
+action_clear_clipboard_callback (GtkAction *action,
+				 gpointer   user_data)
+{
+	GtkClipboard *clipboard = gtk_clipboard_get_for_display (gtk_widget_get_display (GTK_WIDGET (user_data)),
+								 GDK_SELECTION_CLIPBOARD);
+
+	/* gtk_clipboard_clear () wirkt nur auf eigene Inhalte; ein leerer Text
+	 * ersetzt auch Inhalte anderer Anwendungen. */
+	gtk_clipboard_clear (clipboard);
+	gtk_clipboard_set_text (clipboard, "", 0);
 }
 
 static void
@@ -1005,6 +1119,13 @@ action_new_window_callback (GtkAction *action,
 }
 
 static void
+action_clear_history_callback (GtkAction *action,
+			       gpointer user_data)
+{
+	nolphin_location_stats_clear (nolphin_location_stats_get_default ());
+}
+
+static void
 action_new_tab_callback (GtkAction *action,
 			 gpointer user_data)
 {
@@ -1511,6 +1632,54 @@ static const GtkActionEntry main_entries[] = {
   /* label, accelerator */       N_("_Alle Reiter schließen"), NULL,
   /* tooltip */                  N_("Jeden Reiter in diesem Fenster schließen"),
                                  G_CALLBACK (action_close_all_tabs_callback) },
+  /* name, stock id, label */  { "WorkspacesMenu", NULL, N_("_Arbeitsbereiche") },
+  /* name, stock id */         { "Workspace Save", NULL,
+  /* label, accelerator */       N_("_Speichern …"), NULL,
+  /* tooltip */                  N_("Den aktuellen Arbeitsbereich (Reiter, Teilung, Fenstergröße, Panels) unter einem Namen speichern"),
+                                 G_CALLBACK (action_workspace_callback) },
+  /* name, stock id */         { "Workspace Load", NULL,
+  /* label, accelerator */       N_("_Laden …"), NULL,
+  /* tooltip */                  N_("Einen gespeicherten Arbeitsbereich laden"),
+                                 G_CALLBACK (action_workspace_callback) },
+  /* name, stock id */         { "Workspace Duplicate", NULL,
+  /* label, accelerator */       N_("_Duplizieren …"), NULL,
+  /* tooltip */                  N_("Einen gespeicherten Arbeitsbereich duplizieren"),
+                                 G_CALLBACK (action_workspace_callback) },
+  /* name, stock id */         { "Workspace Manage", NULL,
+  /* label, accelerator */       N_("_Verwalten …"), NULL,
+  /* tooltip */                  N_("Gespeicherte Arbeitsbereiche laden, duplizieren und löschen"),
+                                 G_CALLBACK (action_workspace_callback) },
+  /* name, stock id, label */  { "SplitViewMenu", NULL, N_("_Geteilte Ansicht") },
+  /* name, stock id */         { "Duplicate Pane", NULL,
+  /* label, accelerator */       N_("Bereich _duplizieren"), NULL,
+  /* tooltip */                  N_("Einen weiteren Bereich (bis zu vier) am Ort des aktiven Bereichs öffnen"),
+                                 G_CALLBACK (action_duplicate_pane_callback) },
+  /* name, stock id */         { "Maximize Pane", NULL,
+  /* label, accelerator */       N_("Bereich _maximieren"), NULL,
+  /* tooltip */                  N_("Den aktiven Bereich allein anzeigen oder die anderen wieder einblenden"),
+                                 G_CALLBACK (action_maximize_pane_callback) },
+  /* name, stock id */         { "Close Pane", NULL,
+  /* label, accelerator */       N_("Bereich _schließen"), NULL,
+  /* tooltip */                  N_("Den aktiven Bereich schließen"),
+                                 G_CALLBACK (action_close_pane_callback) },
+  /* name, stock id, label */  { "TabsMenu", NULL, N_("_Reiter") },
+  /* name, stock id, label */  { "ClipboardMenu", NULL, N_("_Zwischenablage") },
+  /* name, stock id */         { "Lock Tab", NULL,
+  /* label, accelerator */       N_("Reiter _sperren"), NULL,
+  /* tooltip */                  N_("Den Reiter gegen versehentliches Schließen sperren oder entsperren"),
+                                 G_CALLBACK (action_lock_tab_callback) },
+  /* name, stock id */         { "Rename Tab", NULL,
+  /* label, accelerator */       N_("Reiter _umbenennen …"), NULL,
+  /* tooltip */                  N_("Dem Reiter einen eigenen Namen geben"),
+                                 G_CALLBACK (action_rename_tab_callback) },
+  /* name, stock id */         { "Show Clipboard", NULL,
+  /* label, accelerator */       N_("Inhalt _anzeigen"), NULL,
+  /* tooltip */                  N_("Anzeigen, was sich in der Zwischenablage befindet"),
+                                 G_CALLBACK (action_show_clipboard_callback) },
+  /* name, stock id */         { "Clear Clipboard", NULL,
+  /* label, accelerator */       N_("_Leeren"), NULL,
+  /* tooltip */                  N_("Die Zwischenablage leeren"),
+                                 G_CALLBACK (action_clear_clipboard_callback) },
   /* name, stock id */         { NOLPHIN_ACTION_RESTORE_CLOSED_TAB, NULL,
   /* label, accelerator */       N_("Geschlossenen _Reiter wiederherstellen"), "<control><shift>T",
   /* tooltip */                  N_("Den zuletzt geschlossenen Reiter wiederherstellen"),
@@ -1616,6 +1785,12 @@ static const GtkActionEntry main_entries[] = {
                                  G_CALLBACK (action_go_to_trash_callback) },
   /* name, stock id, label */  { "Go", NULL, N_("_Gehen zu") },
   /* name, stock id, label */  { "Bookmarks", NULL, N_("_Lesezeichen") },
+  /* name, stock id, label */  { "HistoryMenu", NULL, N_("_Verlauf") },
+  /* name, stock id, label */  { "FrequentMenu", NULL, N_("_Häufig verwendet") },
+  /* name, stock id */         { "ClearHistory", NULL,
+  /* label, accelerator */       N_("Verlauf _löschen"), NULL,
+  /* tooltip */                  N_("Verlauf und Besuchszähler der Orte löschen"),
+                                 G_CALLBACK (action_clear_history_callback) },
   /* name, stock id, label */  { "Tabs", NULL, N_("_Reiter") },
   /* name, stock id, label */  { "New Window", NULL, N_("Neues _Fenster"),
                                  "<control>N", N_("Ein neues Nolphin-Fenster für den angezeigten Ort öffnen"),
@@ -1721,7 +1896,7 @@ static const GtkRadioActionEntry sidebar_radio_entries[] = {
 	  N_("Orte"), NULL, N_("»Orte« als Voreinstellung für die Seitenleiste festlegen"),
 	  SIDEBAR_PLACES },
 	{ "Sidebar Tree", NULL,
-	  N_("Baumansicht"), NULL, N_("»Baumansicht« als Voreinstellung für die Seitenleiste festlegen"),
+	  N_("Baumansicht"), "F7", N_("»Baumansicht« als Voreinstellung für die Seitenleiste festlegen"),
 	  SIDEBAR_TREE }
 };
 

@@ -89,6 +89,10 @@ struct NolphinWindowSlot {
 	/* Current location. */
 	GFile *location;
 	char *title;
+	/* Vom Benutzer vergebener Reiter-Name (NULL = automatischer Titel) und
+	 * Sperre gegen versehentliches Schließen. */
+	char *custom_title;
+	gboolean locked;
 	char *status_text;
 
 	NolphinFile *viewed_file;
@@ -134,6 +138,7 @@ NolphinWindowSlot * nolphin_window_slot_new (NolphinWindowPane *pane);
 void    nolphin_window_slot_update_title		   (NolphinWindowSlot *slot);
 void    nolphin_window_slot_update_icon		   (NolphinWindowSlot *slot);
 void    nolphin_window_slot_move_query_editor_to_panel (NolphinWindowSlot *slot);
+gboolean nolphin_window_slot_open_saved_search (NolphinWindowSlot *slot, const char *path);
 void    nolphin_window_slot_sync_query_editor_host (NolphinWindowSlot *slot);
 void    nolphin_window_slot_set_query_editor_visible	   (NolphinWindowSlot *slot,
 							    gboolean            visible);

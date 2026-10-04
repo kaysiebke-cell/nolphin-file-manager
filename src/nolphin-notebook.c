@@ -302,7 +302,25 @@ nolphin_notebook_sync_tab_label (NolphinNotebook *notebook,
 	label = GTK_WIDGET (g_object_get_data (G_OBJECT (hbox), "label"));
 	g_return_if_fail (GTK_IS_WIDGET (label));
 
-	gtk_label_set_text (GTK_LABEL (label), slot->title);
+	gtk_label_set_text (GTK_LABEL (label), slot->custom_title != NULL ? slot->custom_title : slot->title);
+
+	/* Gesperrter Reiter: Schließen-Knopf deaktiviert, Schloss-Symbol sichtbar */
+	{
+		GtkWidget *close_button = g_object_get_data (G_OBJECT (hbox), "close-button");
+		GtkWidget *icon = g_object_get_data (G_OBJECT (hbox), "icon");
+
+		if (close_button != NULL) {
+			gtk_widget_set_sensitive (close_button, !slot->locked);
+		}
+		if (icon != NULL) {
+			if (slot->locked) {
+				gtk_image_set_from_icon_name (GTK_IMAGE (icon), "changes-prevent-symbolic", GTK_ICON_SIZE_MENU);
+				gtk_widget_show (icon);
+			} else {
+				gtk_widget_hide (icon);
+			}
+		}
+	}
 
 	if (slot->location != NULL) {
 		/* Set the tooltip on the label's parent (the tab label hbox),

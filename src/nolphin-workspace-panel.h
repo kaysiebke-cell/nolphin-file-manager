@@ -49,6 +49,17 @@ GtkWidget *nolphin_workspace_panel_get_search_host (GtkWidget *workspace_panel);
 void       nolphin_workspace_panel_show_archive      (GtkWidget *workspace_panel,
 						       NolphinWindow *window);
 
+/* Zeigt die Archiv-Verwaltung (Inhalt anzeigen, Dateien hinzufügen, ersetzen,
+ * entfernen, einzelne Einträge entpacken, prüfen) für das Archiv @archive. */
+void       nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_panel,
+							  NolphinWindow *window,
+							  GFile *archive);
+
+/* Zeigt die Arbeitsbereiche-Seite (Speichern, Laden, Duplizieren, Löschen). */
+void       nolphin_workspace_panel_show_workspaces (GtkWidget *workspace_panel,
+						     NolphinWindow *window,
+						     gboolean focus_name);
+
 /* Zeigt die Git-Seite, blendet das Panel ein und stößt sofort eine
  * Status-Aktualisierung an. */
 void       nolphin_workspace_panel_show_git          (GtkWidget *workspace_panel,

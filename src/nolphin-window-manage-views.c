@@ -27,6 +27,7 @@
 
 #include <config.h>
 #include "nolphin-window-manage-views.h"
+#include "nolphin-location-stats.h"
 
 #include "nolphin-actions.h"
 #include "nolphin-application.h"
@@ -443,6 +444,26 @@ nolphin_window_slot_open_location_full (NolphinWindowSlot *slot,
 	gboolean use_same;
 	gboolean is_desktop;
 	NolphinApplication *app;
+
+	/* Gespeicherte Suche (Lesezeichen auf eine .nsearch-Datei) */
+	if (g_file_is_native (location)) {
+		char *basename = g_file_get_basename (location);
+		gboolean is_saved = basename != NULL && g_str_has_suffix (basename, ".nsearch");
+
+		g_free (basename);
+		if (is_saved) {
+			char *path = g_file_get_path (location);
+			gboolean ok = path != NULL && nolphin_window_slot_open_saved_search (slot, path);
+
+			g_free (path);
+			if (ok) {
+				if (callback != NULL) {
+					callback (nolphin_window_slot_get_window (slot), NULL, user_data);
+				}
+				return;
+			}
+		}
+	}
 
 	window = nolphin_window_slot_get_window (slot);
 
@@ -1510,6 +1531,9 @@ update_for_new_location (NolphinWindowSlot *slot)
 	set_displayed_location (slot, new_location);
 
 	update_history (slot, slot->location_change_type, new_location);
+	if (slot->location_change_type != NOLPHIN_LOCATION_CHANGE_RELOAD) {
+		nolphin_location_stats_record (nolphin_location_stats_get_default (), new_location);
+	}
 
 	location_really_changed =
 		slot->location == NULL ||

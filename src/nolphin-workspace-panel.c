@@ -15,8 +15,10 @@
 #include "nolphin-workspace-panel.h"
 
 #include <glib/gi18n.h>
+#include <glib/gstdio.h>
 
 #include <libnolphin-private/nolphin-archive.h>
+#include <libnolphin-private/nolphin-archive-manage.h>
 #include <libnolphin-private/nolphin-file.h>
 #include <libnolphin-private/nolphin-git.h>
 
@@ -1993,6 +1995,526 @@ build_deb_builder_tab (NolphinWindow *window)
 	return scroller;
 }
 
+/* --- Archiv verwalten (§36) ----------------------------------------------
+ * Seite im Archiv-Panel: Inhalt anzeigen, einzelne Einträge entpacken,
+ * Dateien hinzufügen/ersetzen/entfernen, Archiv testen, Informationen. */
+
+enum { AM_COL_NAME, AM_COL_SIZE, AM_COL_DATE, AM_COL_PATH, AM_COL_IS_DIR, AM_N_COLS };
+
+typedef struct {
+	NolphinWindow *window;
+	GtkWidget *title_label;
+	GtkWidget *info_label;
+	GtkWidget *status_label;
+	GtkWidget *spinner;
+	GtkWidget *tree;
+	GtkListStore *store;
+	GtkWidget *buttons[8];   /* extract, add files, add folder, replace, remove, test, refresh */
+	GFile *archive;
+	NolphinArchiveFormat format;
+	gboolean busy;
+} ArchiveManagerTab;
+
+/* Größe ab der vor dem Neupacken (TAR-Formate) gewarnt wird */
+#define AM_REPACK_WARN_BYTES (50 * 1024 * 1024)
+
+static void archive_manager_reload (ArchiveManagerTab *d);
+
+static void
+am_set_busy (ArchiveManagerTab *d, gboolean busy, const gchar *status)
+{
+	guint i;
+
+	d->busy = busy;
+	for (i = 0; i < 7; i++) {
+		if (d->buttons[i] != NULL) {
+			gtk_widget_set_sensitive (d->buttons[i], !busy && d->archive != NULL);
+		}
+	}
+	if (busy) {
+		gtk_spinner_start (GTK_SPINNER (d->spinner));
+	} else {
+		gtk_spinner_stop (GTK_SPINNER (d->spinner));
+	}
+	gtk_label_set_text (GTK_LABEL (d->status_label), status != NULL ? status : "");
+}
+
+static void
+am_show_error (ArchiveManagerTab *d, const gchar *message)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (d->tree);
+	GtkWidget *dialog = gtk_message_dialog_new (GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+						    GTK_DIALOG_DESTROY_WITH_PARENT,
+						    GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", message);
+
+	gtk_dialog_run (GTK_DIALOG (dialog));
+	gtk_widget_destroy (dialog);
+}
+
+/* Gewählte Einträge als GList von Pfaden (Ordner mit "/" am Ende). */
+static GList *
+am_selected_paths (ArchiveManagerTab *d, guint *n_dirs, guint *n_files)
+{
+	GtkTreeSelection *sel = gtk_tree_view_get_selection (GTK_TREE_VIEW (d->tree));
+	GList *rows = gtk_tree_selection_get_selected_rows (sel, NULL), *l, *paths = NULL;
+
+	*n_dirs = *n_files = 0;
+	for (l = rows; l != NULL; l = l->next) {
+		GtkTreeIter iter;
+		gchar *path = NULL;
+		gboolean is_dir = FALSE;
+
+		if (gtk_tree_model_get_iter (GTK_TREE_MODEL (d->store), &iter, l->data)) {
+			gtk_tree_model_get (GTK_TREE_MODEL (d->store), &iter, AM_COL_PATH, &path, AM_COL_IS_DIR, &is_dir, -1);
+			if (is_dir) {
+				paths = g_list_append (paths, g_strconcat (path, "/", NULL));
+				(*n_dirs)++;
+			} else {
+				paths = g_list_append (paths, g_strdup (path));
+				(*n_files)++;
+			}
+			g_free (path);
+		}
+	}
+	g_list_free_full (rows, (GDestroyNotify) gtk_tree_path_free);
+	return paths;
+}
+
+static void
+am_fill (ArchiveManagerTab *d, GPtrArray *entries)
+{
+	goffset total = 0, archive_size = 0;
+	guint files = 0, dirs = 0, i;
+	GFileInfo *info;
+	gchar *text, *size_text, *total_text, *fmt_label;
+
+	gtk_list_store_clear (d->store);
+	for (i = 0; i < entries->len; i++) {
+		NolphinArchiveEntry *e = entries->pdata[i];
+		GtkTreeIter iter;
+		gchar *size = (!e->is_dir && e->size >= 0) ? g_format_size (e->size) : NULL;
+
+		gtk_list_store_append (d->store, &iter);
+		gtk_list_store_set (d->store, &iter,
+				    AM_COL_NAME, e->path,
+				    AM_COL_SIZE, size != NULL ? size : "",
+				    AM_COL_DATE, e->modified != NULL ? e->modified : "",
+				    AM_COL_PATH, e->path,
+				    AM_COL_IS_DIR, e->is_dir, -1);
+		g_free (size);
+		if (e->is_dir) {
+			dirs++;
+		} else {
+			files++;
+			if (e->size > 0) {
+				total += e->size;
+			}
+		}
+	}
+
+	info = g_file_query_info (d->archive, G_FILE_ATTRIBUTE_STANDARD_SIZE, G_FILE_QUERY_INFO_NONE, NULL, NULL);
+	if (info != NULL) {
+		archive_size = g_file_info_get_size (info);
+		g_object_unref (info);
+	}
+	size_text = g_format_size (archive_size);
+	total_text = g_format_size (total);
+	fmt_label = g_strdup (nolphin_archive_format_get_label (d->format));
+	text = g_strdup_printf (_("Format: %s · Größe: %s · %u Dateien, %u Ordner · entpackt: %s%s"),
+				fmt_label, size_text, files, dirs, total_text,
+				nolphin_archive_manage_can_modify (d->format) ? "" : _(" · nur lesbar"));
+	gtk_label_set_text (GTK_LABEL (d->info_label), text);
+	g_free (text);
+	g_free (size_text);
+	g_free (total_text);
+	g_free (fmt_label);
+}
+
+static void
+am_list_ready (GObject *source, GAsyncResult *result, gpointer user_data)
+{
+	ArchiveManagerTab *d = user_data;
+	GError *error = NULL;
+	GPtrArray *entries = nolphin_archive_list_finish (result, &error);
+
+	if (entries != NULL) {
+		am_fill (d, entries);
+		g_ptr_array_unref (entries);
+		am_set_busy (d, FALSE, NULL);
+	} else {
+		gtk_list_store_clear (d->store);
+		gtk_label_set_text (GTK_LABEL (d->info_label), "");
+		am_set_busy (d, FALSE, error != NULL ? error->message : _("Der Inhalt konnte nicht gelesen werden."));
+		g_clear_error (&error);
+	}
+}
+
+static void
+archive_manager_reload (ArchiveManagerTab *d)
+{
+	if (d->archive == NULL) {
+		return;
+	}
+	am_set_busy (d, TRUE, _("Inhalt wird gelesen …"));
+	nolphin_archive_list_async (d->archive, NULL, am_list_ready, d);
+}
+
+static void
+am_op_ready (GObject *source, GAsyncResult *result, gpointer user_data)
+{
+	ArchiveManagerTab *d = user_data;
+	GError *error = NULL;
+	gboolean ok = nolphin_archive_manage_finish (result, &error);
+
+	if (ok) {
+		archive_manager_reload (d);
+		gtk_label_set_text (GTK_LABEL (d->status_label), _("Fertig."));
+	} else {
+		am_set_busy (d, FALSE, error != NULL ? error->message : _("Fehlgeschlagen."));
+		if (error != NULL) {
+			am_show_error (d, error->message);
+		}
+		g_clear_error (&error);
+		archive_manager_reload (d);
+	}
+}
+
+/* TAR-Formate: Ändern heißt Neupacken - bei großen Archiven vorher fragen. */
+static gboolean
+am_confirm_repack (ArchiveManagerTab *d)
+{
+	GFileInfo *info;
+	goffset size = 0;
+	GtkWidget *toplevel, *dialog;
+	gboolean proceed = TRUE;
+
+	if (!nolphin_archive_manage_needs_repack (d->format)) {
+		return TRUE;
+	}
+	info = g_file_query_info (d->archive, G_FILE_ATTRIBUTE_STANDARD_SIZE, G_FILE_QUERY_INFO_NONE, NULL, NULL);
+	if (info != NULL) {
+		size = g_file_info_get_size (info);
+		g_object_unref (info);
+	}
+	if (size < AM_REPACK_WARN_BYTES) {
+		return TRUE;
+	}
+
+	toplevel = gtk_widget_get_toplevel (d->tree);
+	dialog = gtk_message_dialog_new (GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+					 GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE,
+					 "%s", _("Archiv muss neu gepackt werden"));
+	gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), "%s",
+		_("Bei TAR-Archiven ist zum Ändern ein vollständiges Neupacken nötig. Das kann bei großen Archiven lange dauern und braucht temporär Platz für den ganzen Inhalt."));
+	gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+				_("_Fortfahren"), GTK_RESPONSE_OK, NULL);
+	proceed = gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK;
+	gtk_widget_destroy (dialog);
+	return proceed;
+}
+
+static GFile *
+am_choose_folder (ArchiveManagerTab *d, const gchar *title, const gchar *accept)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (d->tree);
+	GtkWidget *chooser = gtk_file_chooser_dialog_new (title,
+							  GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+							  GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+							  _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+							  accept, GTK_RESPONSE_ACCEPT, NULL);
+	GFile *result = NULL;
+
+	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
+		result = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (chooser));
+	}
+	gtk_widget_destroy (chooser);
+	return result;
+}
+
+static GList *
+am_choose_files (ArchiveManagerTab *d, const gchar *title, gboolean multiple)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (d->tree);
+	GtkWidget *chooser = gtk_file_chooser_dialog_new (title,
+							  GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+							  GTK_FILE_CHOOSER_ACTION_OPEN,
+							  _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+							  _("_Auswählen"), GTK_RESPONSE_ACCEPT, NULL);
+	GSList *chosen = NULL, *s;
+	GList *result = NULL;
+
+	gtk_file_chooser_set_select_multiple (GTK_FILE_CHOOSER (chooser), multiple);
+	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
+		chosen = gtk_file_chooser_get_files (GTK_FILE_CHOOSER (chooser));
+	}
+	gtk_widget_destroy (chooser);
+	for (s = chosen; s != NULL; s = s->next) {
+		result = g_list_append (result, s->data);
+	}
+	g_slist_free (chosen);
+	return result;
+}
+
+static void
+am_extract_clicked (GtkButton *button, gpointer user_data)
+{
+	ArchiveManagerTab *d = user_data;
+	guint nd, nf;
+	GList *paths = am_selected_paths (d, &nd, &nf);
+	GFile *dest = am_choose_folder (d, _("Entpacken nach …"), _("_Entpacken"));
+
+	if (dest != NULL) {
+		am_set_busy (d, TRUE, _("Wird entpackt …"));
+		if (paths != NULL) {
+			nolphin_archive_extract_entries_async (d->archive, paths, dest, NULL, am_op_ready, d);
+		} else {
+			nolphin_archive_extract_async (d->archive, dest, NULL, am_op_ready, d);
+		}
+		g_object_unref (dest);
+	}
+	g_list_free_full (paths, g_free);
+}
+
+/* Zielordner im Archiv: der gewählte Ordner, sonst oberste Ebene */
+static gchar *
+am_target_dir (ArchiveManagerTab *d)
+{
+	guint nd, nf;
+	GList *paths = am_selected_paths (d, &nd, &nf);
+	gchar *target = NULL;
+
+	if (nd == 1 && nf == 0 && paths != NULL) {
+		target = g_strdup (paths->data);
+	}
+	g_list_free_full (paths, g_free);
+	return target;
+}
+
+static void
+am_add_clicked (GtkButton *button, gpointer user_data)
+{
+	ArchiveManagerTab *d = user_data;
+	gboolean folder = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (button), "am-folder"));
+	GList *sources = NULL;
+
+	if (!nolphin_archive_manage_can_modify (d->format)) {
+		am_show_error (d, _("Dieses Archivformat kann nur gelesen, aber nicht geändert werden."));
+		return;
+	}
+	if (folder) {
+		GFile *f = am_choose_folder (d, _("Ordner hinzufügen"), _("_Hinzufügen"));
+
+		if (f != NULL) {
+			sources = g_list_append (NULL, f);
+		}
+	} else {
+		sources = am_choose_files (d, _("Dateien hinzufügen"), TRUE);
+	}
+	if (sources != NULL && am_confirm_repack (d)) {
+		gchar *target = am_target_dir (d);
+
+		am_set_busy (d, TRUE, _("Wird hinzugefügt …"));
+		nolphin_archive_add_files_async (d->archive, sources, target, NULL, am_op_ready, d);
+		g_free (target);
+	}
+	g_list_free_full (sources, g_object_unref);
+}
+
+static void
+am_replace_clicked (GtkButton *button, gpointer user_data)
+{
+	ArchiveManagerTab *d = user_data;
+	guint nd, nf;
+	GList *paths = am_selected_paths (d, &nd, &nf), *files;
+
+	if (!nolphin_archive_manage_can_modify (d->format)) {
+		am_show_error (d, _("Dieses Archivformat kann nur gelesen, aber nicht geändert werden."));
+	} else if (nf != 1 || nd != 0) {
+		am_show_error (d, _("Zum Ersetzen genau eine Datei im Archiv auswählen."));
+	} else {
+		files = am_choose_files (d, _("Ersetzen durch …"), FALSE);
+		if (files != NULL && am_confirm_repack (d)) {
+			am_set_busy (d, TRUE, _("Wird ersetzt …"));
+			nolphin_archive_replace_entry_async (d->archive, paths->data, files->data, NULL, am_op_ready, d);
+		}
+		g_list_free_full (files, g_object_unref);
+	}
+	g_list_free_full (paths, g_free);
+}
+
+static void
+am_remove_clicked (GtkButton *button, gpointer user_data)
+{
+	ArchiveManagerTab *d = user_data;
+	guint nd, nf;
+	GList *paths = am_selected_paths (d, &nd, &nf);
+
+	if (!nolphin_archive_manage_can_modify (d->format)) {
+		am_show_error (d, _("Dieses Archivformat kann nur gelesen, aber nicht geändert werden."));
+	} else if (paths == NULL) {
+		am_show_error (d, _("Keine Einträge ausgewählt."));
+	} else {
+		GtkWidget *toplevel = gtk_widget_get_toplevel (d->tree);
+		GtkWidget *dialog = gtk_message_dialog_new (GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+							    GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
+							    GTK_BUTTONS_NONE, "%s", _("Einträge aus dem Archiv entfernen?"));
+		gboolean go;
+
+		gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog),
+			ngettext ("%u Datei und %u Ordner werden aus dem Archiv gelöscht. Das lässt sich nicht rückgängig machen.",
+				  "%u Dateien und %u Ordner werden aus dem Archiv gelöscht. Das lässt sich nicht rückgängig machen.", nf),
+			nf, nd);
+		gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+					_("_Entfernen"), GTK_RESPONSE_OK, NULL);
+		go = gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK;
+		gtk_widget_destroy (dialog);
+
+		if (go && am_confirm_repack (d)) {
+			am_set_busy (d, TRUE, _("Wird entfernt …"));
+			nolphin_archive_remove_entries_async (d->archive, paths, NULL, am_op_ready, d);
+		}
+	}
+	g_list_free_full (paths, g_free);
+}
+
+static void
+am_test_ready (GObject *source, GAsyncResult *result, gpointer user_data)
+{
+	ArchiveManagerTab *d = user_data;
+	GError *error = NULL;
+
+	if (nolphin_archive_test_finish (result, &error)) {
+		am_set_busy (d, FALSE, _("Archiv in Ordnung: keine Fehler gefunden."));
+	} else {
+		am_set_busy (d, FALSE, error != NULL ? error->message : _("Der Test ist fehlgeschlagen."));
+		g_clear_error (&error);
+	}
+}
+
+static void
+am_test_clicked (GtkButton *button, gpointer user_data)
+{
+	ArchiveManagerTab *d = user_data;
+
+	am_set_busy (d, TRUE, _("Archiv wird geprüft …"));
+	nolphin_archive_test_async (d->archive, NULL, am_test_ready, d);
+}
+
+static void
+am_refresh_clicked (GtkButton *button, gpointer user_data)
+{
+	archive_manager_reload (user_data);
+}
+
+static void
+am_free (gpointer data)
+{
+	ArchiveManagerTab *d = data;
+
+	g_clear_object (&d->archive);
+	g_free (d);
+}
+
+static GtkWidget *
+am_button (ArchiveManagerTab *d, GtkWidget *box, guint index, const gchar *label, const gchar *icon,
+	   GCallback cb, gboolean folder)
+{
+	GtkWidget *b = gtk_button_new_with_label (label);
+
+	panel_decorate_button (b, icon, FALSE);
+	g_object_set_data (G_OBJECT (b), "am-folder", GINT_TO_POINTER (folder));
+	g_signal_connect (b, "clicked", cb, d);
+	gtk_box_pack_start (GTK_BOX (box), b, FALSE, FALSE, 0);
+	d->buttons[index] = b;
+	return b;
+}
+
+static GtkWidget *
+build_archive_manager_tab (NolphinWindow *window)
+{
+	ArchiveManagerTab *d = g_new0 (ArchiveManagerTab, 1);
+	GtkWidget *outer, *scroller, *tree_scroller, *flow, *status_row;
+	GtkCellRenderer *renderer;
+	GtkTreeViewColumn *column;
+
+	d->window = window;
+	d->store = gtk_list_store_new (AM_N_COLS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN);
+
+	outer = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
+	gtk_container_set_border_width (GTK_CONTAINER (outer), 12);
+	gtk_box_pack_start (GTK_BOX (outer), build_back_to_preview_button (window), FALSE, FALSE, 0);
+
+	d->title_label = gtk_label_new ("");
+	gtk_widget_set_halign (d->title_label, GTK_ALIGN_START);
+	gtk_label_set_ellipsize (GTK_LABEL (d->title_label), PANGO_ELLIPSIZE_MIDDLE);
+	gtk_style_context_add_class (gtk_widget_get_style_context (d->title_label), "heading");
+	gtk_box_pack_start (GTK_BOX (outer), d->title_label, FALSE, FALSE, 0);
+
+	d->info_label = gtk_label_new ("");
+	gtk_widget_set_halign (d->info_label, GTK_ALIGN_START);
+	gtk_label_set_line_wrap (GTK_LABEL (d->info_label), TRUE);
+	gtk_label_set_selectable (GTK_LABEL (d->info_label), TRUE);
+	panel_dim_label (d->info_label);
+	gtk_box_pack_start (GTK_BOX (outer), d->info_label, FALSE, FALSE, 0);
+
+	flow = gtk_flow_box_new ();
+	gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (flow), GTK_SELECTION_NONE);
+	gtk_box_pack_start (GTK_BOX (outer), flow, FALSE, FALSE, 0);
+	{
+		GtkWidget *buttons_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
+		GtkWidget *buttons_box2 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
+
+		am_button (d, buttons_box, 0, _("Entpacken …"), "document-save-symbolic", G_CALLBACK (am_extract_clicked), FALSE);
+		am_button (d, buttons_box, 1, _("Dateien hinzufügen …"), "list-add-symbolic", G_CALLBACK (am_add_clicked), FALSE);
+		am_button (d, buttons_box, 2, _("Ordner hinzufügen …"), "folder-new-symbolic", G_CALLBACK (am_add_clicked), TRUE);
+		am_button (d, buttons_box2, 3, _("Ersetzen …"), "view-refresh-symbolic", G_CALLBACK (am_replace_clicked), FALSE);
+		am_button (d, buttons_box2, 4, _("Entfernen"), "list-remove-symbolic", G_CALLBACK (am_remove_clicked), FALSE);
+		am_button (d, buttons_box2, 5, _("Prüfen"), "emblem-ok-symbolic", G_CALLBACK (am_test_clicked), FALSE);
+		am_button (d, buttons_box2, 6, _("Neu laden"), "view-refresh-symbolic", G_CALLBACK (am_refresh_clicked), FALSE);
+		gtk_container_add (GTK_CONTAINER (flow), buttons_box);
+		gtk_container_add (GTK_CONTAINER (flow), buttons_box2);
+	}
+
+	d->tree = gtk_tree_view_new_with_model (GTK_TREE_MODEL (d->store));
+	gtk_tree_selection_set_mode (gtk_tree_view_get_selection (GTK_TREE_VIEW (d->tree)), GTK_SELECTION_MULTIPLE);
+	renderer = gtk_cell_renderer_text_new ();
+	g_object_set (renderer, "ellipsize", PANGO_ELLIPSIZE_MIDDLE, NULL);
+	column = gtk_tree_view_column_new_with_attributes (_("Name"), renderer, "text", AM_COL_NAME, NULL);
+	gtk_tree_view_column_set_expand (column, TRUE);
+	gtk_tree_view_column_set_resizable (column, TRUE);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (d->tree), column);
+	renderer = gtk_cell_renderer_text_new ();
+	g_object_set (renderer, "xalign", 1.0f, NULL);
+	column = gtk_tree_view_column_new_with_attributes (_("Größe"), renderer, "text", AM_COL_SIZE, NULL);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (d->tree), column);
+	renderer = gtk_cell_renderer_text_new ();
+	column = gtk_tree_view_column_new_with_attributes (_("Geändert"), renderer, "text", AM_COL_DATE, NULL);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (d->tree), column);
+
+	tree_scroller = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (tree_scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_widget_set_size_request (tree_scroller, -1, 260);
+	gtk_container_add (GTK_CONTAINER (tree_scroller), d->tree);
+	gtk_box_pack_start (GTK_BOX (outer), tree_scroller, TRUE, TRUE, 0);
+
+	status_row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+	d->spinner = gtk_spinner_new ();
+	gtk_box_pack_start (GTK_BOX (status_row), d->spinner, FALSE, FALSE, 0);
+	d->status_label = gtk_label_new ("");
+	gtk_widget_set_halign (d->status_label, GTK_ALIGN_START);
+	gtk_label_set_line_wrap (GTK_LABEL (d->status_label), TRUE);
+	gtk_label_set_selectable (GTK_LABEL (d->status_label), TRUE);
+	gtk_box_pack_start (GTK_BOX (status_row), d->status_label, TRUE, TRUE, 0);
+	gtk_box_pack_start (GTK_BOX (outer), status_row, FALSE, FALSE, 0);
+
+	scroller = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_container_add (GTK_CONTAINER (scroller), outer);
+	g_object_set_data_full (G_OBJECT (scroller), "archive-manager-data", d, am_free);
+
+	return scroller;
+}
+
 /* §36.1: Die DEB-Paket-Erstellung ist Teil des Archiv-Panels, kein
  * eigenes Panel - beide Formulare (Komprimieren, .deb-Paket erstellen)
  * teilen sich deshalb denselben aeusseren "archive"-Platz, statt zwei
@@ -2014,6 +2536,7 @@ build_archive_panel (NolphinWindow *window, GtkWidget **out_inner_stack)
 
 	gtk_stack_add_named (GTK_STACK (inner_stack), build_archive_tab (window), "compress");
 	gtk_stack_add_named (GTK_STACK (inner_stack), build_deb_builder_tab (window), "deb");
+	gtk_stack_add_named (GTK_STACK (inner_stack), build_archive_manager_tab (window), "manage");
 	gtk_stack_set_visible_child_name (GTK_STACK (inner_stack), "compress");
 
 	if (out_inner_stack != NULL) {
@@ -2021,6 +2544,347 @@ build_archive_panel (NolphinWindow *window, GtkWidget **out_inner_stack)
 	}
 
 	return inner_stack;
+}
+
+/* --- Arbeitsbereiche (§41) -----------------------------------------------
+ * Benannte Schnappschüsse der Sitzung (Reiter, Teilung, Fenstergröße,
+ * Panels), abgelegt unter ~/.config/nolphin/workspaces/. Speichern, Laden,
+ * Duplizieren und Löschen laufen in dieser Panel-Seite, ohne eigenes Fenster. */
+
+enum { WS_COL_NAME, WS_COL_PATH, WS_COL_INFO, WS_N_COLS };
+
+typedef struct {
+	NolphinWindow *window;
+	GtkWidget *name_entry;
+	GtkWidget *tree;
+	GtkListStore *store;
+	GtkWidget *status_label;
+} WorkspacesTab;
+
+static gchar *
+ws_directory (void)
+{
+	gchar *dir = g_build_filename (g_get_user_config_dir (), "nolphin", "workspaces", NULL);
+
+	g_mkdir_with_parents (dir, 0700);
+	return dir;
+}
+
+static void
+ws_set_status (WorkspacesTab *d, const gchar *text)
+{
+	gtk_label_set_text (GTK_LABEL (d->status_label), text != NULL ? text : "");
+}
+
+static void
+ws_reload (WorkspacesTab *d)
+{
+	gchar *dir = ws_directory ();
+	GDir *gd = g_dir_open (dir, 0, NULL);
+	const gchar *file;
+	GList *names = NULL, *l;
+
+	gtk_list_store_clear (d->store);
+	if (gd != NULL) {
+		while ((file = g_dir_read_name (gd)) != NULL) {
+			if (g_str_has_suffix (file, ".ini")) {
+				names = g_list_prepend (names, g_strdup (file));
+			}
+		}
+		g_dir_close (gd);
+	}
+	names = g_list_sort (names, (GCompareFunc) g_utf8_collate);
+
+	for (l = names; l != NULL; l = l->next) {
+		gchar *path = g_build_filename (dir, l->data, NULL);
+		GKeyFile *kf = g_key_file_new ();
+
+		if (g_key_file_load_from_file (kf, path, G_KEY_FILE_NONE, NULL)) {
+			gchar *name = g_key_file_get_string (kf, "Workspace", "Name", NULL);
+			gchar **left = g_key_file_get_string_list (kf, "Workspace", "tabs-left", NULL, NULL);
+			gchar **right = g_key_file_get_string_list (kf, "Workspace", "tabs-right", NULL, NULL);
+			guint nl = left != NULL ? g_strv_length (left) : 0, nr = right != NULL ? g_strv_length (right) : 0;
+			gchar *info = (nr > 0) ? g_strdup_printf (_("%u + %u Reiter, geteilt"), nl, nr)
+					       : g_strdup_printf (ngettext ("%u Reiter", "%u Reiter", nl), nl);
+			GtkTreeIter iter;
+
+			gtk_list_store_append (d->store, &iter);
+			gtk_list_store_set (d->store, &iter, WS_COL_NAME, name != NULL ? name : (const gchar *) l->data,
+					    WS_COL_PATH, path, WS_COL_INFO, info, -1);
+			g_free (name);
+			g_free (info);
+			g_strfreev (left);
+			g_strfreev (right);
+		}
+		g_key_file_free (kf);
+		g_free (path);
+	}
+	g_list_free_full (names, g_free);
+	g_free (dir);
+}
+
+static gchar *
+ws_selected_path (WorkspacesTab *d, gchar **out_name)
+{
+	GtkTreeIter iter;
+	GtkTreeModel *model;
+	gchar *path = NULL;
+
+	if (gtk_tree_selection_get_selected (gtk_tree_view_get_selection (GTK_TREE_VIEW (d->tree)), &model, &iter)) {
+		gtk_tree_model_get (model, &iter, WS_COL_PATH, &path, WS_COL_NAME, out_name, -1);
+	}
+	return path;
+}
+
+/* Eindeutiger Dateiname für @name im Arbeitsbereichs-Ordner */
+static gchar *
+ws_new_path (const gchar *name)
+{
+	gchar *dir = ws_directory (), *safe = g_strdup (name), *path = NULL;
+	guint i;
+
+	for (i = 0; safe[i] != '\0'; i++) {
+		if (safe[i] == '/' || safe[i] == '\\' || g_ascii_iscntrl (safe[i])) {
+			safe[i] = '_';
+		}
+	}
+	for (i = 0; i < 1000; i++) {
+		gchar *file = i == 0 ? g_strdup_printf ("%s.ini", safe) : g_strdup_printf ("%s-%u.ini", safe, i);
+
+		g_free (path);
+		path = g_build_filename (dir, file, NULL);
+		g_free (file);
+		if (!g_file_test (path, G_FILE_TEST_EXISTS)) {
+			break;
+		}
+	}
+	g_free (safe);
+	g_free (dir);
+	return path;
+}
+
+static void
+ws_write (WorkspacesTab *d, GKeyFile *kf, const gchar *name)
+{
+	gchar *path = NULL, *data;
+	GtkTreeIter iter;
+	GError *error = NULL;
+	gboolean found = FALSE;
+	gboolean valid = gtk_tree_model_get_iter_first (GTK_TREE_MODEL (d->store), &iter);
+
+	/* Gleicher Name überschreibt den vorhandenen Arbeitsbereich */
+	while (valid) {
+		gchar *n = NULL, *p = NULL;
+
+		gtk_tree_model_get (GTK_TREE_MODEL (d->store), &iter, WS_COL_NAME, &n, WS_COL_PATH, &p, -1);
+		if (g_strcmp0 (n, name) == 0) {
+			path = p;
+			found = TRUE;
+		} else {
+			g_free (p);
+		}
+		g_free (n);
+		if (found) {
+			break;
+		}
+		valid = gtk_tree_model_iter_next (GTK_TREE_MODEL (d->store), &iter);
+	}
+	if (path == NULL) {
+		path = ws_new_path (name);
+	}
+
+	g_key_file_set_string (kf, "Workspace", "Name", name);
+	data = g_key_file_to_data (kf, NULL, NULL);
+	if (g_file_set_contents (path, data, -1, &error)) {
+		ws_set_status (d, found ? _("Arbeitsbereich aktualisiert.") : _("Arbeitsbereich gespeichert."));
+	} else {
+		ws_set_status (d, error->message);
+		g_clear_error (&error);
+	}
+	g_free (data);
+	g_free (path);
+	ws_reload (d);
+}
+
+static void
+ws_save_clicked (GtkButton *button, gpointer user_data)
+{
+	WorkspacesTab *d = user_data;
+	gchar *name = g_strstrip (g_strdup (gtk_entry_get_text (GTK_ENTRY (d->name_entry))));
+	GKeyFile *kf;
+
+	if (name[0] == '\0') {
+		ws_set_status (d, _("Bitte einen Namen eingeben."));
+		g_free (name);
+		return;
+	}
+	kf = g_key_file_new ();
+	nolphin_window_workspace_capture (d->window, kf);
+	ws_write (d, kf, name);
+	g_key_file_free (kf);
+	g_free (name);
+}
+
+static void
+ws_load_clicked (GtkButton *button, gpointer user_data)
+{
+	WorkspacesTab *d = user_data;
+	gchar *name = NULL, *path = ws_selected_path (d, &name);
+	GKeyFile *kf = g_key_file_new ();
+
+	if (path == NULL) {
+		ws_set_status (d, _("Bitte einen Arbeitsbereich in der Liste auswählen."));
+	} else if (!g_key_file_load_from_file (kf, path, G_KEY_FILE_NONE, NULL)) {
+		ws_set_status (d, _("Der Arbeitsbereich konnte nicht gelesen werden."));
+	} else {
+		gchar *text;
+
+		nolphin_window_workspace_apply (d->window, kf);
+		text = g_strdup_printf (_("Arbeitsbereich »%s« geladen."), name);
+		ws_set_status (d, text);
+		g_free (text);
+	}
+	g_key_file_free (kf);
+	g_free (name);
+	g_free (path);
+}
+
+static void
+ws_duplicate_clicked (GtkButton *button, gpointer user_data)
+{
+	WorkspacesTab *d = user_data;
+	gchar *name = NULL, *path = ws_selected_path (d, &name);
+	GKeyFile *kf = g_key_file_new ();
+
+	if (path == NULL) {
+		ws_set_status (d, _("Bitte einen Arbeitsbereich in der Liste auswählen."));
+	} else if (g_key_file_load_from_file (kf, path, G_KEY_FILE_NONE, NULL)) {
+		gchar *copy_name = g_strdup_printf (_("%s (Kopie)"), name);
+
+		ws_write (d, kf, copy_name);
+		g_free (copy_name);
+	}
+	g_key_file_free (kf);
+	g_free (name);
+	g_free (path);
+}
+
+static void
+ws_delete_clicked (GtkButton *button, gpointer user_data)
+{
+	WorkspacesTab *d = user_data;
+	gchar *name = NULL, *path = ws_selected_path (d, &name);
+
+	if (path == NULL) {
+		ws_set_status (d, _("Bitte einen Arbeitsbereich in der Liste auswählen."));
+	} else {
+		GtkWidget *toplevel = gtk_widget_get_toplevel (d->tree);
+		GtkWidget *dialog = gtk_message_dialog_new (GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+							    GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
+							    GTK_BUTTONS_NONE, _("Arbeitsbereich »%s« löschen?"), name);
+
+		gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+					_("_Löschen"), GTK_RESPONSE_OK, NULL);
+		if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK) {
+			if (g_remove (path) == 0) {
+				ws_set_status (d, _("Arbeitsbereich gelöscht."));
+			} else {
+				ws_set_status (d, _("Der Arbeitsbereich konnte nicht gelöscht werden."));
+			}
+			ws_reload (d);
+		}
+		gtk_widget_destroy (dialog);
+	}
+	g_free (name);
+	g_free (path);
+}
+
+static void
+ws_row_activated (GtkTreeView *tree, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data)
+{
+	ws_load_clicked (NULL, user_data);
+}
+
+static GtkWidget *
+build_workspaces_tab (NolphinWindow *window)
+{
+	WorkspacesTab *d = g_new0 (WorkspacesTab, 1);
+	GtkWidget *outer, *row, *label, *scroller, *tree_scroller, *b;
+	GtkCellRenderer *renderer;
+	GtkTreeViewColumn *column;
+
+	d->window = window;
+	d->store = gtk_list_store_new (WS_N_COLS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+
+	outer = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
+	gtk_container_set_border_width (GTK_CONTAINER (outer), 12);
+	gtk_box_pack_start (GTK_BOX (outer), build_back_to_preview_button (window), FALSE, FALSE, 0);
+
+	label = gtk_label_new (_("Arbeitsbereiche"));
+	gtk_widget_set_halign (label, GTK_ALIGN_START);
+	gtk_style_context_add_class (gtk_widget_get_style_context (label), "heading");
+	gtk_box_pack_start (GTK_BOX (outer), label, FALSE, FALSE, 0);
+
+	label = gtk_label_new (_("Ein Arbeitsbereich merkt sich Reiter, Teilung, Fenstergröße und die Panels."));
+	gtk_widget_set_halign (label, GTK_ALIGN_START);
+	gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
+	panel_dim_label (label);
+	gtk_box_pack_start (GTK_BOX (outer), label, FALSE, FALSE, 0);
+
+	row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+	d->name_entry = gtk_entry_new ();
+	gtk_entry_set_placeholder_text (GTK_ENTRY (d->name_entry), _("Name des Arbeitsbereichs"));
+	gtk_box_pack_start (GTK_BOX (row), d->name_entry, TRUE, TRUE, 0);
+	b = gtk_button_new_with_label (_("Speichern"));
+	panel_decorate_button (b, "document-save-symbolic", TRUE);
+	g_signal_connect (b, "clicked", G_CALLBACK (ws_save_clicked), d);
+	g_signal_connect (d->name_entry, "activate", G_CALLBACK (ws_save_clicked), d);
+	gtk_box_pack_start (GTK_BOX (row), b, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (outer), row, FALSE, FALSE, 0);
+
+	d->tree = gtk_tree_view_new_with_model (GTK_TREE_MODEL (d->store));
+	renderer = gtk_cell_renderer_text_new ();
+	column = gtk_tree_view_column_new_with_attributes (_("Name"), renderer, "text", WS_COL_NAME, NULL);
+	gtk_tree_view_column_set_expand (column, TRUE);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (d->tree), column);
+	renderer = gtk_cell_renderer_text_new ();
+	column = gtk_tree_view_column_new_with_attributes (_("Inhalt"), renderer, "text", WS_COL_INFO, NULL);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (d->tree), column);
+	g_signal_connect (d->tree, "row-activated", G_CALLBACK (ws_row_activated), d);
+
+	tree_scroller = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (tree_scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_widget_set_size_request (tree_scroller, -1, 200);
+	gtk_container_add (GTK_CONTAINER (tree_scroller), d->tree);
+	gtk_box_pack_start (GTK_BOX (outer), tree_scroller, TRUE, TRUE, 0);
+
+	row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+	b = gtk_button_new_with_label (_("Laden"));
+	panel_decorate_button (b, "document-open-symbolic", FALSE);
+	g_signal_connect (b, "clicked", G_CALLBACK (ws_load_clicked), d);
+	gtk_box_pack_start (GTK_BOX (row), b, FALSE, FALSE, 0);
+	b = gtk_button_new_with_label (_("Duplizieren"));
+	panel_decorate_button (b, "edit-copy-symbolic", FALSE);
+	g_signal_connect (b, "clicked", G_CALLBACK (ws_duplicate_clicked), d);
+	gtk_box_pack_start (GTK_BOX (row), b, FALSE, FALSE, 0);
+	b = gtk_button_new_with_label (_("Löschen"));
+	panel_decorate_button (b, "edit-delete-symbolic", FALSE);
+	g_signal_connect (b, "clicked", G_CALLBACK (ws_delete_clicked), d);
+	gtk_box_pack_start (GTK_BOX (row), b, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (outer), row, FALSE, FALSE, 0);
+
+	d->status_label = gtk_label_new ("");
+	gtk_widget_set_halign (d->status_label, GTK_ALIGN_START);
+	gtk_label_set_line_wrap (GTK_LABEL (d->status_label), TRUE);
+	gtk_box_pack_start (GTK_BOX (outer), d->status_label, FALSE, FALSE, 0);
+
+	scroller = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_container_add (GTK_CONTAINER (scroller), outer);
+	g_object_set_data_full (G_OBJECT (scroller), "workspaces-data", d, g_free);
+	ws_reload (d);
+
+	return scroller;
 }
 
 /* Das Panel ist ein GtkStack ohne Reiterleiste, keine Dauer-Werkzeugleiste
@@ -3994,6 +4858,7 @@ nolphin_workspace_panel_new (NolphinWindow *window, GtkWidget *preview_widget, G
 	add_stack_page (GTK_STACK (stack), build_search_tab (window), "search");
 	add_stack_page (GTK_STACK (stack), build_batch_rename_tab (window), "rename");
 	add_stack_page (GTK_STACK (stack), build_git_tab (window), "git");
+	add_stack_page (GTK_STACK (stack), build_workspaces_tab (window), "workspaces");
 
 	/* Terminal-Widget selbst kommt bereits sichtbar aus
 	 * nolphin_terminal_new() (wie im frueheren unteren Bereich auch) -
@@ -4071,6 +4936,60 @@ nolphin_workspace_panel_show_archive (GtkWidget *workspace_panel, NolphinWindow 
 	}
 
 	workspace_panel_show_page (workspace_panel, window, "archive");
+}
+
+/* Zeigt die Archiv-Verwaltung für @archive (Inhalt, Hinzufügen, Entfernen, …). */
+void
+nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_panel, NolphinWindow *window, GFile *archive)
+{
+	GtkWidget *inner, *page;
+	ArchiveManagerTab *d;
+	gchar *name;
+
+	g_return_if_fail (GTK_IS_STACK (workspace_panel));
+	g_return_if_fail (G_IS_FILE (archive));
+
+	inner = g_object_get_data (G_OBJECT (workspace_panel), "archive-inner-stack");
+	if (inner == NULL) {
+		return;
+	}
+	page = gtk_stack_get_child_by_name (GTK_STACK (inner), "manage");
+	d = page != NULL ? g_object_get_data (G_OBJECT (page), "archive-manager-data") : NULL;
+	if (d == NULL) {
+		return;
+	}
+
+	g_clear_object (&d->archive);
+	d->archive = g_object_ref (archive);
+	d->format = nolphin_archive_detect_format (archive);
+	name = g_file_get_basename (archive);
+	gtk_label_set_text (GTK_LABEL (d->title_label), name);
+	g_free (name);
+	gtk_list_store_clear (d->store);
+
+	gtk_stack_set_visible_child_name (GTK_STACK (inner), "manage");
+	workspace_panel_show_page (workspace_panel, window, "archive");
+	archive_manager_reload (d);
+}
+
+/* Zeigt die Arbeitsbereiche-Seite; @focus_name: Namensfeld (Speichern) statt Liste fokussieren. */
+void
+nolphin_workspace_panel_show_workspaces (GtkWidget *workspace_panel, NolphinWindow *window, gboolean focus_name)
+{
+	GtkWidget *page;
+	WorkspacesTab *d;
+
+	g_return_if_fail (GTK_IS_STACK (workspace_panel));
+
+	page = gtk_stack_get_child_by_name (GTK_STACK (workspace_panel), "workspaces");
+	d = page != NULL ? g_object_get_data (G_OBJECT (page), "workspaces-data") : NULL;
+	if (d == NULL) {
+		return;
+	}
+	ws_reload (d);
+	ws_set_status (d, NULL);
+	workspace_panel_show_page (workspace_panel, window, "workspaces");
+	gtk_widget_grab_focus (focus_name ? d->name_entry : d->tree);
 }
 
 void

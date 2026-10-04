@@ -55,6 +55,11 @@
 			<menuitem name="Cut" action="Cut"/>
 			<menuitem name="Copy" action="Copy"/>
 			<menuitem name="Paste" action="Paste"/>
+			<menuitem name="PasteClipboardAsFile" action="PasteClipboardAsFile"/>
+			<menu action="CopyAsMenu">
+				<menuitem name="CopyPath" action="CopyPath"/>
+				<menuitem name="CopyFileName" action="CopyFileName"/>
+			</menu>
 		</placeholder>
 		<placeholder name="Undostack Actions">
 			<menuitem name="Undo" action="Undo"/>
@@ -64,6 +69,7 @@
 		<menuitem name="Select All" action="Select All"/>
 		<menuitem name="Select Pattern" action="Select Pattern"/>
 		<menuitem name="Select Type" action="Select Type"/>
+		<menuitem name="SelectCriteria" action="SelectCriteria"/>
 		<menuitem name="Invert Selection" action="Invert Selection"/>
 		<separator/>
 		<menuitem name="SaveSelection" action="SaveSelection"/>
@@ -76,6 +82,7 @@
             <menuitem name="Unpin File" action="Unpin File"/>
 			<menuitem name="Duplicate" action="Duplicate"/>
 			<menuitem name="Create Link" action="Create Link"/>
+			<menuitem name="CreateHardlink" action="CreateHardlink"/>
 			<menuitem name="Rename" action="Rename"/>
 			<menuitem name="Massenumbenennung" action="Massenumbenennung"/>
 			<menu action="CopyToMenu">
@@ -205,6 +212,7 @@
         <menuitem name="Pin File" action="Pin File"/>
         <menuitem name="Unpin File" action="Unpin File"/>
 		<menuitem name="Create Link" action="Create Link"/>
+		<menuitem name="CreateHardlink" action="CreateHardlink"/>
 		<menuitem name="Rename" action="Rename"/>
 		<menu name="CopyToMenu" action="CopyToMenu">
 			<menuitem name="Copy to next pane" action="Copy to next pane"/>
@@ -234,7 +242,9 @@
     <menuitem name="OpenContainingFolder" action="OpenContainingFolder"/>
 	<separator name="Archive separator"/>
 	<menuitem name="Compress" action="Compress"/>
+	<menuitem name="ArchiveManage" action="ArchiveManage"/>
 	<menuitem name="ExtractHere" action="ExtractHere"/>
+	<menuitem name="ExtractTo" action="ExtractTo"/>
 	<menuitem name="TestArchive" action="TestArchive"/>
 	<separator name="Checksum separator"/>
 	<menuitem name="ComputeChecksum" action="ComputeChecksum"/>

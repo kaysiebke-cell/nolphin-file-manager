@@ -300,3 +300,100 @@ nolphin_query_set_recurse (NolphinQuery *query, gboolean recurse)
     query->details->recurse = recurse;
 }
 
+
+
+/* Gespeicherte Suchen: einfache GKeyFile-Datei (Gruppe "Nolphin Saved Search"). */
+#define SAVED_SEARCH_GROUP "Nolphin Saved Search"
+
+gboolean
+nolphin_query_save (NolphinQuery *query, char *file)
+{
+	GKeyFile *kf;
+	GList *l;
+	GPtrArray *mimes;
+	gboolean ok;
+	GError *error = NULL;
+	char *tmp;
+
+	g_return_val_if_fail (NOLPHIN_IS_QUERY (query) && file != NULL, FALSE);
+
+	kf = g_key_file_new ();
+	g_key_file_set_string (kf, SAVED_SEARCH_GROUP, "FilePattern", query->details->file_pattern ? query->details->file_pattern : "");
+	g_key_file_set_string (kf, SAVED_SEARCH_GROUP, "ContentPattern", query->details->content_pattern ? query->details->content_pattern : "");
+	g_key_file_set_string (kf, SAVED_SEARCH_GROUP, "Location", query->details->location_uri ? query->details->location_uri : "");
+	g_key_file_set_boolean (kf, SAVED_SEARCH_GROUP, "ShowHidden", query->details->show_hidden);
+	g_key_file_set_boolean (kf, SAVED_SEARCH_GROUP, "FileCaseSensitive", query->details->file_case_sensitive);
+	g_key_file_set_boolean (kf, SAVED_SEARCH_GROUP, "FileUseRegex", query->details->file_use_regex);
+	g_key_file_set_boolean (kf, SAVED_SEARCH_GROUP, "ContentCaseSensitive", query->details->content_case_sensitive);
+	g_key_file_set_boolean (kf, SAVED_SEARCH_GROUP, "ContentUseRegex", query->details->content_use_regex);
+	g_key_file_set_boolean (kf, SAVED_SEARCH_GROUP, "Recurse", query->details->recurse);
+
+	mimes = g_ptr_array_new ();
+	for (l = query->details->mime_types; l != NULL; l = l->next) {
+		g_ptr_array_add (mimes, l->data);
+	}
+	g_key_file_set_string_list (kf, SAVED_SEARCH_GROUP, "MimeTypes", (const gchar * const *) mimes->pdata, mimes->len);
+	g_ptr_array_free (mimes, TRUE);
+
+	tmp = g_key_file_to_data (kf, NULL, NULL);
+	ok = g_file_set_contents (file, tmp, -1, &error);
+	if (!ok) {
+		g_warning ("Konnte gespeicherte Suche nicht schreiben: %s", error->message);
+		g_error_free (error);
+	}
+	g_free (tmp);
+	g_key_file_free (kf);
+
+	return ok;
+}
+
+NolphinQuery *
+nolphin_query_load (char *file)
+{
+	GKeyFile *kf;
+	NolphinQuery *query;
+	char *str;
+	char **mimes;
+	gsize n, i;
+
+	g_return_val_if_fail (file != NULL, NULL);
+
+	kf = g_key_file_new ();
+	if (!g_key_file_load_from_file (kf, file, G_KEY_FILE_NONE, NULL) ||
+	    !g_key_file_has_group (kf, SAVED_SEARCH_GROUP)) {
+		g_key_file_free (kf);
+		return NULL;
+	}
+
+	query = nolphin_query_new ();
+
+	str = g_key_file_get_string (kf, SAVED_SEARCH_GROUP, "FilePattern", NULL);
+	nolphin_query_set_file_pattern (query, str);
+	g_free (str);
+	str = g_key_file_get_string (kf, SAVED_SEARCH_GROUP, "ContentPattern", NULL);
+	if (str != NULL && str[0] != '\0') {
+		nolphin_query_set_content_pattern (query, str);
+	}
+	g_free (str);
+	str = g_key_file_get_string (kf, SAVED_SEARCH_GROUP, "Location", NULL);
+	if (str != NULL && str[0] != '\0') {
+		nolphin_query_set_location (query, str);
+	}
+	g_free (str);
+
+	nolphin_query_set_show_hidden (query, g_key_file_get_boolean (kf, SAVED_SEARCH_GROUP, "ShowHidden", NULL));
+	nolphin_query_set_file_case_sensitive (query, g_key_file_get_boolean (kf, SAVED_SEARCH_GROUP, "FileCaseSensitive", NULL));
+	nolphin_query_set_use_file_regex (query, g_key_file_get_boolean (kf, SAVED_SEARCH_GROUP, "FileUseRegex", NULL));
+	nolphin_query_set_content_case_sensitive (query, g_key_file_get_boolean (kf, SAVED_SEARCH_GROUP, "ContentCaseSensitive", NULL));
+	nolphin_query_set_use_content_regex (query, g_key_file_get_boolean (kf, SAVED_SEARCH_GROUP, "ContentUseRegex", NULL));
+	nolphin_query_set_recurse (query, g_key_file_get_boolean (kf, SAVED_SEARCH_GROUP, "Recurse", NULL));
+
+	mimes = g_key_file_get_string_list (kf, SAVED_SEARCH_GROUP, "MimeTypes", &n, NULL);
+	for (i = 0; mimes != NULL && i < n; i++) {
+		nolphin_query_add_mime_type (query, mimes[i]);
+	}
+	g_strfreev (mimes);
+	g_key_file_free (kf);
+
+	return query;
+}

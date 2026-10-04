@@ -287,6 +287,102 @@ nolphin_window_close_all_tabs (NolphinWindow *window)
 	g_list_free (slots_snapshot);
 }
 
+/* Beschriftung der Sperren-Aktion an den Zustand des aktiven Reiters anpassen. */
+void
+nolphin_window_sync_tab_actions (NolphinWindow *window)
+{
+	NolphinWindowSlot *slot;
+	GtkAction *action;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	if (window->details->main_action_group == NULL) {
+		return;
+	}
+
+	slot = nolphin_window_get_active_slot (window);
+	action = gtk_action_group_get_action (window->details->main_action_group, "Lock Tab");
+	if (action != NULL) {
+		g_object_set (action, "label",
+			      (slot != NULL && slot->locked) ? _("Reiter ent_sperren") : _("Reiter _sperren"),
+			      NULL);
+	}
+
+	/* Bereichsaktionen: Duplizieren bis vier Bereiche, Maximieren/Schließen nur bei mehreren */
+	action = gtk_action_group_get_action (window->details->main_action_group, "Duplicate Pane");
+	if (action != NULL) {
+		gtk_action_set_sensitive (action, g_list_length (window->details->panes) < 4);
+	}
+	action = gtk_action_group_get_action (window->details->main_action_group, "Maximize Pane");
+	if (action != NULL) {
+		gtk_action_set_sensitive (action, g_list_length (window->details->panes) > 1);
+		g_object_set (action, "label",
+			      GPOINTER_TO_INT (g_object_get_data (G_OBJECT (window), "nolphin-pane-maximized"))
+			      ? _("Bereich _wiederherstellen") : _("Bereich _maximieren"),
+			      NULL);
+	}
+	action = gtk_action_group_get_action (window->details->main_action_group, "Close Pane");
+	if (action != NULL) {
+		gtk_action_set_sensitive (action, g_list_length (window->details->panes) > 1);
+	}
+}
+
+void
+nolphin_window_toggle_lock_tab (NolphinWindow *window)
+{
+	NolphinWindowSlot *slot;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	slot = nolphin_window_get_active_slot (window);
+	if (slot == NULL) {
+		return;
+	}
+
+	slot->locked = !slot->locked;
+	nolphin_notebook_sync_tab_label (NOLPHIN_NOTEBOOK (slot->pane->notebook), slot);
+	nolphin_window_sync_tab_actions (window);
+}
+
+void
+nolphin_window_rename_tab (NolphinWindow *window)
+{
+	NolphinWindowSlot *slot;
+	GtkWidget *dialog, *entry;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	slot = nolphin_window_get_active_slot (window);
+	if (slot == NULL) {
+		return;
+	}
+
+	dialog = gtk_dialog_new_with_buttons (_("Reiter umbenennen"), GTK_WINDOW (window),
+					      GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+					      _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+					      _("_OK"), GTK_RESPONSE_OK, NULL);
+	gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
+	entry = gtk_entry_new ();
+	gtk_entry_set_text (GTK_ENTRY (entry), slot->custom_title != NULL ? slot->custom_title : slot->title);
+	gtk_entry_set_placeholder_text (GTK_ENTRY (entry), _("Leer lassen für den automatischen Namen"));
+	gtk_entry_set_activates_default (GTK_ENTRY (entry), TRUE);
+	gtk_container_set_border_width (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), 12);
+	gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), entry, TRUE, TRUE, 0);
+	gtk_widget_show_all (dialog);
+
+	if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK) {
+		gchar *text = g_strstrip (g_strdup (gtk_entry_get_text (GTK_ENTRY (entry))));
+
+		g_free (slot->custom_title);
+		slot->custom_title = (text[0] != '\0' && g_strcmp0 (text, slot->title) != 0) ? text : NULL;
+		if (slot->custom_title == NULL) {
+			g_free (text);
+		}
+		nolphin_notebook_sync_tab_label (NOLPHIN_NOTEBOOK (slot->pane->notebook), slot);
+	}
+	gtk_widget_destroy (dialog);
+}
+
 gboolean
 nolphin_window_has_closed_tab_history (NolphinWindow *window)
 {
@@ -774,6 +870,7 @@ nolphin_window_constructed (GObject *self)
 	GtkWidget *menu;
 	GtkWidget *hpaned;
 	GtkWidget *vbox;
+	GtkWidget *content_stack;
 	GtkWidget *toolbar_holder;
     GtkWidget *nolphin_statusbar;
 	NolphinWindowPane *pane;
@@ -853,7 +950,15 @@ nolphin_window_constructed (GObject *self)
 	gtk_widget_set_hexpand (window->details->content_paned, TRUE);
 	gtk_widget_set_vexpand (window->details->content_paned, TRUE);
 
-	gtk_container_add (GTK_CONTAINER (grid), window->details->content_paned);
+	/* The stack lets full-page views (e.g. the preferences) replace the
+	 * file area while menu bar and toolbar stay in place. */
+	content_stack = gtk_stack_new ();
+	gtk_widget_set_hexpand (content_stack, TRUE);
+	gtk_widget_set_vexpand (content_stack, TRUE);
+	gtk_stack_add_named (GTK_STACK (content_stack), window->details->content_paned, "files");
+	g_object_set_data (G_OBJECT (window), "nolphin-content-stack", content_stack);
+	gtk_container_add (GTK_CONTAINER (grid), content_stack);
+	gtk_widget_show (content_stack);
 	gtk_widget_show (window->details->content_paned);
 
 	vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
@@ -1194,11 +1299,56 @@ nolphin_window_close (NolphinWindow *window)
 	NOLPHIN_WINDOW_CLASS (G_OBJECT_GET_CLASS (window))->close (window);
 }
 
+static void set_pane_maximized (NolphinWindow *window, gboolean maximized);
+
+/* Hat ein verschachtelter GtkPaned (bei 3-4 Bereichen) nur noch ein Kind,
+ * wird er aufgelöst: das Kind rückt an seine Stelle im übergeordneten Paned. */
+static void
+collapse_nested_paned (NolphinWindow *window, GtkPaned *paned)
+{
+	GtkWidget *remaining;
+	GtkWidget *grandparent_widget;
+	GtkPaned *grandparent;
+	gboolean was_child1;
+
+	if (GTK_WIDGET (paned) == window->details->split_view_hpane) {
+		return;
+	}
+	if (gtk_paned_get_child1 (paned) != NULL && gtk_paned_get_child2 (paned) != NULL) {
+		return;
+	}
+
+	remaining = gtk_paned_get_child1 (paned) != NULL ? gtk_paned_get_child1 (paned)
+							  : gtk_paned_get_child2 (paned);
+	grandparent_widget = gtk_widget_get_parent (GTK_WIDGET (paned));
+	if (remaining == NULL || !GTK_IS_PANED (grandparent_widget)) {
+		return;
+	}
+	grandparent = GTK_PANED (grandparent_widget);
+	was_child1 = gtk_paned_get_child1 (grandparent) == GTK_WIDGET (paned);
+
+	g_object_ref (remaining);
+	gtk_container_remove (GTK_CONTAINER (paned), remaining);
+	gtk_container_remove (GTK_CONTAINER (grandparent), GTK_WIDGET (paned));
+	if (was_child1) {
+		gtk_paned_pack1 (grandparent, remaining, TRUE, FALSE);
+	} else {
+		gtk_paned_pack2 (grandparent, remaining, TRUE, FALSE);
+	}
+	g_object_unref (remaining);
+}
+
 void
 nolphin_window_close_pane (NolphinWindow *window,
 			    NolphinWindowPane *pane)
 {
+	GtkWidget *pane_parent;
+
 	g_assert (NOLPHIN_IS_WINDOW_PANE (pane));
+
+	/* Ein geschlossener Bereich beendet auch den maximierten Zustand. */
+	set_pane_maximized (window, FALSE);
+	pane_parent = gtk_widget_get_parent (GTK_WIDGET (pane));
 
 	while (pane->slots != NULL) {
 		NolphinWindowSlot *slot = pane->slots->data;
@@ -1220,6 +1370,10 @@ nolphin_window_close_pane (NolphinWindow *window,
 	window->details->panes = g_list_remove (window->details->panes, pane);
 
 	gtk_widget_destroy (GTK_WIDGET (pane));
+
+	if (pane_parent != NULL && GTK_IS_PANED (pane_parent)) {
+		collapse_nested_paned (window, GTK_PANED (pane_parent));
+	}
 }
 
 NolphinWindowPane*
@@ -1325,6 +1479,8 @@ nolphin_window_set_active_slot (NolphinWindow *window, NolphinWindowSlot *new_sl
 		/* inform slot & view */
                 g_signal_emit_by_name (new_slot, "active");
 	}
+
+	nolphin_window_sync_tab_actions (window);
 }
 
 static void
@@ -2086,6 +2242,25 @@ center_pane_divider (GtkWidget  *paned,
     g_signal_handlers_disconnect_by_func (G_OBJECT (paned), center_pane_divider, NULL);
 }
 
+/* Bei verschachtelten Paneds (3-4 Bereiche) ist ein Kind des Haupt-Paneds
+ * kein Bereich, sondern wieder ein Paned: dann gilt der erste Bereich darin. */
+static NolphinWindowPane *
+first_pane_in_widget (GtkWidget *widget)
+{
+	if (widget == NULL) {
+		return NULL;
+	}
+	if (NOLPHIN_IS_WINDOW_PANE (widget)) {
+		return NOLPHIN_WINDOW_PANE (widget);
+	}
+	if (GTK_IS_PANED (widget)) {
+		NolphinWindowPane *pane = first_pane_in_widget (gtk_paned_get_child1 (GTK_PANED (widget)));
+
+		return pane != NULL ? pane : first_pane_in_widget (gtk_paned_get_child2 (GTK_PANED (widget)));
+	}
+	return NULL;
+}
+
 static NolphinWindowSlot *
 create_extra_pane (NolphinWindow *window)
 {
@@ -2381,8 +2556,8 @@ nolphin_window_save_session_state (NolphinWindow *window)
 	child1 = gtk_paned_get_child1 (paned);
 	child2 = gtk_paned_get_child2 (paned);
 
-	left_pane = child1 != NULL ? NOLPHIN_WINDOW_PANE (child1) : NULL;
-	right_pane = child2 != NULL ? NOLPHIN_WINDOW_PANE (child2) : NULL;
+	left_pane = first_pane_in_widget (child1);
+	right_pane = first_pane_in_widget (child2);
 
 	left_uris = collect_pane_saved_tab_uris (left_pane, &left_active);
 	right_uris = collect_pane_saved_tab_uris (right_pane, &right_active);
@@ -2523,8 +2698,8 @@ nolphin_window_restore_saved_tabs (NolphinWindow *window)
 		GtkWidget *child1 = gtk_paned_get_child1 (paned);
 		GtkWidget *child2 = gtk_paned_get_child2 (paned);
 
-		left_pane = child1 != NULL ? NOLPHIN_WINDOW_PANE (child1) : NULL;
-		right_pane = (want_split && child2 != NULL) ? NOLPHIN_WINDOW_PANE (child2) : NULL;
+		left_pane = first_pane_in_widget (child1);
+		right_pane = want_split ? first_pane_in_widget (child2) : NULL;
 	}
 
 	/* Reset panes to one tab each, then rebuild tabs in saved order */
@@ -2570,6 +2745,108 @@ nolphin_window_restore_saved_tabs (NolphinWindow *window)
 	g_strfreev (right_uris);
 
 	return TRUE;
+}
+
+/* --- Benannte Arbeitsbereiche (§41) --------------------------------------
+ * Ein Arbeitsbereich ist ein Schnappschuss der Sitzung: Reiter beider Bereiche,
+ * Teilung samt Ausrichtung, Fenstergröße und die Sichtbarkeit von
+ * Seitenleiste, Vorschau und Terminal. Er nutzt dieselben Werte wie die
+ * automatische Sitzungswiederherstellung. */
+#define WS_GROUP "Workspace"
+
+void
+nolphin_window_workspace_capture (NolphinWindow *window, GKeyFile *kf)
+{
+	gchar **left, **right;
+	gint width = 0, height = 0;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	nolphin_window_save_session_state (window);
+
+	left = g_settings_get_strv (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_TABS_LEFT);
+	right = g_settings_get_strv (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_TABS_RIGHT);
+
+	g_key_file_set_boolean (kf, WS_GROUP, "split", g_settings_get_boolean (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_SPLIT_VIEW));
+	g_key_file_set_string_list (kf, WS_GROUP, "tabs-left", (const gchar * const *) left, g_strv_length (left));
+	g_key_file_set_string_list (kf, WS_GROUP, "tabs-right", (const gchar * const *) right, g_strv_length (right));
+	g_key_file_set_integer (kf, WS_GROUP, "active-left", g_settings_get_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_LEFT));
+	g_key_file_set_integer (kf, WS_GROUP, "active-right", g_settings_get_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_RIGHT));
+	g_key_file_set_boolean (kf, WS_GROUP, "split-vertical",
+				gtk_orientable_get_orientation (GTK_ORIENTABLE (window->details->split_view_hpane)) == GTK_ORIENTATION_VERTICAL);
+
+	gtk_window_get_size (GTK_WINDOW (window), &width, &height);
+	g_key_file_set_integer (kf, WS_GROUP, "width", width);
+	g_key_file_set_integer (kf, WS_GROUP, "height", height);
+
+	g_key_file_set_boolean (kf, WS_GROUP, "sidebar", nolphin_window_get_show_sidebar (window));
+	g_key_file_set_boolean (kf, WS_GROUP, "preview", nolphin_window_preview_showing (window));
+	g_key_file_set_boolean (kf, WS_GROUP, "terminal", window->details->show_terminal);
+
+	g_strfreev (left);
+	g_strfreev (right);
+}
+
+gboolean
+nolphin_window_workspace_apply (NolphinWindow *window, GKeyFile *kf)
+{
+	gchar **left, **right;
+	gboolean restored;
+
+	g_return_val_if_fail (NOLPHIN_IS_WINDOW (window), FALSE);
+
+	if (!g_key_file_has_group (kf, WS_GROUP) || nolphin_window_is_desktop (window)) {
+		return FALSE;
+	}
+
+	left = g_key_file_get_string_list (kf, WS_GROUP, "tabs-left", NULL, NULL);
+	right = g_key_file_get_string_list (kf, WS_GROUP, "tabs-right", NULL, NULL);
+	if (left == NULL) {
+		left = g_new0 (gchar *, 1);
+	}
+	if (right == NULL) {
+		right = g_new0 (gchar *, 1);
+	}
+
+	/* Werte in die Sitzungsschlüssel schreiben und die bewährte
+	 * Wiederherstellung der Sitzung verwenden. */
+	g_settings_set_boolean (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_SPLIT_VIEW, g_key_file_get_boolean (kf, WS_GROUP, "split", NULL));
+	g_settings_set_strv (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_TABS_LEFT, (const gchar * const *) left);
+	g_settings_set_strv (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_TABS_RIGHT, (const gchar * const *) right);
+	g_settings_set_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_LEFT, g_key_file_get_integer (kf, WS_GROUP, "active-left", NULL));
+	g_settings_set_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_RIGHT, g_key_file_get_integer (kf, WS_GROUP, "active-right", NULL));
+	g_strfreev (left);
+	g_strfreev (right);
+
+	gtk_orientable_set_orientation (GTK_ORIENTABLE (window->details->split_view_hpane),
+					g_key_file_get_boolean (kf, WS_GROUP, "split-vertical", NULL)
+					? GTK_ORIENTATION_VERTICAL : GTK_ORIENTATION_HORIZONTAL);
+	restored = nolphin_window_restore_saved_tabs (window);
+
+	if (g_key_file_has_key (kf, WS_GROUP, "sidebar", NULL)) {
+		if (g_key_file_get_boolean (kf, WS_GROUP, "sidebar", NULL)) {
+			nolphin_window_show_sidebar (window);
+		} else {
+			nolphin_window_hide_sidebar (window);
+		}
+	}
+	if (g_key_file_has_key (kf, WS_GROUP, "preview", NULL)) {
+		nolphin_window_set_show_preview (window, g_key_file_get_boolean (kf, WS_GROUP, "preview", NULL));
+	}
+	if (g_key_file_has_key (kf, WS_GROUP, "terminal", NULL)) {
+		nolphin_window_set_show_terminal (window, g_key_file_get_boolean (kf, WS_GROUP, "terminal", NULL));
+	}
+	{
+		gint w = g_key_file_get_integer (kf, WS_GROUP, "width", NULL);
+		gint h = g_key_file_get_integer (kf, WS_GROUP, "height", NULL);
+
+		if (w > 200 && h > 150 && !gtk_window_is_maximized (GTK_WINDOW (window))) {
+			gtk_window_resize (GTK_WINDOW (window), w, h);
+		}
+	}
+
+	nolphin_window_update_show_hide_ui_elements (window);
+	return restored;
 }
 
 static void
@@ -2796,6 +3073,180 @@ nolphin_window_split_view_off (NolphinWindow *window)
 					      active_pane->action_group);
 
 	nolphin_window_update_show_hide_ui_elements (window);
+}
+
+#define MAX_SPLIT_PANES 4
+
+static void
+center_nested_paned (GtkWidget *paned, GdkRectangle *allocation, gpointer user_data)
+{
+	gint size = gtk_orientable_get_orientation (GTK_ORIENTABLE (paned)) == GTK_ORIENTATION_HORIZONTAL
+		    ? allocation->width : allocation->height;
+
+	if (size <= 1) {
+		return;
+	}
+	gtk_paned_set_position (GTK_PANED (paned), size / 2);
+	g_signal_handlers_disconnect_by_func (paned, center_nested_paned, user_data);
+}
+
+/* Bereich duplizieren: öffnet einen weiteren Bereich (bis zu vier) am
+ * Ort des aktiven Bereichs. Ab dem dritten Bereich wird der aktive Bereich
+ * in einen eigenen, verschachtelten GtkPaned mit umgekehrter Ausrichtung
+ * gesetzt. */
+void
+nolphin_window_split_view_add_pane (NolphinWindow *window)
+{
+	NolphinWindowPane *active, *pane;
+	NolphinWindowSlot *slot, *old_slot;
+	GtkPaned *parent, *nested;
+	GFile *location = NULL;
+	gboolean was_child1;
+	GtkOrientation orientation;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	if (!nolphin_window_split_view_showing (window)) {
+		nolphin_window_split_view_on (window);
+		nolphin_window_update_show_hide_ui_elements (window);
+		return;
+	}
+
+	if (g_list_length (window->details->panes) >= MAX_SPLIT_PANES) {
+		return;
+	}
+
+	active = nolphin_window_get_active_pane (window);
+	if (active == NULL || !GTK_IS_PANED (gtk_widget_get_parent (GTK_WIDGET (active)))) {
+		return;
+	}
+	old_slot = active->active_slot;
+	parent = GTK_PANED (gtk_widget_get_parent (GTK_WIDGET (active)));
+	was_child1 = gtk_paned_get_child1 (parent) == GTK_WIDGET (active);
+	orientation = gtk_orientable_get_orientation (GTK_ORIENTABLE (parent)) == GTK_ORIENTATION_HORIZONTAL
+		      ? GTK_ORIENTATION_VERTICAL : GTK_ORIENTATION_HORIZONTAL;
+
+	pane = nolphin_window_pane_new (window);
+	window->details->panes = g_list_append (window->details->panes, pane);
+
+	nested = GTK_PANED (gtk_paned_new (orientation));
+	g_object_ref (active);
+	gtk_container_remove (GTK_CONTAINER (parent), GTK_WIDGET (active));
+	gtk_paned_pack1 (nested, GTK_WIDGET (active), TRUE, FALSE);
+	gtk_paned_pack2 (nested, GTK_WIDGET (pane), TRUE, FALSE);
+	g_object_unref (active);
+	if (was_child1) {
+		gtk_paned_pack1 (parent, GTK_WIDGET (nested), TRUE, FALSE);
+	} else {
+		gtk_paned_pack2 (parent, GTK_WIDGET (nested), TRUE, FALSE);
+	}
+	g_signal_connect (nested, "size-allocate", G_CALLBACK (center_nested_paned), NULL);
+	gtk_widget_show (GTK_WIDGET (nested));
+
+	gtk_widget_hide (pane->tool_bar);
+	slot = nolphin_window_pane_open_slot (NOLPHIN_WINDOW_PANE (pane), NOLPHIN_WINDOW_OPEN_SLOT_APPEND);
+	pane->active_slot = slot;
+
+	if (old_slot != NULL) {
+		location = nolphin_window_slot_get_location (old_slot);
+		if (location != NULL && g_file_has_uri_scheme (location, "x-nolphin-search")) {
+			g_object_unref (location);
+			location = NULL;
+		}
+	}
+	if (location == NULL) {
+		location = g_file_new_for_path (g_get_home_dir ());
+	}
+	nolphin_window_slot_open_location (slot, location, 0);
+	g_object_unref (location);
+
+	nolphin_window_update_show_hide_ui_elements (window);
+	nolphin_window_sync_tab_actions (window);
+}
+
+/* Bereich schließen: schließt den aktiven Bereich (nur bei mehreren). */
+void
+nolphin_window_close_active_pane (NolphinWindow *window)
+{
+	NolphinWindowPane *active, *next;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	if (!nolphin_window_split_view_showing (window)) {
+		return;
+	}
+
+	active = nolphin_window_get_active_pane (window);
+	next = nolphin_window_get_next_pane (window);
+	if (active == NULL || next == NULL) {
+		return;
+	}
+
+	g_clear_object (&window->details->secondary_pane_last_location);
+	window->details->secondary_pane_last_location = nolphin_window_slot_get_location (active->active_slot);
+
+	nolphin_window_close_pane (window, active);
+	nolphin_window_set_active_pane (window, next);
+	nolphin_navigation_state_set_master (window->details->nav_state, next->action_group);
+
+	nolphin_window_update_show_hide_ui_elements (window);
+	nolphin_window_sync_tab_actions (window);
+}
+
+/* Blendet nach dem (Ein-)Ausblenden von Bereichen auch verschachtelte
+ * Paneds aus, in denen kein Kind mehr sichtbar ist (und wieder ein). */
+static void
+sync_nested_paned_visibility (NolphinWindow *window, GtkWidget *widget)
+{
+	GtkWidget *parent = gtk_widget_get_parent (widget);
+
+	while (GTK_IS_PANED (parent) && parent != window->details->split_view_hpane) {
+		GtkWidget *c1 = gtk_paned_get_child1 (GTK_PANED (parent));
+		GtkWidget *c2 = gtk_paned_get_child2 (GTK_PANED (parent));
+		gboolean visible = (c1 != NULL && gtk_widget_get_visible (c1)) ||
+				   (c2 != NULL && gtk_widget_get_visible (c2));
+
+		gtk_widget_set_visible (parent, visible);
+		parent = gtk_widget_get_parent (parent);
+	}
+}
+
+static void
+set_pane_maximized (NolphinWindow *window, gboolean maximized)
+{
+	NolphinWindowPane *active = window->details->active_pane;
+	GList *l;
+
+	if (!!GPOINTER_TO_INT (g_object_get_data (G_OBJECT (window), "nolphin-pane-maximized")) == maximized) {
+		return;
+	}
+	if (maximized && active == NULL) {
+		return;
+	}
+
+	for (l = window->details->panes; l != NULL; l = l->next) {
+		NolphinWindowPane *pane = l->data;
+
+		if (pane != active) {
+			gtk_widget_set_visible (GTK_WIDGET (pane), !maximized);
+			sync_nested_paned_visibility (window, GTK_WIDGET (pane));
+		}
+	}
+	g_object_set_data (G_OBJECT (window), "nolphin-pane-maximized", GINT_TO_POINTER (maximized));
+}
+
+/* Bereich maximieren / wiederherstellen */
+void
+nolphin_window_toggle_maximize_pane (NolphinWindow *window)
+{
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	if (!nolphin_window_split_view_showing (window)) {
+		return;
+	}
+
+	set_pane_maximized (window, !GPOINTER_TO_INT (g_object_get_data (G_OBJECT (window), "nolphin-pane-maximized")));
+	nolphin_window_sync_tab_actions (window);
 }
 
 gboolean
