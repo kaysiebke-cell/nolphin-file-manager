@@ -6,7 +6,7 @@ Nolphin ist ein eigenständiger Dateimanager auf Basis von Nemo 6.7.7 (GTK3, C11
 
 > **Hinweis:** Nolphin ist ein unabhängiges Open-Source-Projekt und kein offizielles Projekt von Linux Mint.
 
-![Nolphin mit Hauptansicht und rechtem Arbeitsbereich, der die Vorschau des Persönlichen Ordners zeigt](docs/screenshots/uebersicht.png)
+![Nolphin mit Hauptansicht mit Dateien des Ordners Bilder und rechtem Arbeitsbereich mit Ordner-Informationen](docs/screenshots/uebersicht.png)
 
 ---
 
@@ -92,9 +92,9 @@ Ein Panel wird im Arbeitsbereich wiederverwendet, es öffnet kein zusätzliches 
 
 ### So sehen die Panels aus
 
-**Eigenschaften** – Berechtigungen, Besitzer, zusätzliche Benutzer und Gruppen (ACL) und „Öffnen mit“, ohne das Hauptfenster zu verlassen:
+**Eigenschaften** – Zugriffsrechte, Besitzer und Gruppe sowie zusätzliche Benutzer und Gruppen (ACL), ohne das Hauptfenster zu verlassen:
 
-![Eigenschaften-Panel für eine ausgewählte Zertifikatsdatei mit Berechtigungen und ACL-Bereich](docs/screenshots/panel-eigenschaften.png)
+![Eigenschaften-Panel für den Ordner Bilder mit Zugriffsrechten und ACL-Bereich](docs/screenshots/panel-eigenschaften.png)
 
 **Symbol auswählen** – eigene Symbole für Ordner und Dateien, durchsuchbar und nach Kategorien sortiert:
 
@@ -106,13 +106,15 @@ Ein Panel wird im Arbeitsbereich wiederverwendet, es öffnet kein zusätzliches 
 
 **Archiv** – Name, Format und Zielort wählen. Passwort und Teilarchive stehen unter „Erweiterte Optionen“:
 
-| Grundansicht | Erweiterte Optionen |
-| ------------ | ------------------- |
-| ![Archiv-Panel mit Dateiname, Format ZIP und Ort](docs/screenshots/panel-archiv.png) | ![Archiv-Panel mit aufgeklappten erweiterten Optionen für Passwort und Teilarchive](docs/screenshots/panel-archiv-erweitert.png) |
+![Archiv-Panel mit Dateiname, Format ZIP, Ort und aufgeklappten erweiterten Optionen für Passwort und Teilarchive](docs/screenshots/panel-archiv.png)
 
 **DEB-Ersteller** – Paketname, Version, Beschreibung und Ersteller eintragen, Dateien und Ordner mit Zielpfad hinzufügen und das Paket erstellen:
 
 ![DEB-Ersteller-Panel mit Eingabefeldern und leerer Dateiliste](docs/screenshots/panel-deb-ersteller.png)
+
+**Terminal (F4)** – das eingebettete VTE-Terminal öffnet im aktuellen Ordner und bleibt neben der Hauptansicht:
+
+![Terminal-Panel neben der Dateiansicht des Ordners Bilder](docs/screenshots/panel-terminal.png)
 
 ---
 
