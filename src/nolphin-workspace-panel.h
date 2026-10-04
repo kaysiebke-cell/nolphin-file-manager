@@ -40,6 +40,11 @@ void       nolphin_workspace_panel_sync_properties   (GtkWidget *workspace_panel
 						       GList *selection,
 						       NolphinFile *directory_as_file);
 
+/* Behälter der Such-Seite: die Suchleiste (NolphinQueryEditor) des aktiven
+ * Tabs wird beim Start einer Suche hierher verschoben und danach wieder
+ * zurückgesetzt (siehe nolphin-window-slot.c). */
+GtkWidget *nolphin_workspace_panel_get_search_host (GtkWidget *workspace_panel);
+
 /* Zeigt die Archiv-Seite (Komprimieren) und blendet das Panel ein. */
 void       nolphin_workspace_panel_show_archive      (GtkWidget *workspace_panel,
 						       NolphinWindow *window);

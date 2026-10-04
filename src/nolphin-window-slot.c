@@ -34,6 +34,7 @@
 #include "nolphin-window-manage-views.h"
 #include "nolphin-window-types.h"
 #include "nolphin-window-slot-dnd.h"
+#include "nolphin-workspace-panel.h"
 
 #include <glib/gi18n.h>
 
@@ -180,6 +181,101 @@ update_query_editor (NolphinWindowSlot *slot)
 	nolphin_directory_unref (directory);
 }
 
+/* Die Suchleiste wohnt während einer Suche in der rechten Arbeitsleiste
+ * (Seite "Suche"), sonst im Tab. */
+static void
+slot_return_query_editor (NolphinWindowSlot *slot)
+{
+	GtkWidget *editor = GTK_WIDGET (slot->query_editor);
+	GtkWidget *parent = gtk_widget_get_parent (editor);
+
+	if (parent == NULL || parent == slot->extra_location_widgets) {
+		return;
+	}
+
+	g_object_ref (editor);
+	gtk_container_remove (GTK_CONTAINER (parent), editor);
+	gtk_box_pack_start (GTK_BOX (slot->extra_location_widgets), editor, TRUE, TRUE, 0);
+	g_object_unref (editor);
+}
+
+static GtkWidget *
+slot_workspace_panel (NolphinWindowSlot *slot)
+{
+	NolphinWindow *window = (slot->pane != NULL) ? slot->pane->window : NULL;
+
+	return (window != NULL) ? nolphin_window_get_workspace_panel (window) : NULL;
+}
+
+void
+nolphin_window_slot_move_query_editor_to_panel (NolphinWindowSlot *slot)
+{
+	GtkWidget *panel = slot_workspace_panel (slot);
+	GtkWidget *host = (panel != NULL) ? nolphin_workspace_panel_get_search_host (panel) : NULL;
+	GtkWidget *editor = GTK_WIDGET (slot->query_editor);
+	GtkWidget *parent;
+	GList *children, *l;
+
+	if (host == NULL) {
+		return;
+	}
+
+	/* Eine Suchleiste eines anderen Tabs zuerst in ihren Tab zurückgeben. */
+	children = gtk_container_get_children (GTK_CONTAINER (host));
+	for (l = children; l != NULL; l = l->next) {
+		NolphinWindowSlot *owner = g_object_get_data (G_OBJECT (l->data), "owner-slot");
+
+		if (l->data != editor && owner != NULL) {
+			slot_return_query_editor (owner);
+		}
+	}
+	g_list_free (children);
+
+	parent = gtk_widget_get_parent (editor);
+	if (parent != host) {
+		g_object_ref (editor);
+		if (parent != NULL) {
+			gtk_container_remove (GTK_CONTAINER (parent), editor);
+		}
+		/* gtk_container_add statt pack_start: nur so meldet der Behälter das Hinzufügen
+		 * (die Such-Seite blendet dann ihren Hinweistext aus). */
+		gtk_container_add (GTK_CONTAINER (host), editor);
+		g_object_unref (editor);
+	}
+	g_object_set_data (G_OBJECT (editor), "owner-slot", slot);
+
+	nolphin_workspace_panel_show_search (panel, slot->pane->window);
+	gtk_widget_grab_focus (editor);
+}
+
+/* Beim Tabwechsel: die Suchleiste des jetzt aktiven Tabs in die Leiste
+ * holen, sofern dort gesucht wird; sonst ihre Suchleiste im Tab lassen. */
+void
+nolphin_window_slot_sync_query_editor_host (NolphinWindowSlot *slot)
+{
+	GtkWidget *panel = slot_workspace_panel (slot);
+	GtkWidget *host = (panel != NULL) ? nolphin_workspace_panel_get_search_host (panel) : NULL;
+	GList *children, *l;
+
+	if (host == NULL) {
+		return;
+	}
+
+	children = gtk_container_get_children (GTK_CONTAINER (host));
+	for (l = children; l != NULL; l = l->next) {
+		NolphinWindowSlot *owner = g_object_get_data (G_OBJECT (l->data), "owner-slot");
+
+		if (owner != NULL && owner != slot) {
+			slot_return_query_editor (owner);
+		}
+	}
+	g_list_free (children);
+
+	if (nolphin_query_editor_get_active (NOLPHIN_QUERY_EDITOR (slot->query_editor))) {
+		nolphin_window_slot_move_query_editor_to_panel (slot);
+	}
+}
+
 static void
 ensure_query_editor (NolphinWindowSlot *slot)
 {
@@ -203,6 +299,7 @@ nolphin_window_slot_set_query_editor_visible (NolphinWindowSlot *slot,
 
 	if (visible) {
 		ensure_query_editor (slot);
+		nolphin_window_slot_move_query_editor_to_panel (slot);
 
 		if (slot->qe_changed_id == 0)
 			slot->qe_changed_id = g_signal_connect (slot->query_editor, "changed",
@@ -213,6 +310,16 @@ nolphin_window_slot_set_query_editor_visible (NolphinWindowSlot *slot,
 
 	} else {
         nolphin_query_editor_set_active (NOLPHIN_QUERY_EDITOR (slot->query_editor), NULL, FALSE);
+
+        {
+            GtkWidget *panel = slot_workspace_panel (slot);
+            gboolean was_in_panel = (gtk_widget_get_parent (GTK_WIDGET (slot->query_editor)) != slot->extra_location_widgets);
+
+            slot_return_query_editor (slot);
+            if (was_in_panel && panel != NULL) {
+                nolphin_workspace_panel_show_preview (panel);
+            }
+        }
 
         if (slot->qe_changed_id > 0) {
             g_signal_handler_disconnect (slot->query_editor, slot->qe_changed_id);
@@ -462,6 +569,13 @@ nolphin_window_slot_dispose (GObject *object)
 
 	nolphin_window_slot_clear_forward_list (slot);
 	nolphin_window_slot_clear_back_list (slot);
+
+	/* Steckt die Suchleiste gerade in der rechten Leiste, mit dem Tab entfernen. */
+	if (slot->query_editor != NULL &&
+	    gtk_widget_get_parent (GTK_WIDGET (slot->query_editor)) != NULL &&
+	    gtk_widget_get_parent (GTK_WIDGET (slot->query_editor)) != slot->extra_location_widgets) {
+		gtk_widget_destroy (GTK_WIDGET (slot->query_editor));
+	}
     nolphin_window_slot_remove_extra_location_widgets (slot);
 
 	if (slot->content_view) {

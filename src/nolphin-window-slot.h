@@ -133,6 +133,8 @@ NolphinWindowSlot * nolphin_window_slot_new (NolphinWindowPane *pane);
 
 void    nolphin_window_slot_update_title		   (NolphinWindowSlot *slot);
 void    nolphin_window_slot_update_icon		   (NolphinWindowSlot *slot);
+void    nolphin_window_slot_move_query_editor_to_panel (NolphinWindowSlot *slot);
+void    nolphin_window_slot_sync_query_editor_host (NolphinWindowSlot *slot);
 void    nolphin_window_slot_set_query_editor_visible	   (NolphinWindowSlot *slot,
 							    gboolean            visible);
 

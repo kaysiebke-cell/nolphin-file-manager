@@ -1241,6 +1241,9 @@ nolphin_window_pane_sync_search_widgets (NolphinWindowPane *pane)
 	    	toggle_toolbar_search_button (pane, FALSE);
 	}
 
+	/* Die Suchleiste des jetzt aktiven Tabs gehört in die rechte Leiste. */
+	nolphin_window_slot_sync_query_editor_host (slot);
+
 	nolphin_directory_unref (directory);
 }
 

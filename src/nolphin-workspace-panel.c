@@ -1321,12 +1321,12 @@ on_search_trigger_clicked (GtkButton *button, gpointer user_data)
 		return;
 	}
 
+	/* Die Suchleiste zieht danach selbst in diese Seite um (siehe
+	 * nolphin_window_slot_set_query_editor_visible()). */
 	action = gtk_action_group_get_action (pane->action_group, NOLPHIN_ACTION_SEARCH);
 	if (action != NULL) {
 		gtk_action_activate (action);
 	}
-
-	nolphin_workspace_panel_show_preview (nolphin_window_get_workspace_panel (window));
 }
 
 static void
@@ -1342,11 +1342,26 @@ on_filter_trigger_clicked (GtkButton *button, gpointer user_data)
 	nolphin_workspace_panel_show_preview (nolphin_window_get_workspace_panel (window));
 }
 
+/* Hinweis und Startknöpfe nur zeigen, solange keine Suchleiste in der Seite steckt. */
+static void
+search_host_child_added (GtkContainer *host, GtkWidget *child, gpointer idle_box)
+{
+	gtk_widget_hide (GTK_WIDGET (idle_box));
+}
+
+static void
+search_host_child_removed (GtkContainer *host, GtkWidget *child, gpointer idle_box)
+{
+	gtk_widget_show (GTK_WIDGET (idle_box));
+}
+
 static GtkWidget *
 build_search_tab (NolphinWindow *window)
 {
 	GtkWidget *scroller;
 	GtkWidget *box;
+	GtkWidget *host;
+	GtkWidget *idle_box;
 	GtkWidget *desc_label;
 	GtkWidget *search_button;
 	GtkWidget *filter_button;
@@ -1359,6 +1374,16 @@ build_search_tab (NolphinWindow *window)
 	gtk_container_add (GTK_CONTAINER (scroller), box);
 	gtk_box_pack_start (GTK_BOX (box), build_back_to_preview_button (window), FALSE, FALSE, 0);
 
+	/* Hier landet die Suchleiste, sobald eine Suche läuft. */
+	host = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+	gtk_box_pack_start (GTK_BOX (box), host, FALSE, FALSE, 0);
+	g_object_set_data (G_OBJECT (scroller), "search-host", host);
+
+	idle_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 10);
+	gtk_box_pack_start (GTK_BOX (box), idle_box, FALSE, FALSE, 0);
+	g_signal_connect (host, "add", G_CALLBACK (search_host_child_added), idle_box);
+	g_signal_connect (host, "remove", G_CALLBACK (search_host_child_removed), idle_box);
+
 	desc_label = gtk_label_new (_("Vollständige Suche im aktuellen Ordner starten "
 				     "oder die Ansicht sofort nach Namen filtern. Die "
 				     "Ergebnisse erscheinen in der Hauptansicht."));
@@ -1366,19 +1391,19 @@ build_search_tab (NolphinWindow *window)
 	panel_dim_label (desc_label);
 	gtk_label_set_max_width_chars (GTK_LABEL (desc_label), 30);
 	gtk_label_set_xalign (GTK_LABEL (desc_label), 0.0);
-	gtk_box_pack_start (GTK_BOX (box), desc_label, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (idle_box), desc_label, FALSE, FALSE, 0);
 
 	search_button = gtk_button_new_with_label (_("Suchen … (Strg+F)"));
 	panel_decorate_button (search_button, "edit-find-symbolic", TRUE);
 	gtk_widget_set_halign (search_button, GTK_ALIGN_START);
 	g_signal_connect (search_button, "clicked", G_CALLBACK (on_search_trigger_clicked), window);
-	gtk_box_pack_start (GTK_BOX (box), search_button, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (idle_box), search_button, FALSE, FALSE, 0);
 
 	filter_button = gtk_button_new_with_label (_("Filterleiste (Strg+I)"));
 	panel_decorate_button (filter_button, "view-list-symbolic", FALSE);
 	gtk_widget_set_halign (filter_button, GTK_ALIGN_START);
 	g_signal_connect (filter_button, "clicked", G_CALLBACK (on_filter_trigger_clicked), window);
-	gtk_box_pack_start (GTK_BOX (box), filter_button, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (idle_box), filter_button, FALSE, FALSE, 0);
 
 	return scroller;
 }
@@ -4175,4 +4200,15 @@ nolphin_workspace_panel_sync_properties (GtkWidget *workspace_panel, GList *sele
 	}
 	nolphin_properties_panel_set_files (NOLPHIN_PROPERTIES_PANEL (d->panel), selection);
 	g_list_free (single);
+}
+
+GtkWidget *
+nolphin_workspace_panel_get_search_host (GtkWidget *workspace_panel)
+{
+	GtkWidget *search_page;
+
+	g_return_val_if_fail (GTK_IS_STACK (workspace_panel), NULL);
+
+	search_page = gtk_stack_get_child_by_name (GTK_STACK (workspace_panel), "search");
+	return (search_page != NULL) ? g_object_get_data (G_OBJECT (search_page), "search-host") : NULL;
 }
