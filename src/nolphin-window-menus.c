@@ -133,6 +133,35 @@ action_workspace_callback (GtkAction *action, gpointer user_data)
 	}
 }
 
+/* Aktueller Ordner des aktiven Bereichs (lokal), sonst der persönliche Ordner. */
+static GFile *
+tools_current_folder (NolphinWindow *window)
+{
+	NolphinWindowSlot *slot = nolphin_window_get_active_slot (window);
+	GFile *loc = slot != NULL ? nolphin_window_slot_get_location (slot) : NULL;
+
+	if (loc == NULL || !g_file_is_native (loc)) {
+		g_clear_object (&loc);
+		loc = g_file_new_for_path (g_get_home_dir ());
+	}
+	return loc;
+}
+
+static void
+action_tool_duplicates_callback (GtkAction *action, gpointer user_data)
+{
+	NolphinWindow *window;
+	GFile *folder;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	folder = tools_current_folder (window);
+	nolphin_workspace_panel_show_duplicates (nolphin_window_get_workspace_panel (window), window, folder);
+	g_object_unref (folder);
+}
+
 static void
 action_diagnostics_callback (GtkAction *action, gpointer user_data)
 {
@@ -1672,6 +1701,11 @@ static const GtkActionEntry main_entries[] = {
   /* label, accelerator */       N_("_Alle Reiter schließen"), NULL,
   /* tooltip */                  N_("Jeden Reiter in diesem Fenster schließen"),
                                  G_CALLBACK (action_close_all_tabs_callback) },
+  /* name, stock id, label */  { "ToolsMenu", NULL, N_("_Werkzeuge") },
+  /* name, stock id */         { "Tool Duplicates", NULL,
+  /* label, accelerator */       N_("_Duplikate finden …"), NULL,
+  /* tooltip */                  N_("Doppelte Dateien in einem Ordner suchen (Name, Größe oder Inhalt)"),
+                                 G_CALLBACK (action_tool_duplicates_callback) },
   /* name, stock id, label */  { "DiagnosticsMenu", NULL, N_("_Diagnose") },
   /* name, stock id */         { "Diag Logs", NULL,
   /* label, accelerator */       N_("_Protokolle anzeigen"), NULL,

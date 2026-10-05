@@ -59,6 +59,11 @@ void       nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_pa
 							  NolphinWindow *window,
 							  GFile *archive);
 
+/* Zeigt die Duplikat-Suche für @folder (Bearbeiten ▸ Werkzeuge ▸ Duplikate finden). */
+void       nolphin_workspace_panel_show_duplicates (GtkWidget *workspace_panel,
+						    NolphinWindow *window,
+						    GFile *folder);
+
 /* Zeigt die Diagnose-Seite (0 Protokolle, 1 System, 2 Plugins, 3 Fehlerbericht). */
 void       nolphin_workspace_panel_show_diagnostics (GtkWidget *workspace_panel,
 						      NolphinWindow *window,

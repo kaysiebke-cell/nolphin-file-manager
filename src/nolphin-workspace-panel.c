@@ -27,6 +27,7 @@
 #include "nolphin-deb-builder.h"
 #include "nolphin-application.h"
 #include "nolphin-diagnostics.h"
+#include "nolphin-tools.h"
 #include "nolphin-terminal.h"
 #include "nolphin-view.h"
 #include "nolphin-window-pane.h"
@@ -4907,6 +4908,7 @@ nolphin_workspace_panel_new (NolphinWindow *window, GtkWidget *preview_widget, G
 	add_stack_page (GTK_STACK (stack), build_git_tab (window), "git");
 	add_stack_page (GTK_STACK (stack), build_workspaces_tab (window), "workspaces");
 	add_stack_page (GTK_STACK (stack), nolphin_diagnostics_page_new (window), "diagnostics");
+	add_stack_page (GTK_STACK (stack), nolphin_duplicates_page_new (window), "duplicates");
 
 	/* Terminal-Widget selbst kommt bereits sichtbar aus
 	 * nolphin_terminal_new() (wie im frueheren unteren Bereich auch) -
@@ -5048,6 +5050,21 @@ nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_panel, Nolphi
 	gtk_stack_set_visible_child_name (GTK_STACK (inner), "manage");
 	workspace_panel_show_page (workspace_panel, window, "archive");
 	archive_manager_reload (d);
+}
+
+/* Zeigt die Duplikat-Suche für @folder. */
+void
+nolphin_workspace_panel_show_duplicates (GtkWidget *workspace_panel, NolphinWindow *window, GFile *folder)
+{
+	GtkWidget *page;
+
+	g_return_if_fail (GTK_IS_STACK (workspace_panel));
+
+	page = gtk_stack_get_child_by_name (GTK_STACK (workspace_panel), "duplicates");
+	if (page != NULL && folder != NULL) {
+		nolphin_duplicates_page_open (page, folder);
+	}
+	workspace_panel_show_page (workspace_panel, window, "duplicates");
 }
 
 /* Zeigt die Diagnose-Seite mit dem gewünschten Reiter. */
