@@ -42,15 +42,22 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 
 ## Highlights
 
-* **Rechter Arbeitsbereich (F11):** ein fester Bereich, in dem Vorschau, Eigenschaften, Archiv, Terminal, Git, DEB-Ersteller und Massenumbenennung geöffnet werden.
-* **Archive:** Komprimieren und Entpacken über die installierten Systemwerkzeuge, Argumente nie über eine Shell.
+* **Rechter Arbeitsbereich (F11):** ein fester Bereich für Vorschau, Eigenschaften, Archive, Terminal, Git, DEB-Ersteller, Massenumbenennung und die Werkzeuge unten – ohne zusätzliche Fenster.
+* **Vorschau mit Medieninfos:** Bilder, **PDF** (Titel, Autor, Seiten, Seitengröße), **Video** und **Audio** (Dauer, Codec, Auflösung, Bildrate, Kanäle).
+* **Metadaten:** **Bewertung (Sterne), Tags und Kommentar** direkt im Info-Panel.
+* **Git direkt im Dateimanager:** Overlay-Symbole an den Dateien (hinzugefügt, geändert, unversioniert), Panel für Status, Speichern, Server-Abgleich, Verlauf und Unterschiede.
+* **Archive:** Komprimieren, Entpacken, Prüfen und – im **Archiv-Manager** – Inhalt auflisten sowie Dateien hinzufügen, ersetzen und entfernen.
+* **Werkzeuge:** Ordner **vergleichen und synchronisieren** (rsync, löscht nie), **Regeln anwenden**, **Duplikate finden**, **Versionen** einer Datei speichern und wiederherstellen.
+* **Mehrere Bereiche:** geteilte Ansicht mit bis zu vier Bereichen und **Arbeitsbereiche**, die Reiter, Teilung und Fenstergröße speichern.
+* **Gehe zu:** Verlauf, häufig verwendete Orte und die Reiter des Fensters im Menü.
+* **Diagnose:** Protokolle, Systeminformationen, Plugin-Status und Fehlerbericht im Panel.
+* **Einstellungen exportieren, importieren und zurücksetzen.**
 * **DEB-Pakete erstellen:** Nolphin baut ein `.deb` selbst als `ar`-Archiv, ohne `dpkg-deb`.
-* **Massenumbenennung:** Suchen/Ersetzen, Nummerierung und Groß-/Kleinschreibung mit Vorschau der neuen Namen, rückgängig machbar.
+* **Massenumbenennung:** Suchen/Ersetzen, Nummerierung und Groß-/Kleinschreibung mit Vorschau, rückgängig machbar.
 * **CAD- und 3D-Erkennung:** STL, STEP/STP, FreeCAD `.FCStd` und weitere Formate.
-* **Git direkt im Dateimanager:** Änderungen anzeigen, speichern, mit dem Server abgleichen, Verlauf und Unterschiede.
 * **Sicherheit:** Prüfsummen, GPG-Verschlüsselung, ACL-Verwaltung.
 * **Papierkorb-Automatik** und **gespeicherte Dateiauswahlen**.
-* **Nemo-Grundlagen:** Tabs, Split View, Symbol-, Listen- und Kompaktansicht, Fortschritt, Rückgängig, Netzwerk über GVfs.
+* **Nemo-Grundlagen:** Tabs, Symbol-, Listen- und Kompaktansicht, Fortschritt, Rückgängig, Netzwerk über GVfs.
 
 ---
 
@@ -69,6 +76,12 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 │              │                          │   Git                  │
 │              │                          │   DEB-Ersteller        │
 │              │                          │   Massenumbenennung    │
+│              │                          │   Archiv-Manager       │
+│              │                          │   Arbeitsbereiche      │
+│              │                          │   Diagnose             │
+│              │                          │   Duplikate, Versionen │
+│              │                          │   Synchronisation      │
+│              │                          │   Regeln               │
 ├──────────────┴──────────────────────────┴────────────────────────┤
 │ Statusleiste                                                     │
 └──────────────────────────────────────────────────────────────────┘
@@ -79,11 +92,18 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 | Vorschau / Information | **F11** | Vorschau und Dateiinformationen; hierhin kehrt der Arbeitsbereich zurück |
 | Eigenschaften | Menü, Kontextmenü | Zugriffsrechte, Besitzer, Gruppe, ACL |
 | Archiv | Menü, Kontextmenü | Komprimieren |
+| Archiv-Manager | Kontextmenü „Archiv öffnen …“ | Inhalt, Hinzufügen, Ersetzen, Entfernen, Prüfen, Entpacken |
 | Terminal | **F4** | VTE-Terminal im aktuellen Ordner |
 | Suche | Suchaktion | Such- und Filterleiste |
 | Git | Menü, Kontextmenü | Status und Aktionen |
 | DEB-Ersteller | Menü, Kontextmenü | `.deb`-Paket aus Dateien und Ordnern |
 | Massenumbenennung | Menü | Umbenennen mit Vorschau |
+| Arbeitsbereiche | Datei ▸ Arbeitsbereiche | Layout speichern, laden, duplizieren, löschen |
+| Diagnose | Hilfe ▸ Diagnose | Protokolle, Systeminformationen, Plugin-Status, Fehlerbericht |
+| Duplikate | Bearbeiten ▸ Werkzeuge | Gleiche Dateien finden, in den Papierkorb legen |
+| Versionen | Bearbeiten ▸ Werkzeuge ▸ Versionen | Versionen einer Datei speichern, vergleichen, wiederherstellen |
+| Synchronisation | Bearbeiten ▸ Werkzeuge | Zwei Ordner vergleichen und abgleichen |
+| Regeln | Bearbeiten ▸ Werkzeuge | Bedingung und Aktion mit Vorschau auf einen Ordner anwenden |
 
 Ein Panel wird im Arbeitsbereich wiederverwendet und öffnet kein zusätzliches Fenster. Klassische Dialoge gibt es weiterhin für Dateiauswahl, Lösch- und Überschreibbestätigungen, Fehlermeldungen, Mount-Zugangsdaten und „Über Nolphin“.
 
@@ -97,21 +117,72 @@ Ein Panel wird im Arbeitsbereich wiederverwendet und öffnet kein zusätzliches 
 
 ![Panel zur Symbolauswahl mit Kategorien und Suchfeld](docs/bilder/panel-symbol-waehlen.png)
 
-**Git** – Änderungen anzeigen, speichern (Commit), mit dem Server abgleichen, Verlauf und Unterschiede. Außerhalb eines Repositorys meldet das Panel das ehrlich:
+**Git** – Änderungen anzeigen, speichern (Commit), mit dem Server abgleichen, Verlauf und Unterschiede. Die Statusliste unten zeigt, was hinzugefügt, geändert oder noch unversioniert ist. Außerhalb eines Repositorys meldet das Panel das ehrlich.
 
-![Git-Panel mit den Schritten Änderungen, Speichern und Server; Hinweis, dass der Ort kein Git-Repository ist](docs/bilder/panel-git.png)
+![Git-Panel mit den Schritten Änderungen, Speichern und Server sowie der Statusliste](docs/bilder/panel-git.png)
+
+Im Ordner selbst zeigen **Overlay-Symbole** den Git-Status jeder Datei (Häkchen = hinzugefügt, Ausrufezeichen = geändert, Plus = unversioniert). Alle Git-Aktionen stehen im Kontextmenü unter „Git“:
+
+| Overlays im Ordner | Git-Untermenü |
+| --- | --- |
+| ![Dateien eines Git-Ordners mit Overlay-Symbolen](docs/bilder/git-overlays.png) | ![Kontextmenü mit Git-Untermenü](docs/bilder/git-menue.png) |
 
 **Archiv** – Name, Format und Zielort wählen; Passwort und Teilarchive stehen unter „Erweiterte Optionen“:
 
-![Archiv-Panel mit Dateiname, Format ZIP, Ort und aufgeklappten erweiterten Optionen](docs/bilder/panel-archiv.png)
+![Archiv-Panel mit Dateiname, Format ZIP, Ort und erweiterten Optionen](docs/bilder/panel-archiv.png)
+
+**Archiv-Manager** – bei einem vorhandenen Archiv zeigt „Archiv öffnen …“ den Inhalt und erlaubt Entpacken, Hinzufügen, Ersetzen, Entfernen und Prüfen:
+
+| Kontextmenü eines Archivs | Archiv-Manager |
+| --- | --- |
+| ![Kontextmenü einer ZIP-Datei mit Archiv-Einträgen](docs/bilder/kontextmenue-archiv.png) | ![Archiv-Manager mit Inhaltsliste einer ZIP-Datei](docs/bilder/panel-archiv-manager.png) |
 
 **DEB-Ersteller** – Paketname, Version, Beschreibung und Ersteller eintragen, Dateien und Ordner mit Zielpfad hinzufügen und das Paket erstellen:
 
-![DEB-Ersteller-Panel mit Eingabefeldern und leerer Dateiliste](docs/bilder/panel-deb-ersteller.png)
+![DEB-Ersteller-Panel mit ausgefüllten Eingabefeldern und leerer Dateiliste](docs/bilder/panel-deb-ersteller.png)
 
 **Terminal (F4)** – das eingebettete Terminal öffnet im aktuellen Ordner und bleibt neben der Hauptansicht:
 
 ![Terminal-Panel neben der Dateiansicht des Ordners „Bilder“](docs/bilder/panel-terminal.png)
+
+**Vorschau und Metadaten** – PDF und Video zeigen eine Vorschau samt Eckdaten; zu jeder Datei lassen sich Bewertung, Tags und Kommentar festhalten:
+
+| PDF | Video |
+| --- | --- |
+| ![Vorschau einer PDF-Datei mit Titel, Autor, Seiten und Seitengröße](docs/bilder/vorschau-pdf.png) | ![Vorschau eines Videos mit Dauer, Codec, Auflösung und Bildrate](docs/bilder/vorschau-video.png) |
+
+![Info-Panel eines Bildes mit vier Sternen, Tags und Kommentar](docs/bilder/info-bewertung.png)
+
+**Werkzeuge** – zu finden unter Bearbeiten ▸ Werkzeuge; jedes Werkzeug arbeitet mit einer **Vorschau**, bevor etwas verändert wird:
+
+![Menü Bearbeiten ▸ Werkzeuge mit Ordner vergleichen, Regeln, Stapelverarbeitung, Duplikate und Versionen](docs/bilder/menue-werkzeuge.png)
+
+| Duplikate | Versionen |
+| --- | --- |
+| ![Duplikate-Panel mit einer Gruppe gleicher Dateien](docs/bilder/panel-duplikate.png) | ![Versionen-Panel mit zwei gespeicherten Versionen und Unterschieden](docs/bilder/panel-versionen.png) |
+| **Synchronisation** | **Regeln** |
+| ![Synchronisations-Panel mit Neu, Geändert und Konflikt](docs/bilder/panel-sync.png) | ![Regeln-Panel mit Bedingung, Aktion und Vorschau](docs/bilder/panel-regeln.png) |
+
+**Massenumbenennung** – Suchen/Ersetzen und Nummerierung mit Vorschau der neuen Namen:
+
+![Massenumbenennung mit Suchen, Ersetzen und Nummerierung](docs/bilder/panel-massenumbenennung.png)
+
+**Geteilte Ansicht und Arbeitsbereiche** – bis zu vier Bereiche nebeneinander; das gesamte Layout lässt sich als Arbeitsbereich speichern:
+
+| Geteilte Ansicht | Vier Bereiche |
+| --- | --- |
+| ![Menü Ansicht ▸ Geteilte Ansicht](docs/bilder/menue-geteilte-ansicht.png) | ![Vier Bereiche mit verschiedenen Ordnern](docs/bilder/ansicht-vier-bereiche.png) |
+| ![Menü Datei ▸ Arbeitsbereiche](docs/bilder/menue-arbeitsbereiche.png) | ![Arbeitsbereiche-Panel mit einem gespeicherten Arbeitsbereich](docs/bilder/panel-arbeitsbereiche.png) |
+
+**Gehe zu und Hilfe** – Verlauf, häufig verwendete Orte und Reiter im Menü „Gehe zu“, die Diagnose im Menü „Hilfe“:
+
+| Gehe zu | Hilfe |
+| --- | --- |
+| ![Menü Gehe zu mit Häufig verwendet](docs/bilder/menue-gehe-zu.png) | ![Menü Hilfe mit Diagnose-Untermenü](docs/bilder/menue-hilfe.png) |
+
+**Diagnose** – Protokolle, Systeminformationen mit gefundenen Werkzeugen, Plugin-Status und Fehlerbericht in einem Panel:
+
+![Diagnose-Panel mit Systeminformationen und gefundenen Werkzeugen](docs/bilder/panel-diagnose.png)
 
 ---
 
@@ -128,7 +199,36 @@ Tabs, Split View (F3), Symbol-, Listen- und Kompaktansicht, Kopieren und Verschi
 | ZIP, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, TAR.LZ4, 7Z | CAB, ARJ, LZH, ISO, CPIO, RPM, DEB |
 | Einzeldateien: XZ, ZST, LZ4 | |
 
-Ist das benötigte Werkzeug nicht installiert, wird das erkannt und angezeigt.
+Ist das benötigte Werkzeug nicht installiert, wird das erkannt und angezeigt. Der **Archiv-Manager** liest den Inhalt eines Archivs aus und ändert es gezielt (hinzufügen, ersetzen, entfernen); er arbeitet mit denselben Systemwerkzeugen.
+
+### Vorschau und Metadaten
+
+* **PDF:** Titel, Autor, Seitenzahl, Seitengröße und PDF-Version über `pdfinfo`, Vorschaubild über `pdftocairo` (Paket `poppler-utils`).
+* **Audio und Video:** Dauer, Container, Codecs, Auflösung, Bildrate, Kanäle und Abtastrate über `gst-discoverer-1.0` (Paket `gstreamer1.0-tools`).
+* **Bewertung, Tags, Kommentar:** werden als Datei-Metadaten über GIO gespeichert und im Info-Panel angezeigt.
+
+Fehlt eines der Werkzeuge, steht im Panel ein Hinweis, statt Werte vorzutäuschen.
+
+### Git
+
+Der Git-Status jeder Datei erscheint als Overlay-Symbol im Ordner. Das Panel führt durch die Schritte „Änderungen“, „Speichern“ und „Mit dem Server“ und zeigt Verlauf und Unterschiede.
+
+### Werkzeuge
+
+* **Ordner vergleichen und synchronisieren:** vergleicht zwei Ordner über `rsync -n` und zeigt, was neu, geändert oder in Konflikt ist. Abgeglichen wird in **eine** Richtung, im Ziel wird **nie etwas gelöscht**.
+* **Regeln anwenden:** Bedingungen (Dateityp, Name mit Platzhaltern, Größe, Änderungsdatum) und eine Aktion; zuerst die Vorschau, dann „Anwenden“. Regeln werden derzeit nicht dauerhaft gespeichert.
+* **Duplikate finden:** nach Name, Größe oder Inhalt (Prüfsumme) in einem Ordner samt Unterordnern; gelöscht wird nur in den Papierkorb und nach Bestätigung.
+* **Versionen:** Nolphin sichert Versionen einer Datei in `~/.local/share/nolphin/versions`; wiederherstellen, löschen und – bei Textdateien – mit der aktuellen Datei vergleichen.
+
+### Fenster, Reiter und Orte
+
+* **Geteilte Ansicht:** bis zu vier Bereiche, Aufteilung waagerecht oder senkrecht, Bereiche duplizieren, maximieren und schließen.
+* **Arbeitsbereiche:** speichern Reiter, Teilung, Fenstergröße und Panels unter einem Namen; Laden, Duplizieren und Löschen im Panel. Beim Beenden merkt sich Nolphin die letzte Sitzung.
+* **Gehe zu:** Verlauf, häufig verwendete Orte und Reiter; „Zwischenablage als Datei einfügen“ im Bearbeiten-Menü.
+
+### Diagnose
+
+Unter Hilfe ▸ Diagnose zeigt Nolphin das Protokoll, Systeminformationen mit den gefundenen Hilfswerkzeugen, den Status der geladenen Plugins und erstellt einen Fehlerbericht.
 
 ### DEB-Paket erstellen
 
@@ -155,9 +255,9 @@ Der Papierkorb wird nach einer einstellbaren Aufbewahrungsdauer bereinigt, bei �
 
 ## Einstellungen und Anpassung
 
-Verhalten, Anzeige, Listenspalten, Vorschau, Werkzeugleiste, Kontextmenüs, Dokumentvorlagen und Plugins haben jeweils eine eigene Einstellungsseite.
+Ansichten, Verhalten, Anzeige, Listenspalten, Vorschau, Werkzeugleiste, Kontextmenüs, Dokumentvorlagen und Module haben jeweils eine eigene Einstellungsseite. Unten stehen **Exportieren …**, **Importieren …** und **Zurücksetzen …** für alle Einstellungen.
 
-> **Bekannt:** Einige Texte der Einstellungsseiten sind noch englisch (aus dem Nemo-Ursprung) und noch nicht ins Deutsche übersetzt.
+> **Bekannt:** Einzelne Texte (zum Beispiel im Layout-Editor und in manchen Einstellungsseiten) sind noch englisch.
 
 | | |
 | --- | --- |
@@ -178,29 +278,35 @@ Nolphin ist Entwicklungssoftware: Funktionen können sich ändern.
 
 ### Umgesetzt
 
-* [x] Dateiverwaltung auf Nemo-Basis mit Tabs, Split View und Ansichten
+* [x] Dateiverwaltung auf Nemo-Basis mit Tabs, geteilter Ansicht (bis zu vier Bereiche) und Ansichten
 * [x] Rechter Arbeitsbereich mit Panel-Wechsel
-* [x] Vorschau- und Info-Panel
+* [x] Vorschau- und Info-Panel, Bewertung, Tags und Kommentar
+* [x] PDF-, Audio- und Video-Informationen (über `pdfinfo`, `pdftocairo`, `gst-discoverer-1.0`)
 * [x] Eigenschaften im Arbeitsbereich
 * [x] Integriertes Terminal (F4)
-* [x] Archive komprimieren und entpacken
+* [x] Archive komprimieren und entpacken, Archiv-Manager
 * [x] DEB-Paket-Ersteller
 * [x] Massenumbenennung
 * [x] CAD- und 3D-Erkennung (STL, STEP, FCStd u. a.)
-* [x] Git-Aktionen
+* [x] Git-Aktionen und Git-Overlay-Symbole
 * [x] Prüfsummen, GPG, ACL
 * [x] Papierkorb-Automatik
 * [x] Gespeicherte Dateiauswahlen
+* [x] Arbeitsbereiche und Merken der letzten Sitzung
+* [x] Gehe zu: Verlauf, häufig verwendet, Reiter
+* [x] Synchronisation (`rsync`), Regeln, Duplikaterkennung, Versionierung
+* [x] Diagnose mit Protokoll, Systeminformationen, Plugin-Status und Fehlerbericht
+* [x] Einstellungen exportieren, importieren, zurücksetzen
 
-### Geplant
+### Geplant und bekannte Grenzen
 
 * [ ] Erweiterte Suche: UND, ODER, NICHT, kombinierbare Filter
-* [ ] Erweiterte Vorschau: PDF (Poppler-GLib), Video und Audio (GStreamer)
-* [ ] Metadaten: Tags, Bewertungen, Kommentare
-* [ ] Arbeitsbereiche: Layout, Tabs und Terminal speichern und benennen
 * [ ] Netzwerk: SFTP, FTP, WebDAV prüfen
-* [ ] Automatische Regeln, Synchronisation über `rsync`, Versionierung, Duplikaterkennung
-* [ ] Diagnose-Dialog mit Fehlerbericht-Export
+* [ ] PDF und Medien direkt über Poppler-GLib und GStreamer-Bibliotheken statt über Kommandozeilenwerkzeuge
+* [ ] Regeln dauerhaft speichern und automatisch auslösen
+* [ ] Überlagerungen für SVN und Mercurial (bisher nur Git)
+* [ ] Vollständige Übersetzung aller Einstellungstexte
+* [ ] Eigene Tests und Dokumentation für die neuen Module
 
 ### Teststand
 
@@ -231,6 +337,14 @@ Diese drei Punkte sind offen und nicht als erledigt zu betrachten.
 | Prüfsummen, GPG, ACL | – | ✓ |
 | Papierkorb-Automatik | – | ✓ |
 | Gespeicherte Dateiauswahlen | – | ✓ |
+| Git-Overlays am Dateisymbol | – | ✓ |
+| PDF-, Audio- und Video-Informationen | – | ✓ |
+| Bewertung, Tags, Kommentar im Info-Panel | – | ✓ |
+| Archiv-Manager | – | ✓ |
+| Synchronisation, Regeln, Duplikate, Versionen | – | ✓ |
+| Arbeitsbereiche, bis zu vier Bereiche | – | ✓ |
+| Diagnose-Panel mit Fehlerbericht | – | ✓ |
+| Einstellungen exportieren und importieren | – | ✓ |
 
 ---
 
@@ -243,7 +357,7 @@ Nolphin läuft ausschließlich unter Linux und ist für Linux Mint mit Cinnamon 
 * Meson (≥ 0.64), Ninja, C-Compiler (C11)
 * GTK3, GLib, GIO, GVfs, VTE 2.91, XApp, cinnamon-desktop
 * optional: libexif, exempi
-* Laufzeitwerkzeuge, je nach Funktion: `zip`/`unzip`, `tar`, `7z`, `zstd`, `lz4`, `xz`, `git`, `gpg`, `getfacl`/`setfacl`
+* Laufzeitwerkzeuge, je nach Funktion: `zip`/`unzip`, `tar`, `7z`, `zstd`, `lz4`, `xz`, `git`, `gpg`, `getfacl`/`setfacl`, `rsync`, `pdfinfo`/`pdftocairo` (poppler-utils), `gst-discoverer-1.0` (gstreamer1.0-tools)
 
 ### Bauen und testen
 
