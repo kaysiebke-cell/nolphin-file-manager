@@ -25,6 +25,7 @@
 #include <glib/gi18n.h>
 #include <libnolphin-private/nolphin-global-preferences.h>
 #include <libnolphin-private/nolphin-cad.h>
+#include <libnolphin-private/nolphin-media.h>
 #include <libnolphin-private/nolphin-metadata.h>
 
 #define PREVIEW_IMAGE_SIZE 256
@@ -78,6 +79,12 @@ struct _NolphinPreview
      * below apply to (may be an attempt that failed, cad_info_error
      * set instead of cad_info) - NULL when nothing has been requested
      * yet for the current watched_file. */
+    /* §34: PDF-/Video-/Audio-Angaben für watched_file, asynchron geladen. */
+    GCancellable *media_cancellable;
+    NolphinFile *media_info_file;
+    NolphinMediaInfo *media_info;
+    gchar *media_info_error;
+
     GCancellable *cad_cancellable;
     NolphinFile *cad_info_file;
     NolphinCadInfo *cad_info;
@@ -98,6 +105,18 @@ clear_cad_state (NolphinPreview *preview)
     g_clear_pointer (&preview->cad_info, nolphin_cad_info_free);
     g_clear_pointer (&preview->cad_info_error, g_free);
     g_clear_pointer (&preview->cad_info_file, nolphin_file_unref);
+}
+
+static void
+clear_media_state (NolphinPreview *preview)
+{
+    if (preview->media_cancellable != NULL) {
+        g_cancellable_cancel (preview->media_cancellable);
+        g_clear_object (&preview->media_cancellable);
+    }
+    g_clear_pointer (&preview->media_info, nolphin_media_info_free);
+    g_clear_pointer (&preview->media_info_error, g_free);
+    g_clear_pointer (&preview->media_info_file, nolphin_file_unref);
 }
 
 static void
@@ -129,6 +148,7 @@ stop_watching_file (NolphinPreview *preview)
     }
 
     clear_cad_state (preview);
+    clear_media_state (preview);
     clear_text_state (preview);
 
     nolphin_file_unref (preview->watched_file);
@@ -263,6 +283,47 @@ add_cad_info_rows (GtkGrid *grid, gint *row, NolphinCadInfo *info)
         default:
             break;
     }
+}
+
+typedef struct {
+    NolphinPreview *preview; /* reffed */
+    NolphinFile *file;       /* reffed - the subject this request is for */
+} MediaRequest;
+
+static void
+media_request_free (MediaRequest *req)
+{
+    g_object_unref (req->preview);
+    nolphin_file_unref (req->file);
+    g_free (req);
+}
+
+static void
+media_info_ready_cb (GObject *source, GAsyncResult *result, gpointer user_data)
+{
+    MediaRequest *req = user_data;
+    GError *error = NULL;
+    NolphinMediaInfo *info = nolphin_media_get_info_finish (result, &error);
+
+    /* Nur anwenden, wenn die Datei noch angezeigt wird (sonst verspätetes Ergebnis). */
+    if (req->file == req->preview->watched_file) {
+        g_clear_pointer (&req->preview->media_info, nolphin_media_info_free);
+        g_clear_pointer (&req->preview->media_info_error, g_free);
+        g_clear_pointer (&req->preview->media_info_file, nolphin_file_unref);
+
+        req->preview->media_info_file = nolphin_file_ref (req->file);
+        if (info != NULL) {
+            req->preview->media_info = info;
+            info = NULL;
+        } else {
+            req->preview->media_info_error = g_strdup (error != NULL ? error->message : _("Unbekannter Fehler"));
+        }
+        display_subject (req->preview, req->file);
+    }
+
+    nolphin_media_info_free (info);
+    g_clear_error (&error);
+    media_request_free (req);
 }
 
 typedef struct {
@@ -620,6 +681,47 @@ display_single_file (NolphinPreview *preview, NolphinFile *file)
         }
     }
 
+    /* §34 Erweiterte Vorschau: PDF, Video, Audio (asynchron, mit Cache je Datei). */
+    if (!is_dir) {
+        gchar *mime = nolphin_file_get_mime_type (file);
+
+        if (nolphin_media_is_supported (mime)) {
+            if (preview->media_info_file == file) {
+                if (preview->media_info != NULL) {
+                    guint k;
+
+                    for (k = 0; k < preview->media_info->rows->len; k++) {
+                        NolphinMediaRow *r = preview->media_info->rows->pdata[k];
+
+                        add_info_row (grid, row++, r->label, r->value);
+                    }
+                    add_info_row (grid, row++, _("Hinweis:"), preview->media_info->notice);
+                } else {
+                    add_info_row (grid, row++, _("Medien-Vorschau:"), preview->media_info_error);
+                }
+            } else {
+                GFile *location = nolphin_file_get_location (file);
+                MediaRequest *req;
+
+                add_info_row (grid, row++, _("Medien-Angaben:"), _("Wird gelesen …"));
+
+                if (preview->media_cancellable != NULL) {
+                    g_cancellable_cancel (preview->media_cancellable);
+                    g_object_unref (preview->media_cancellable);
+                }
+                preview->media_cancellable = g_cancellable_new ();
+
+                req = g_new0 (MediaRequest, 1);
+                req->preview = g_object_ref (preview);
+                req->file = nolphin_file_ref (file);
+                nolphin_media_get_info_async (location, mime, preview->media_cancellable,
+                                              media_info_ready_cb, req);
+                g_object_unref (location);
+            }
+        }
+        g_free (mime);
+    }
+
     /* Image preview. Skip large files rather than decode them
      * synchronously - nolphin_file_get_icon_pixbuf() returns whatever
      * is already cached/generated (falling back to a generic mime
@@ -647,6 +749,19 @@ display_single_file (NolphinPreview *preview, NolphinFile *file)
     if (preview->cad_info_file == file && preview->cad_info != NULL &&
         preview->cad_info->fcstd_thumbnail_png != NULL) {
         GInputStream *stream = g_memory_input_stream_new_from_bytes (preview->cad_info->fcstd_thumbnail_png);
+        GdkPixbuf *thumb = gdk_pixbuf_new_from_stream (stream, NULL, NULL);
+
+        g_object_unref (stream);
+        if (thumb != NULL) {
+            gtk_image_set_from_pixbuf (GTK_IMAGE (preview->image), thumb);
+            g_object_unref (thumb);
+        }
+    }
+
+    /* Erste PDF-Seite als Vorschaubild, sobald verfügbar. */
+    if (preview->media_info_file == file && preview->media_info != NULL &&
+        preview->media_info->thumb_png != NULL) {
+        GInputStream *stream = g_memory_input_stream_new_from_bytes (preview->media_info->thumb_png);
         GdkPixbuf *thumb = gdk_pixbuf_new_from_stream (stream, NULL, NULL);
 
         g_object_unref (stream);

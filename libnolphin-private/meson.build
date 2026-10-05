@@ -60,6 +60,7 @@ nolphin_private_sources = [
   'nolphin-malloc-utils.c',
   'nolphin-link.c',
   'nolphin-merged-directory.c',
+  'nolphin-media.c',
   'nolphin-metadata.c',
   'nolphin-mime-application-chooser.c',
   'nolphin-module.c',
