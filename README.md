@@ -310,7 +310,7 @@ Nolphin ist Entwicklungssoftware: Funktionen können sich ändern.
 
 ### Teststand
 
-`meson test -C build` (Stand: 4. Oktober 2026): **13 von 16 Tests bestehen.**
+`meson test -C build` (Stand: 5. Oktober 2026): **13 von 16 Tests bestehen.**
 
 | Test | Ergebnis |
 | ---- | -------- |
