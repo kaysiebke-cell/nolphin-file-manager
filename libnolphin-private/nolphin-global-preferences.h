@@ -116,6 +116,7 @@ typedef enum
 #define NOLPHIN_WINDOW_STATE_START_WITH_TERMINAL		"start-with-terminal"
 #define NOLPHIN_WINDOW_STATE_TERMINAL_HEIGHT			"terminal-height"
 #define NOLPHIN_WINDOW_STATE_START_WITH_PREVIEW		"start-with-preview"
+#define NOLPHIN_WINDOW_STATE_SHOW_GID_PROJECTS		"show-gid-projects"
 #define NOLPHIN_WINDOW_STATE_PREVIEW_WIDTH			"preview-width"
 #define NOLPHIN_WINDOW_STATE_START_WITH_TOOLBAR		"start-with-toolbar"
 #define NOLPHIN_WINDOW_STATE_START_WITH_MENU_BAR           "start-with-menu-bar"
@@ -158,6 +159,8 @@ typedef enum
 #define NOLPHIN_PREFERENCES_RECENT_ENABLED "remember-recent-files"
 
 #define NOLPHIN_PREFERENCES_SIDEBAR_BOOKMARK_BREAKPOINT "sidebar-bookmark-breakpoint"
+
+#define NOLPHIN_PREFERENCES_GID_PROJECTS "gid-projects"
 
 enum
 {

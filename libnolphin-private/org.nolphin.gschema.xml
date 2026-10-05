@@ -270,6 +270,11 @@
   </schema>
 
   <schema id="org.nolphin.preferences" path="/org/nolphin/preferences/" gettext-domain="nolphin">
+    <key name="gid-projects" type="as">
+      <default>[]</default>
+      <summary>Local GID project folders</summary>
+      <description>Absolute paths of the local project folders shown in the "GID-Projekte" section of the side pane. Removing an entry never deletes files.</description>
+    </key>
     <key name="preview-enabled" type="b">
       <default>true</default>
       <summary>Enable file previews in the info panel</summary>
@@ -889,6 +894,11 @@
       <default>200</default>
       <summary>Height of the terminal panel</summary>
       <description>The default height in pixels of the integrated terminal panel.</description>
+    </key>
+    <key name="show-gid-projects" type="b">
+      <default>true</default>
+      <summary>Show the GID projects section in the side pane</summary>
+      <description>If set to false, the "GID-Projekte" section below the places or tree side pane is hidden.</description>
     </key>
     <key name="start-with-preview" type="b">
       <default>true</default>

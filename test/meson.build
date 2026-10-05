@@ -170,3 +170,26 @@ test('Search expression test',
   ),
   args: []
 )
+
+test('Markdown renderer test',
+  executable('test-nolphin-markdown',
+    [ 'test-nolphin-markdown.c', '../src/nolphin-markdown-view.c' ],
+    include_directories: [ rootInclude, ],
+    dependencies: [ gtk ],
+  ),
+  args: []
+)
+
+test('GID projects test',
+  executable('test-nolphin-gid-projects',
+    [ 'test-nolphin-gid-projects.c', '../src/nolphin-gid-projects.c' ],
+    include_directories: [ rootInclude, ],
+    dependencies: [ gtk ],
+    c_args: nolphin_definitions,
+  ),
+  env: [
+    'GSETTINGS_BACKEND=memory',
+    'GSETTINGS_SCHEMA_DIR=' + meson.current_build_dir() + '/../libnolphin-private',
+  ],
+  args: []
+)

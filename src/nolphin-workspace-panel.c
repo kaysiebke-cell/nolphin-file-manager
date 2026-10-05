@@ -28,6 +28,7 @@
 #include "nolphin-application.h"
 #include "nolphin-diagnostics.h"
 #include "nolphin-tools.h"
+#include "nolphin-gid.h"
 #include "nolphin-terminal.h"
 #include "nolphin-view.h"
 #include "nolphin-window-pane.h"
@@ -4912,6 +4913,7 @@ nolphin_workspace_panel_new (NolphinWindow *window, GtkWidget *preview_widget, G
 	add_stack_page (GTK_STACK (stack), nolphin_versions_page_new (window), "versions");
 	add_stack_page (GTK_STACK (stack), nolphin_sync_page_new (window), "sync");
 	add_stack_page (GTK_STACK (stack), nolphin_rules_page_new (window), "rules");
+	add_stack_page (GTK_STACK (stack), nolphin_gid_page_new (window), "gid");
 
 	/* Terminal-Widget selbst kommt bereits sichtbar aus
 	 * nolphin_terminal_new() (wie im frueheren unteren Bereich auch) -
@@ -5233,6 +5235,20 @@ nolphin_workspace_panel_show_git (GtkWidget *workspace_panel, NolphinWindow *win
 	}
 
 	workspace_panel_show_page (workspace_panel, window, "git");
+}
+
+void
+nolphin_workspace_panel_show_gid (GtkWidget *workspace_panel, NolphinWindow *window, GFile *project_folder)
+{
+	GtkWidget *page;
+
+	g_return_if_fail (GTK_IS_STACK (workspace_panel));
+
+	page = gtk_stack_get_child_by_name (GTK_STACK (workspace_panel), "gid");
+	if (page != NULL && project_folder != NULL) {
+		nolphin_gid_page_open (page, project_folder);
+	}
+	workspace_panel_show_page (workspace_panel, window, "gid");
 }
 
 void

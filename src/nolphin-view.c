@@ -34,6 +34,8 @@
 #include "nolphin-window.h"
 
 #include "nolphin-actions.h"
+#include "nolphin-gid-projects.h"
+#include "nolphin-workspace-panel.h"
 #include "nolphin-desktop-icon-view.h"
 #include "nolphin-error-reporting.h"
 #include "nolphin-list-view.h"
@@ -9448,6 +9450,48 @@ action_open_in_terminal_callback(GtkAction *action,
     }
 }
 
+/* Ordner, den "Als GID-Projekt hinzufügen" betrifft (§60.2): der genau eine
+ * gewählte lokale Ordner, ohne Auswahl der aktuelle lokale Ordner. NULL,
+ * wenn keiner in Frage kommt. */
+static gchar *
+gid_candidate_path (NolphinView *view, GList *selection)
+{
+	gchar *path = NULL;
+
+	if (selection != NULL) {
+		if (selection->next == NULL && nolphin_file_is_directory (NOLPHIN_FILE (selection->data)))
+			path = nolphin_file_get_path (NOLPHIN_FILE (selection->data));
+	} else {
+		gchar *uri = nolphin_view_get_uri (view);
+		GFile *gfile = g_file_new_for_uri (uri);
+
+		if (g_file_is_native (gfile) && !g_file_has_uri_scheme (gfile, "x-nolphin-desktop"))
+			path = g_file_get_path (gfile);
+		g_object_unref (gfile);
+		g_free (uri);
+	}
+	return path;
+}
+
+static void
+action_gid_add_project_callback (GtkAction *action, gpointer callback_data)
+{
+	NolphinView *view = NOLPHIN_VIEW (callback_data);
+	GList *selection = nolphin_view_get_selection (view);
+	gchar *path = gid_candidate_path (view, selection);
+	GtkWidget *toplevel = gtk_widget_get_toplevel (GTK_WIDGET (view));
+
+	if (path != NULL && nolphin_gid_projects_add (path) && NOLPHIN_IS_WINDOW (toplevel)) {
+		GFile *folder = g_file_new_for_path (path);
+		NolphinWindow *window = NOLPHIN_WINDOW (toplevel);
+
+		nolphin_workspace_panel_show_gid (nolphin_window_get_workspace_panel (window), window, folder);
+		g_object_unref (folder);
+	}
+	g_free (path);
+	nolphin_file_list_free (selection);
+}
+
 static void
 real_action_undo (NolphinView *view)
 {
@@ -10374,6 +10418,10 @@ static const GtkActionEntry directory_view_entries[] = {
   /* label, accelerator */       N_("Im Terminal öffnen"), "<shift>F4",
   /* tooltip */                  N_("Terminal im gewähltem Ordner öffnen"),
 				 G_CALLBACK (action_open_in_terminal_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_GID_ADD_PROJECT, "list-add-symbolic",
+  /* label, accelerator */       N_("Als GID-Projekt hinzufügen"), NULL,
+  /* tooltip */                  N_("Diesen Ordner in der Seitenleiste als GID-Projekt eintragen"),
+				 G_CALLBACK (action_gid_add_project_callback) },
   /* name, stock id */         { NOLPHIN_ACTION_OPEN_AS_ROOT, "xsi-dialog-password-symbolic",
   /* label, accelerator */       N_("Als Systemverwalter öffnen"), "",
   /* tooltip */                  N_("Ordner mit Administratorrechten öffnen"),
@@ -11983,6 +12031,16 @@ real_update_menus (NolphinView *view)
      * Datei (nicht nur einem Ordner) sichtbar - der Callback oeffnet dann
      * im Elternordner der Datei, das unterstuetzt er laengst. */
     gtk_action_set_visible (action, selection_count <= 1);
+
+    action = gtk_action_group_get_action (view->details->dir_action_group,
+                                         NOLPHIN_ACTION_GID_ADD_PROJECT);
+    {
+        gchar *gid_path = gid_candidate_path (view, selection);
+
+        gtk_action_set_visible (action, gid_path != NULL);
+        gtk_action_set_sensitive (action, gid_path != NULL && !nolphin_gid_projects_contains (gid_path));
+        g_free (gid_path);
+    }
 
 	action = gtk_action_group_get_action (view->details->dir_action_group,
 					      NOLPHIN_ACTION_NEW_FOLDER);

@@ -96,6 +96,12 @@ void       nolphin_workspace_panel_show_workspaces (GtkWidget *workspace_panel,
 void       nolphin_workspace_panel_show_git          (GtkWidget *workspace_panel,
 						       NolphinWindow *window);
 
+/* Zeigt die README.md des GID-Projekts @project_folder (§60.3) und blendet
+ * das Panel ein. */
+void       nolphin_workspace_panel_show_gid          (GtkWidget *workspace_panel,
+						       NolphinWindow *window,
+						       GFile *project_folder);
+
 /* Zeigt den .deb-Paket-Ersteller und blendet das Panel ein. */
 void       nolphin_workspace_panel_show_deb_builder  (GtkWidget *workspace_panel,
 						       NolphinWindow *window);

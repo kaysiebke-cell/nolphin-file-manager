@@ -36,6 +36,8 @@
 #include "nolphin-application.h"
 #include "nolphin-bookmarks-window.h"
 #include "nolphin-desktop-window.h"
+#include "nolphin-gid-menu.h"
+#include "nolphin-gid-sidebar.h"
 #include "nolphin-location-bar.h"
 #include "nolphin-mime-actions.h"
 #include "nolphin-notebook.h"
@@ -770,6 +772,9 @@ nolphin_window_set_up_sidebar (NolphinWindow *window)
 
 	gtk_box_pack_start (GTK_BOX (window->details->sidebar), sidebar, TRUE, TRUE, 0);
 	gtk_widget_show (sidebar);
+
+	/* GID-Projekte (§60.2): zusätzlicher Bereich unter Orte/Ordnerbaum. */
+	gtk_box_pack_end (GTK_BOX (window->details->sidebar), nolphin_gid_sidebar_new (window), FALSE, FALSE, 0);
 	gtk_widget_show (GTK_WIDGET (window->details->sidebar));
 }
 
@@ -1118,6 +1123,8 @@ nolphin_window_constructed (GObject *self)
 	side_pane_id_changed (window);
 
 	nolphin_window_initialize_bookmarks_menu (window);
+	if (!NOLPHIN_IS_DESKTOP_WINDOW (window))
+		nolphin_gid_menu_initialize (window);
 	nolphin_window_set_initial_window_geometry (window);
 
 	slot = nolphin_window_pane_open_slot (window->details->active_pane, 0);

@@ -152,6 +152,7 @@
 		</placeholder>
 		<separator name="Open terminal separator"/>
         <menuitem name="OpenInTerminal" action="OpenInTerminal"/>
+        <menuitem name="GIDAddProject" action="GIDAddProject"/>
         <menuitem name="OpenAsRoot" action="OpenAsRoot"/>
 		<separator name="View items separator"/>
 		<placeholder name="View Items"/>
@@ -237,6 +238,7 @@
 	</placeholder>
 	<separator name="Advanced separator"/>
 	<menuitem name="OpenInTerminal" action="OpenInTerminal"/>
+	<menuitem name="GIDAddProject" action="GIDAddProject"/>
 	<menuitem name="OpenAsRoot" action="OpenAsRoot"/>
     <menuitem name="FollowSymbolicLink" action="FollowSymbolicLink"/>
     <menuitem name="OpenContainingFolder" action="OpenContainingFolder"/>

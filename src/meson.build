@@ -86,6 +86,11 @@ nolphinCommon_sources = [
   'nolphin-window-slot-dnd.c',
   'nolphin-window-slot.c',
   'nolphin-window.c',
+  'nolphin-gid-menu.c',
+  'nolphin-gid-projects.c',
+  'nolphin-gid-sidebar.c',
+  'nolphin-gid.c',
+  'nolphin-markdown-view.c',
   'nolphin-workspace-panel.c',
   'nolphin-x-content-bar.c',
 ]

@@ -83,6 +83,7 @@
 				<menuitem name="Sidebar Tree" action="Sidebar Tree"/>
 				<separator/>
 				<menuitem name="Show Hide Sidebar" action="Show Hide Sidebar"/>
+				<menuitem name="Show Hide GID Projects" action="Show Hide GID Projects"/>
 			</menu>
             <menu action="Toolbar List">
                 <menuitem name="Toolbar Show Pathbar" action="Toolbar Always Show Pathbar"/>
@@ -136,6 +137,11 @@
 			<menuitem name="Go to Templates" action="Go to Templates"/>
 			<menuitem name="Go to Trash" action="Go to Trash"/>
 		        <menuitem name="Go to Network" action="Go to Network"/>
+			<menu action="GIDProjectsMenu">
+				<placeholder name="GID Projects Placeholder"/>
+				<separator/>
+				<menuitem name="GID Add Project" action="GID Add Project"/>
+			</menu>
 			<separator/>
 			<menu action="HistoryMenu">
 				<placeholder name="History Placeholder"/>

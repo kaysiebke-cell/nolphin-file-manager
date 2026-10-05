@@ -1,9 +1,10 @@
-# NOLPHIN – MASTER DEVELOPMENT CONTRACT (Version 2.3)
+# NOLPHIN – MASTER DEVELOPMENT CONTRACT (Version 2.4)
 
 Verbindlicher Entwicklungs-, Funktions- und Arbeitsvertrag
 
 **Aktualisierung 2.2:** Klarstellung und Konfliktauflösung zum rechten integrierten Arbeitsbereich (siehe Abschnitt 58.0 und 58.1).
 **Aktualisierung 2.3:** Nachträgliche Dokumentation der bereits implementierten Funktion „DEB-Paket erstellen" als Teil des Archiv-Panels (siehe Abschnitt 36.1). Alle übrigen Abschnitte sind gegenüber Version 2.1 inhaltlich unverändert.
+**Aktualisierung 2.4:** Neuer Abschnitt 60 „GID-Projekte“ (lokale Projektliste in der Seitenleiste, README-Panel im rechten Arbeitsbereich); vom Benutzer freigegeben.
 
 ---
 
@@ -1565,4 +1566,56 @@ Ich entscheide, was Nolphin sein soll. Du analysierst, planst, implementierst, b
 
 ---
 
-ENDE DES NOLPHIN MASTER DEVELOPMENT CONTRACT (Version 2.2)
+## 60. GID-PROJEKTE (freigegeben, Version 2.4)
+
+### 60.1 Ziel
+
+Lokale Projektordner werden im Aufbau von GitHub dargestellt: links die Projektliste, rechts die gerenderte `README.md` des gewählten Projekts. Alles bleibt lokal. Es gibt keine GitHub-API, keine Netzwerkzugriffe und keine neue Bibliotheksabhängigkeit.
+
+### 60.2 Seitenleiste
+
+- Zusätzlicher, auf- und zuklappbarer Bereich „GID-Projekte" neben Orte und Ordnerbaum. Die bestehende Seitenleiste bleibt unverändert.
+- Jeder Eintrag ist ein lokaler Ordner. Angezeigt werden Ordnername und, falls der Ordner ein Git-Repository ist, der aktuelle Branch. Er wird direkt aus `.git/HEAD` gelesen (auch bei Worktrees); ein Subprozess und das Werkzeug `git` sind dafür nicht nötig.
+- Hinzufügen und Entfernen über das Kontextmenü („Als GID-Projekt hinzufügen", „Aus GID-Projekten entfernen"). Die Liste liegt in GSettings.
+- Entfernen löscht nie Dateien, es entfernt nur den Eintrag.
+- Existiert ein Projektordner nicht mehr, wird der Eintrag als nicht verfügbar gekennzeichnet und nicht stillschweigend gelöscht.
+
+### 60.3 Arbeitsbereich
+
+- Neues Panel `NOLPHIN_PANEL_GID` in der Panel-Engine (58.1.4), als `GtkWidget`, nicht als Dialog oder Fenster.
+- Bei Auswahl eines Projekts zeigt es dessen `README.md` als gerenderten Markdown-Text in einem GtkTextView (eigene Umsetzung mit GtkTextTags, keine neue Bibliothek); Text ist markier- und kopierbar. Der Renderer unterstützt mindestens Überschriften, Absätze, Listen, Code, Zitate, Hervorhebungen, Links und lokale Bilder; nicht unterstützte Elemente werden als Klartext angezeigt.
+- Bilder: Lokale Bilder (relative Pfade innerhalb des Projektordners, Dateien bis 16 MiB, Formate nach GdkPixbuf) werden in der README angezeigt und an die Panelbreite angepasst; Bilder in Links sind klickbar. Entfernte Bilder (`http`/`https`) werden nicht geladen (kein Netzwerk) und erscheinen als Alternativtext. Bilder außerhalb des Projektordners, nicht vorhandene oder nicht lesbare Bilder erscheinen ebenfalls als Alternativtext.
+- Fehlt die `README.md`, wird dies klar angezeigt. Es wird keine Vorschau vorgetäuscht.
+- Schmale Kopfzeile mit Projektname und Pfad. Relative Links auf Dateien im Projekt öffnen die Datei bzw. den Ordner in der Hauptansicht.
+- Eine Projekt-Navigation (README, Dateien, Commits) ist nicht Teil dieser Stufe.
+
+### 60.4 Menü und Tastatur
+
+Kein neues Hauptmenü (Abschnitt 11.1, 57). Einstieg über ein Untermenü von „Gehe zu" (GID-Projekte) und über „Ansicht ▸ Seitenleiste". Jede Funktion nutzt dieselbe GAction wie Kontextmenü und Menü. Ein Tastenkürzel wird erst nach ausdrücklicher Festlegung durch den Benutzer vergeben.
+
+### 60.5 Nicht enthalten
+
+Issues, Pull Requests, Commit-Ansicht, Status-/Test-Plakate sowie alles, was Netzwerk oder GitHub-API benötigt.
+
+### 60.6 Test
+
+Meson-Build; Projekt hinzufügen und entfernen; README rendern; fehlende README; nicht mehr vorhandener Ordner; Panel-Wechsel, F11, Breitenänderung und Rückkehr zur Vorschau; kein zusätzliches Top-Level-Fenster; kein Treffer für `GTK_TYPE_DIALOG`/`gtk_dialog_new` im neuen Modul.
+
+### 60.7 Änderungsprotokoll (Umsetzungsstand)
+
+- REQUIREMENT: §60.2, §60.3 und §60.4, Schritte 1–4 der freigegebenen Reihenfolge (Renderer, Panel, Seitenleisten-Bereich, Menüeinträge).
+- DATEI: src/nolphin-markdown-view.c/.h, src/nolphin-gid-projects.c/.h, src/nolphin-gid.c/.h, src/nolphin-gid-sidebar.c/.h, src/nolphin-gid-menu.c/.h (alle neu); src/nolphin-workspace-panel.c/.h, src/nolphin-window.c, src/nolphin-view.c, src/nolphin-actions.h, src/meson.build, gresources/nolphin-shell-ui.xml, gresources/nolphin-directory-view-ui.xml, libnolphin-private/org.nolphin.gschema.xml, libnolphin-private/nolphin-global-preferences.h, test/test-nolphin-markdown.c und test/test-nolphin-gid-projects.c (neu), test/meson.build.
+- ÄNDERUNG:
+  - Markdown-Renderer auf GtkTextTag-Basis mit lokalen Bildern, Trennlinien und Link-Klick.
+  - Projektliste in GSettings (`gid-projects`), Branch-Erkennung aus `.git/HEAD`.
+  - Panel-Seite `gid` in der Panel-Engine (`nolphin_workspace_panel_show_gid`).
+  - Bereich „GID-Projekte“ am unteren Rand der Seitenleiste (Orte und Ordnerbaum unverändert) mit Kontextmenü: README anzeigen, im Dateimanager öffnen, entfernen, hinzufügen. Sichtbarkeit über die Einstellung `show-gid-projects`.
+  - Menü: Gehe zu ▸ GID-Projekte (Projektliste, Projekt hinzufügen …) und Ansicht ▸ Seitenleiste ▸ GID-Projekte anzeigen; kein neues Hauptmenü.
+  - Dateiansicht: Kontextmenü-Eintrag „Als GID-Projekt hinzufügen“ für den gewählten bzw. aktuellen lokalen Ordner (ausgegraut, wenn schon Projekt).
+- WARUM: §60.2 bis §60.4. Der Renderer musste neu gebaut werden, weil kein Markdown-Renderer vorhanden war. Der Branch wird aus `.git/HEAD` gelesen statt über einen `git`-Subprozess (§60.2 entsprechend angepasst). Lokale Bilder wurden auf Wunsch des Benutzers ergänzt (§60.3).
+- TEST: `test-nolphin-markdown` und `test-nolphin-gid-projects` (Meson), Build ohne Warnungen. Manuell in einer isolierten Instanz (eigener D-Bus, eigene dconf-Datei, Xephyr): Projektliste mit Branch, README mit Bildern, Badges und Trennlinie, fehlende README, nicht vorhandener Ordner, Klick auf einen README-Link (Hauptansicht wechselt in den Projektordner), Gehe zu ▸ GID-Projekte, Kontextmenü „Als GID-Projekt hinzufügen“, Entfernen über das Seitenleisten-Kontextmenü, „README anzeigen“, Schalter „GID-Projekte anzeigen“.
+- NICHT GETESTET: Ordnerauswahl-Dialog („Projekt hinzufügen …“), Hintergrund-Kontextmenü (leerer Bereich der Dateiansicht), Tastenkürzel (laut §60.4 bewusst keines vergeben), Dunkles Theme.
+
+---
+
+ENDE DES NOLPHIN MASTER DEVELOPMENT CONTRACT (Version 2.4)
