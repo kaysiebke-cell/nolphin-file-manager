@@ -134,3 +134,30 @@ test('Metadata/Tags registration test',
   ),
   args: []
 )
+
+test('Archive manager test',
+  executable('test-nolphin-archive-manage',
+    [ 'test-nolphin-archive-manage.c' ],
+    include_directories: [ rootInclude, ],
+    dependencies: [ gtk, nolphin_private ],
+  ),
+  args: []
+)
+
+test('Git overlay test',
+  executable('test-nolphin-git-overlay',
+    [ 'test-nolphin-git-overlay.c' ],
+    include_directories: [ rootInclude, ],
+    dependencies: [ gtk, nolphin_private ],
+  ),
+  args: []
+)
+
+test('Media info test',
+  executable('test-nolphin-media',
+    [ 'test-nolphin-media.c' ],
+    include_directories: [ rootInclude, ],
+    dependencies: [ gtk, nolphin_private ],
+  ),
+  args: []
+)
