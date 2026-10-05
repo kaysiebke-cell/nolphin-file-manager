@@ -38,7 +38,7 @@ hr{border:0;border-top:1px solid var(--bd);margin:24px 0}
 li.task{list-style:none;margin-left:-1.4em}li.task input{margin-right:.5em}
 img{max-width:100%}
 """
-seite = f"""<!doctype html><html lang="de"><head><meta charset="utf-8">
+seite = f"""<!doctype html><html lang="de"><head><meta charset="utf-8"><base href="{html.escape("file://" + os.path.dirname(quelle) + "/")}">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(os.path.basename(quelle))}</title><style>{css}</style></head>
 <body><main>{body}</main></body></html>"""
