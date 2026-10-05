@@ -2764,6 +2764,72 @@ nolphin_window_restore_saved_tabs (NolphinWindow *window)
  * automatische Sitzungswiederherstellung. */
 #define WS_GROUP "Workspace"
 
+/* Sperre und eigener Name der Reiter eines Bereichs: parallel zu den
+ * gespeicherten Reiter-Adressen (nur lokale Orte, gleiche Reihenfolge wie
+ * collect_pane_saved_tab_uris()). */
+static void
+workspace_capture_tab_extras (NolphinWindowPane *pane, GKeyFile *kf, const char *side)
+{
+	GtkNotebook *nb;
+	gint n, i;
+	GArray *locks = g_array_new (FALSE, FALSE, sizeof (gint));
+	GPtrArray *titles = g_ptr_array_new_with_free_func (g_free);
+	gchar *lock_key = g_strconcat ("locked-", side, NULL), *title_key = g_strconcat ("titles-", side, NULL);
+
+	if (pane != NULL && pane->notebook != NULL) {
+		nb = GTK_NOTEBOOK (pane->notebook);
+		n = gtk_notebook_get_n_pages (nb);
+		for (i = 0; i < n; i++) {
+			NolphinWindowSlot *slot = NOLPHIN_WINDOW_SLOT (gtk_notebook_get_nth_page (nb, i));
+			char *uri = nolphin_window_slot_get_location_uri (slot);
+			gint locked = slot->locked ? 1 : 0;
+
+			if (uri_is_native_session_uri (uri)) {
+				g_array_append_val (locks, locked);
+				g_ptr_array_add (titles, g_strdup (slot->custom_title != NULL ? slot->custom_title : ""));
+			}
+			g_free (uri);
+		}
+	}
+
+	if (locks->len > 0) {
+		g_key_file_set_integer_list (kf, WS_GROUP, lock_key, (gint *) locks->data, locks->len);
+		g_key_file_set_string_list (kf, WS_GROUP, title_key, (const gchar * const *) titles->pdata, titles->len);
+	}
+	g_array_free (locks, TRUE);
+	g_ptr_array_free (titles, TRUE);
+	g_free (lock_key);
+	g_free (title_key);
+}
+
+static void
+workspace_apply_tab_extras (NolphinWindowPane *pane, GKeyFile *kf, const char *side)
+{
+	gchar *lock_key = g_strconcat ("locked-", side, NULL), *title_key = g_strconcat ("titles-", side, NULL);
+	gsize n_locks = 0, n_titles = 0, i;
+	gint *locks = g_key_file_get_integer_list (kf, WS_GROUP, lock_key, &n_locks, NULL);
+	gchar **titles = g_key_file_get_string_list (kf, WS_GROUP, title_key, &n_titles, NULL);
+
+	if (pane != NULL && pane->notebook != NULL) {
+		GtkNotebook *nb = GTK_NOTEBOOK (pane->notebook);
+		gint pages = gtk_notebook_get_n_pages (nb);
+
+		for (i = 0; i < n_locks && (gint) i < pages; i++) {
+			NolphinWindowSlot *slot = NOLPHIN_WINDOW_SLOT (gtk_notebook_get_nth_page (nb, i));
+
+			slot->locked = locks[i] != 0;
+			g_free (slot->custom_title);
+			slot->custom_title = (titles != NULL && i < n_titles && titles[i][0] != '\0') ? g_strdup (titles[i]) : NULL;
+			nolphin_notebook_sync_tab_label (NOLPHIN_NOTEBOOK (pane->notebook), slot);
+		}
+		nolphin_notebook_update_tabs_visibility (NOLPHIN_NOTEBOOK (pane->notebook));
+	}
+	g_free (locks);
+	g_strfreev (titles);
+	g_free (lock_key);
+	g_free (title_key);
+}
+
 void
 nolphin_window_workspace_capture (NolphinWindow *window, GKeyFile *kf)
 {
@@ -2784,6 +2850,21 @@ nolphin_window_workspace_capture (NolphinWindow *window, GKeyFile *kf)
 	g_key_file_set_integer (kf, WS_GROUP, "active-right", g_settings_get_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_RIGHT));
 	g_key_file_set_boolean (kf, WS_GROUP, "split-vertical",
 				gtk_orientable_get_orientation (GTK_ORIENTABLE (window->details->split_view_hpane)) == GTK_ORIENTATION_VERTICAL);
+
+	{
+		GtkWidget *c1 = gtk_paned_get_child1 (GTK_PANED (window->details->split_view_hpane));
+		GtkWidget *c2 = gtk_paned_get_child2 (GTK_PANED (window->details->split_view_hpane));
+		NolphinWindowPane *lp = first_pane_in_widget (c1), *rp = first_pane_in_widget (c2);
+
+		if (g_list_length (window->details->panes) <= 1) {
+			if (lp == NULL) {
+				lp = rp;
+			}
+			rp = NULL;
+		}
+		workspace_capture_tab_extras (lp, kf, "left");
+		workspace_capture_tab_extras (rp, kf, "right");
+	}
 
 	gtk_window_get_size (GTK_WINDOW (window), &width, &height);
 	g_key_file_set_integer (kf, WS_GROUP, "width", width);
@@ -2832,6 +2913,20 @@ nolphin_window_workspace_apply (NolphinWindow *window, GKeyFile *kf)
 					g_key_file_get_boolean (kf, WS_GROUP, "split-vertical", NULL)
 					? GTK_ORIENTATION_VERTICAL : GTK_ORIENTATION_HORIZONTAL);
 	restored = nolphin_window_restore_saved_tabs (window);
+	{
+		GtkWidget *c1 = gtk_paned_get_child1 (GTK_PANED (window->details->split_view_hpane));
+		GtkWidget *c2 = gtk_paned_get_child2 (GTK_PANED (window->details->split_view_hpane));
+		NolphinWindowPane *lp = first_pane_in_widget (c1), *rp = first_pane_in_widget (c2);
+
+		if (g_list_length (window->details->panes) <= 1) {
+			if (lp == NULL) {
+				lp = rp;
+			}
+			rp = NULL;
+		}
+		workspace_apply_tab_extras (lp, kf, "left");
+		workspace_apply_tab_extras (rp, kf, "right");
+	}
 
 	if (g_key_file_has_key (kf, WS_GROUP, "sidebar", NULL)) {
 		if (g_key_file_get_boolean (kf, WS_GROUP, "sidebar", NULL)) {
