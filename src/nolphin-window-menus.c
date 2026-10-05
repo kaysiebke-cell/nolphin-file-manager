@@ -216,7 +216,25 @@ action_show_clipboard_callback (GtkAction *action,
 
 	dialog = gtk_message_dialog_new (GTK_WINDOW (user_data), GTK_DIALOG_DESTROY_WITH_PARENT,
 					 GTK_MESSAGE_INFO, GTK_BUTTONS_OK, "%s", _("Inhalt der Zwischenablage"));
-	gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), "%s", text->str);
+	/* Der Inhalt steht in einem festen, scrollbaren Feld, damit auch sehr
+	 * langer Text den Dialog nicht über den Bildschirm hinaus wachsen lässt. */
+	{
+		GtkWidget *area = gtk_message_dialog_get_message_area (GTK_MESSAGE_DIALOG (dialog));
+		GtkWidget *scroller = gtk_scrolled_window_new (NULL, NULL);
+		GtkWidget *view = gtk_text_view_new ();
+
+		gtk_text_view_set_editable (GTK_TEXT_VIEW (view), FALSE);
+		gtk_text_view_set_wrap_mode (GTK_TEXT_VIEW (view), GTK_WRAP_WORD_CHAR);
+		gtk_text_buffer_set_text (gtk_text_view_get_buffer (GTK_TEXT_VIEW (view)), text->str, -1);
+		gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+		gtk_scrolled_window_set_min_content_height (GTK_SCROLLED_WINDOW (scroller), 60);
+		gtk_scrolled_window_set_max_content_height (GTK_SCROLLED_WINDOW (scroller), 260);
+		gtk_scrolled_window_set_propagate_natural_height (GTK_SCROLLED_WINDOW (scroller), TRUE);
+		gtk_widget_set_size_request (scroller, 420, -1);
+		gtk_container_add (GTK_CONTAINER (scroller), view);
+		gtk_box_pack_start (GTK_BOX (area), scroller, TRUE, TRUE, 0);
+		gtk_widget_show_all (scroller);
+	}
 	gtk_dialog_run (GTK_DIALOG (dialog));
 	gtk_widget_destroy (dialog);
 	g_string_free (text, TRUE);

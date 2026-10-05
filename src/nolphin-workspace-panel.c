@@ -2424,7 +2424,7 @@ am_button (ArchiveManagerTab *d, GtkWidget *box, guint index, const gchar *label
 	panel_decorate_button (b, icon, FALSE);
 	g_object_set_data (G_OBJECT (b), "am-folder", GINT_TO_POINTER (folder));
 	g_signal_connect (b, "clicked", cb, d);
-	gtk_box_pack_start (GTK_BOX (box), b, FALSE, FALSE, 0);
+	gtk_container_add (GTK_CONTAINER (box), b);
 	d->buttons[index] = b;
 	return b;
 }
@@ -2457,23 +2457,21 @@ build_archive_manager_tab (NolphinWindow *window)
 	panel_dim_label (d->info_label);
 	gtk_box_pack_start (GTK_BOX (outer), d->info_label, FALSE, FALSE, 0);
 
+	/* Knöpfe in einer umbrechenden Leiste, damit sie im schmalen Panel nicht abgeschnitten werden */
 	flow = gtk_flow_box_new ();
 	gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (flow), GTK_SELECTION_NONE);
+	gtk_flow_box_set_homogeneous (GTK_FLOW_BOX (flow), FALSE);
+	gtk_flow_box_set_max_children_per_line (GTK_FLOW_BOX (flow), 4);
+	gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (flow), 4);
+	gtk_flow_box_set_column_spacing (GTK_FLOW_BOX (flow), 4);
 	gtk_box_pack_start (GTK_BOX (outer), flow, FALSE, FALSE, 0);
-	{
-		GtkWidget *buttons_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
-		GtkWidget *buttons_box2 = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
-
-		am_button (d, buttons_box, 0, _("Entpacken …"), "document-save-symbolic", G_CALLBACK (am_extract_clicked), FALSE);
-		am_button (d, buttons_box, 1, _("Dateien hinzufügen …"), "list-add-symbolic", G_CALLBACK (am_add_clicked), FALSE);
-		am_button (d, buttons_box, 2, _("Ordner hinzufügen …"), "folder-new-symbolic", G_CALLBACK (am_add_clicked), TRUE);
-		am_button (d, buttons_box2, 3, _("Ersetzen …"), "view-refresh-symbolic", G_CALLBACK (am_replace_clicked), FALSE);
-		am_button (d, buttons_box2, 4, _("Entfernen"), "list-remove-symbolic", G_CALLBACK (am_remove_clicked), FALSE);
-		am_button (d, buttons_box2, 5, _("Prüfen"), "emblem-ok-symbolic", G_CALLBACK (am_test_clicked), FALSE);
-		am_button (d, buttons_box2, 6, _("Neu laden"), "view-refresh-symbolic", G_CALLBACK (am_refresh_clicked), FALSE);
-		gtk_container_add (GTK_CONTAINER (flow), buttons_box);
-		gtk_container_add (GTK_CONTAINER (flow), buttons_box2);
-	}
+	am_button (d, flow, 0, _("Entpacken …"), "document-save-symbolic", G_CALLBACK (am_extract_clicked), FALSE);
+	am_button (d, flow, 1, _("Dateien hinzufügen …"), "list-add-symbolic", G_CALLBACK (am_add_clicked), FALSE);
+	am_button (d, flow, 2, _("Ordner hinzufügen …"), "folder-new-symbolic", G_CALLBACK (am_add_clicked), TRUE);
+	am_button (d, flow, 3, _("Ersetzen …"), "view-refresh-symbolic", G_CALLBACK (am_replace_clicked), FALSE);
+	am_button (d, flow, 4, _("Entfernen"), "list-remove-symbolic", G_CALLBACK (am_remove_clicked), FALSE);
+	am_button (d, flow, 5, _("Prüfen"), "emblem-ok-symbolic", G_CALLBACK (am_test_clicked), FALSE);
+	am_button (d, flow, 6, _("Neu laden"), "view-refresh-symbolic", G_CALLBACK (am_refresh_clicked), FALSE);
 
 	d->tree = gtk_tree_view_new_with_model (GTK_TREE_MODEL (d->store));
 	gtk_tree_selection_set_mode (gtk_tree_view_get_selection (GTK_TREE_VIEW (d->tree)), GTK_SELECTION_MULTIPLE);
