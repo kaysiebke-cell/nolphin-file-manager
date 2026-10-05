@@ -33,6 +33,7 @@
 #include "nolphin-actions.h"
 #include "nolphin-location-stats.h"
 #include "nolphin-application.h"
+#include "nolphin-tools.h"
 #include "nolphin-workspace-panel.h"
 #include "nolphin-connect-server-dialog.h"
 #include "nolphin-file-management-properties.h"
@@ -145,6 +146,78 @@ tools_current_folder (NolphinWindow *window)
 		loc = g_file_new_for_path (g_get_home_dir ());
 	}
 	return loc;
+}
+
+/* Kurzer Hinweis (GNotification) für Werkzeug-Aktionen ohne eigene Seite. */
+static void
+tools_notify (const gchar *title, const gchar *body)
+{
+	GNotification *note = g_notification_new (title);
+
+	g_notification_set_body (note, body);
+	g_application_send_notification (G_APPLICATION (nolphin_application_get_singleton ()), NULL, note);
+	g_object_unref (note);
+}
+
+static GList *
+tools_selection (NolphinWindow *window)
+{
+	NolphinWindowSlot *slot = nolphin_window_get_active_slot (window);
+
+	return (slot != NULL && slot->content_view != NULL) ? nolphin_view_get_selection (slot->content_view) : NULL;
+}
+
+static void
+action_version_save_callback (GtkAction *action, gpointer user_data)
+{
+	GList *selection, *l;
+	guint ok = 0, failed = 0;
+	gchar *body;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	selection = tools_selection (NOLPHIN_WINDOW (user_data));
+	if (selection == NULL) {
+		tools_notify (_("Version speichern"), _("Keine Datei ausgewählt."));
+		return;
+	}
+	for (l = selection; l != NULL; l = l->next) {
+		GFile *loc = nolphin_file_get_location (NOLPHIN_FILE (l->data));
+
+		if (nolphin_versions_save_file (loc, NULL, NULL)) {
+			ok++;
+		} else {
+			failed++;
+		}
+		g_object_unref (loc);
+	}
+	nolphin_file_list_free (selection);
+	body = g_strdup_printf (_("%u Version(en) gespeichert, %u nicht möglich (Ordner oder entfernte Dateien)."), ok, failed);
+	tools_notify (_("Version speichern"), body);
+	g_free (body);
+}
+
+static void
+action_version_show_callback (GtkAction *action, gpointer user_data)
+{
+	NolphinWindow *window;
+	GList *selection;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	selection = tools_selection (window);
+	if (selection == NULL || selection->next != NULL) {
+		tools_notify (_("Versionen anzeigen"), _("Bitte genau eine Datei auswählen."));
+	} else {
+		GFile *loc = nolphin_file_get_location (NOLPHIN_FILE (selection->data));
+
+		nolphin_workspace_panel_show_versions (nolphin_window_get_workspace_panel (window), window, loc);
+		g_object_unref (loc);
+	}
+	nolphin_file_list_free (selection);
 }
 
 static void
@@ -1702,6 +1775,15 @@ static const GtkActionEntry main_entries[] = {
   /* tooltip */                  N_("Jeden Reiter in diesem Fenster schließen"),
                                  G_CALLBACK (action_close_all_tabs_callback) },
   /* name, stock id, label */  { "ToolsMenu", NULL, N_("_Werkzeuge") },
+  /* name, stock id, label */  { "VersionsMenu", NULL, N_("_Versionen") },
+  /* name, stock id */         { "Version Save", NULL,
+  /* label, accelerator */       N_("Version _speichern"), NULL,
+  /* tooltip */                  N_("Den aktuellen Stand der gewählten Datei als Version sichern"),
+                                 G_CALLBACK (action_version_save_callback) },
+  /* name, stock id */         { "Version Show", NULL,
+  /* label, accelerator */       N_("Versionen _anzeigen …"), NULL,
+  /* tooltip */                  N_("Gespeicherte Versionen der gewählten Datei anzeigen, wiederherstellen oder vergleichen"),
+                                 G_CALLBACK (action_version_show_callback) },
   /* name, stock id */         { "Tool Duplicates", NULL,
   /* label, accelerator */       N_("_Duplikate finden …"), NULL,
   /* tooltip */                  N_("Doppelte Dateien in einem Ordner suchen (Name, Größe oder Inhalt)"),

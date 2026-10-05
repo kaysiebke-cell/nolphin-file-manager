@@ -26,6 +26,12 @@ GtkWidget *nolphin_tools_heading_new (const gchar *text);
 GtkWidget *nolphin_duplicates_page_new (NolphinWindow *window);
 void       nolphin_duplicates_page_open (GtkWidget *page, GFile *folder);
 
+/* Versionen (§45) */
+GtkWidget *nolphin_versions_page_new  (NolphinWindow *window);
+void       nolphin_versions_page_open (GtkWidget *page, GFile *file);
+/* Speichert den aktuellen Stand von @file sofort als neue Version. */
+gboolean   nolphin_versions_save_file (GFile *file, const gchar *comment, GError **error);
+
 G_END_DECLS
 
 #endif /* NOLPHIN_TOOLS_H */

@@ -59,6 +59,11 @@ void       nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_pa
 							  NolphinWindow *window,
 							  GFile *archive);
 
+/* Zeigt die Versionen einer Datei (Bearbeiten ▸ Werkzeuge ▸ Versionen). */
+void       nolphin_workspace_panel_show_versions (GtkWidget *workspace_panel,
+						  NolphinWindow *window,
+						  GFile *file);
+
 /* Zeigt die Duplikat-Suche für @folder (Bearbeiten ▸ Werkzeuge ▸ Duplikate finden). */
 void       nolphin_workspace_panel_show_duplicates (GtkWidget *workspace_panel,
 						    NolphinWindow *window,

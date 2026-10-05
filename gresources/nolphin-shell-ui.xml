@@ -55,6 +55,10 @@
 		<placeholder name="Global Edit Items Placeholder">
 			<menu action="ToolsMenu">
 				<menuitem name="Tool Duplicates" action="Tool Duplicates"/>
+				<menu action="VersionsMenu">
+					<menuitem name="Version Save" action="Version Save"/>
+					<menuitem name="Version Show" action="Version Show"/>
+				</menu>
 			</menu>
 			<menu action="ClipboardMenu">
 				<menuitem name="Show Clipboard" action="Show Clipboard"/>
