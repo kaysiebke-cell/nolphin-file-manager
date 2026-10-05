@@ -346,33 +346,38 @@ nolphin_window_toggle_lock_tab (NolphinWindow *window)
 	nolphin_window_sync_tab_actions (window);
 }
 
-void
-nolphin_window_rename_tab (NolphinWindow *window)
+/* Ein Popover, das direkt aus einem Menüeintrag geöffnet wird, würde beim
+ * Schließen des Menüs sofort wieder verschwinden: deshalb leicht verzögert. */
+static gboolean
+popover_popup_later_cb (gpointer data)
 {
-	NolphinWindowSlot *slot;
-	GtkWidget *dialog, *entry;
+	GtkWidget *popover = GTK_WIDGET (data);
+	GtkWidget *focus = g_object_get_data (G_OBJECT (popover), "popup-focus");
 
-	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
-
-	slot = nolphin_window_get_active_slot (window);
-	if (slot == NULL) {
-		return;
+	if (gtk_widget_get_parent (popover) != NULL) {
+		gtk_popover_popup (GTK_POPOVER (popover));
+		if (focus != NULL) {
+			gtk_widget_grab_focus (focus);
+		}
 	}
+	g_object_unref (popover);
+	return G_SOURCE_REMOVE;
+}
 
-	dialog = gtk_dialog_new_with_buttons (_("Reiter umbenennen"), GTK_WINDOW (window),
-					      GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-					      _("_Abbrechen"), GTK_RESPONSE_CANCEL,
-					      _("_OK"), GTK_RESPONSE_OK, NULL);
-	gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
-	entry = gtk_entry_new ();
-	gtk_entry_set_text (GTK_ENTRY (entry), slot->custom_title != NULL ? slot->custom_title : slot->title);
-	gtk_entry_set_placeholder_text (GTK_ENTRY (entry), _("Leer lassen für den automatischen Namen"));
-	gtk_entry_set_activates_default (GTK_ENTRY (entry), TRUE);
-	gtk_container_set_border_width (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), 12);
-	gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), entry, TRUE, TRUE, 0);
-	gtk_widget_show_all (dialog);
+static void
+popover_popup_later (GtkWidget *popover, GtkWidget *focus)
+{
+	g_object_set_data (G_OBJECT (popover), "popup-focus", focus);
+	g_timeout_add (150, popover_popup_later_cb, g_object_ref (popover));
+}
 
-	if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK) {
+static void
+tab_rename_apply (GtkWidget *popover)
+{
+	GtkWidget *entry = g_object_get_data (G_OBJECT (popover), "rename-entry");
+	NolphinWindowSlot *slot = g_object_get_data (G_OBJECT (popover), "rename-slot");
+
+	if (slot != NULL && slot->pane != NULL) {
 		gchar *text = g_strstrip (g_strdup (gtk_entry_get_text (GTK_ENTRY (entry))));
 
 		g_free (slot->custom_title);
@@ -382,7 +387,58 @@ nolphin_window_rename_tab (NolphinWindow *window)
 		}
 		nolphin_notebook_sync_tab_label (NOLPHIN_NOTEBOOK (slot->pane->notebook), slot);
 	}
-	gtk_widget_destroy (dialog);
+	gtk_widget_destroy (popover);
+}
+
+static void
+tab_rename_entry_activate_cb (GtkEntry *entry, gpointer popover)
+{
+	tab_rename_apply (GTK_WIDGET (popover));
+}
+
+static void
+tab_rename_ok_cb (GtkButton *button, gpointer popover)
+{
+	tab_rename_apply (GTK_WIDGET (popover));
+}
+
+/* Reiter umbenennen: kleines Popover am Reiterbereich statt eines Dialogs. */
+void
+nolphin_window_rename_tab (NolphinWindow *window)
+{
+	NolphinWindowSlot *slot;
+	GtkWidget *popover, *box, *entry, *ok;
+	GdkRectangle anchor = { 24, 4, 1, 1 };
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	slot = nolphin_window_get_active_slot (window);
+	if (slot == NULL || slot->pane == NULL) {
+		return;
+	}
+
+	popover = gtk_popover_new (slot->pane->notebook);
+	gtk_popover_set_pointing_to (GTK_POPOVER (popover), &anchor);
+	gtk_popover_set_position (GTK_POPOVER (popover), GTK_POS_BOTTOM);
+
+	box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+	gtk_container_set_border_width (GTK_CONTAINER (box), 8);
+	entry = gtk_entry_new ();
+	gtk_entry_set_text (GTK_ENTRY (entry), slot->custom_title != NULL ? slot->custom_title : slot->title);
+	gtk_entry_set_placeholder_text (GTK_ENTRY (entry), _("Leer lassen für den automatischen Namen"));
+	gtk_entry_set_width_chars (GTK_ENTRY (entry), 26);
+	ok = gtk_button_new_with_label (_("Umbenennen"));
+	gtk_box_pack_start (GTK_BOX (box), entry, TRUE, TRUE, 0);
+	gtk_box_pack_start (GTK_BOX (box), ok, FALSE, FALSE, 0);
+	gtk_container_add (GTK_CONTAINER (popover), box);
+
+	g_object_set_data (G_OBJECT (popover), "rename-entry", entry);
+	g_object_set_data_full (G_OBJECT (popover), "rename-slot", g_object_ref (slot), g_object_unref);
+	g_signal_connect (entry, "activate", G_CALLBACK (tab_rename_entry_activate_cb), popover);
+	g_signal_connect (ok, "clicked", G_CALLBACK (tab_rename_ok_cb), popover);
+
+	gtk_widget_show_all (box);
+	popover_popup_later (popover, entry);
 }
 
 gboolean

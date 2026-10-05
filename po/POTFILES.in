@@ -157,7 +157,6 @@ src/nolphin-preview.c
 src/nolphin-previewer.c
 src/nolphin-progress-info-widget.c
 src/nolphin-progress-ui-handler.c
-src/nolphin-properties-window.c
 src/nolphin-query-editor.c
 src/nolphin-self-check-functions.c
 src/nolphin-statusbar.c

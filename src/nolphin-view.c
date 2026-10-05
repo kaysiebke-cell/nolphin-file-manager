@@ -39,7 +39,6 @@
 #include "nolphin-list-view.h"
 #include "nolphin-mime-actions.h"
 #include "nolphin-previewer.h"
-#include "nolphin-properties-window.h"
 #include "nolphin-terminal.h"
 #include "nolphin-workspace-panel.h"
 #include "nolphin-bookmark-list.h"
@@ -2553,7 +2552,7 @@ action_location_properties_callback (GtkAction *action,
         files = g_list_append (NULL, nolphin_file_ref (view->details->location_popup_directory_as_file));
     }
 
-	nolphin_properties_window_present (files, GTK_WIDGET (view), NULL);
+	nolphin_workspace_panel_show_properties_anywhere (files, GTK_WIDGET (view));
 
 	nolphin_file_list_free (files);
 }
@@ -7966,61 +7965,88 @@ action_paste_clipboard_as_file_callback (GtkAction *action, gpointer callback_da
 	g_object_unref (folder);
 }
 
-/* Bearbeiten ▸ Nach Größe/Datum auswählen … (ergänzt Muster und Typ). */
-static void
-criteria_select_response_cb (GtkWidget *dialog, int response, gpointer user_data)
+/* Bearbeiten ▸ Nach Größe/Datum auswählen … (ergänzt Muster und Typ). Die
+ * Eingabe erscheint als Popover an der Ansicht statt in einem Dialog. */
+/* Ein Popover, das direkt aus einem Menüeintrag geöffnet wird, würde beim
+ * Schließen des Menüs sofort wieder verschwinden: deshalb leicht verzögert. */
+static gboolean
+popover_popup_later_cb (gpointer data)
 {
-	NolphinView *view = NOLPHIN_VIEW (user_data);
+	GtkWidget *popover = GTK_WIDGET (data);
+	GtkWidget *focus = g_object_get_data (G_OBJECT (popover), "popup-focus");
 
-	if (response == GTK_RESPONSE_OK) {
-		goffset min_size = (goffset) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (dialog), "min"))) * 1024;
-		goffset max_size = (goffset) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (dialog), "max"))) * 1024;
-		gint days = (gint) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (dialog), "days")));
-		time_t cutoff = days > 0 ? time (NULL) - (time_t) days * 86400 : 0;
-		GList *all, *l, *matches = NULL;
-
-		all = nolphin_directory_get_file_list (nolphin_view_get_model (view));
-		for (l = all; l != NULL; l = l->next) {
-			NolphinFile *file = NOLPHIN_FILE (l->data);
-
-			if (nolphin_file_is_directory (file)) {
-				continue;
-			}
-			if (nolphin_file_get_size (file) < min_size) {
-				continue;
-			}
-			if (max_size > 0 && nolphin_file_get_size (file) > max_size) {
-				continue;
-			}
-			if (cutoff > 0 && nolphin_file_get_mtime (file) < cutoff) {
-				continue;
-			}
-			matches = g_list_prepend (matches, nolphin_file_ref (file));
-		}
-		nolphin_file_list_free (all);
-
-		if (matches != NULL) {
-			nolphin_view_call_set_selection (view, matches);
-			nolphin_file_list_free (matches);
-			nolphin_view_reveal_selection (view);
+	if (gtk_widget_get_parent (popover) != NULL) {
+		gtk_popover_popup (GTK_POPOVER (popover));
+		if (focus != NULL) {
+			gtk_widget_grab_focus (focus);
 		}
 	}
+	g_object_unref (popover);
+	return G_SOURCE_REMOVE;
+}
 
-	gtk_widget_destroy (dialog);
+static void
+popover_popup_later (GtkWidget *popover, GtkWidget *focus)
+{
+	g_object_set_data (G_OBJECT (popover), "popup-focus", focus);
+	g_timeout_add (150, popover_popup_later_cb, g_object_ref (popover));
+}
+
+static void
+criteria_select_apply (GtkWidget *popover)
+{
+	NolphinView *view = g_object_get_data (G_OBJECT (popover), "criteria-view");
+	goffset min_size = (goffset) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (popover), "min"))) * 1024;
+	goffset max_size = (goffset) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (popover), "max"))) * 1024;
+	gint days = (gint) gtk_spin_button_get_value (GTK_SPIN_BUTTON (g_object_get_data (G_OBJECT (popover), "days")));
+	time_t cutoff = days > 0 ? time (NULL) - (time_t) days * 86400 : 0;
+	GList *all, *l, *matches = NULL;
+
+	all = nolphin_directory_get_file_list (nolphin_view_get_model (view));
+	for (l = all; l != NULL; l = l->next) {
+		NolphinFile *file = NOLPHIN_FILE (l->data);
+
+		if (nolphin_file_is_directory (file)) {
+			continue;
+		}
+		if (nolphin_file_get_size (file) < min_size) {
+			continue;
+		}
+		if (max_size > 0 && nolphin_file_get_size (file) > max_size) {
+			continue;
+		}
+		if (cutoff > 0 && nolphin_file_get_mtime (file) < cutoff) {
+			continue;
+		}
+		matches = g_list_prepend (matches, nolphin_file_ref (file));
+	}
+	nolphin_file_list_free (all);
+
+	if (matches != NULL) {
+		nolphin_view_call_set_selection (view, matches);
+		nolphin_file_list_free (matches);
+		nolphin_view_reveal_selection (view);
+	}
+
+	gtk_widget_destroy (popover);
+}
+
+static void
+criteria_select_ok_cb (GtkButton *button, gpointer popover)
+{
+	criteria_select_apply (GTK_WIDGET (popover));
 }
 
 static void
 action_select_criteria_callback (GtkAction *action, gpointer callback_data)
 {
 	NolphinView *view = NOLPHIN_VIEW (callback_data);
-	GtkWidget *dialog, *grid, *label, *min, *max, *days;
+	GtkWidget *popover, *grid, *label, *min, *max, *days, *ok;
+	GdkRectangle anchor = { 40, 8, 1, 1 };
 
-	dialog = gtk_dialog_new_with_buttons (_("Nach Größe und Datum auswählen"),
-					      nolphin_view_get_containing_window (view),
-					      GTK_DIALOG_DESTROY_WITH_PARENT,
-					      _("_Abbrechen"), GTK_RESPONSE_CANCEL,
-					      _("_OK"), GTK_RESPONSE_OK, NULL);
-	gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
+	popover = gtk_popover_new (GTK_WIDGET (view));
+	gtk_popover_set_pointing_to (GTK_POPOVER (popover), &anchor);
+	gtk_popover_set_position (GTK_POPOVER (popover), GTK_POS_BOTTOM);
 
 	grid = gtk_grid_new ();
 	g_object_set (grid, "border-width", 12, "row-spacing", 6, "column-spacing", 12, NULL);
@@ -8041,13 +8067,19 @@ action_select_criteria_callback (GtkAction *action, gpointer callback_data)
 	gtk_widget_set_halign (label, GTK_ALIGN_START);
 	gtk_grid_attach (GTK_GRID (grid), label, 0, 2, 1, 1);
 	gtk_grid_attach (GTK_GRID (grid), days, 1, 2, 1, 1);
+	ok = gtk_button_new_with_label (_("Auswählen"));
+	gtk_style_context_add_class (gtk_widget_get_style_context (ok), "suggested-action");
+	gtk_grid_attach (GTK_GRID (grid), ok, 0, 3, 2, 1);
 
-	gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), grid);
-	g_object_set_data (G_OBJECT (dialog), "min", min);
-	g_object_set_data (G_OBJECT (dialog), "max", max);
-	g_object_set_data (G_OBJECT (dialog), "days", days);
-	g_signal_connect (dialog, "response", G_CALLBACK (criteria_select_response_cb), view);
-	gtk_widget_show_all (dialog);
+	gtk_container_add (GTK_CONTAINER (popover), grid);
+	g_object_set_data (G_OBJECT (popover), "criteria-view", view);
+	g_object_set_data (G_OBJECT (popover), "min", min);
+	g_object_set_data (G_OBJECT (popover), "max", max);
+	g_object_set_data (G_OBJECT (popover), "days", days);
+	g_signal_connect (ok, "clicked", G_CALLBACK (criteria_select_ok_cb), popover);
+
+	gtk_widget_show_all (grid);
+	popover_popup_later (popover, min);
 }
 
 /* Archiv öffnen: Inhalt im Archiv-Panel anzeigen und verwalten. */

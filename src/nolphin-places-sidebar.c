@@ -60,7 +60,6 @@
 #include "nolphin-application.h"
 #include "nolphin-bookmark-list.h"
 #include "nolphin-places-sidebar.h"
-#include "nolphin-properties-window.h"
 #include "nolphin-window.h"
 #include "nolphin-window-slot.h"
 #include "nolphin-workspace-panel.h"
@@ -3260,7 +3259,7 @@ properties_cb (GtkAction           *item,
 			nolphin_workspace_panel_show_properties (nolphin_window_get_workspace_panel (NOLPHIN_WINDOW (toplevel)),
 								 NOLPHIN_WINDOW (toplevel), list);
 		} else {
-			nolphin_properties_window_present (list, GTK_WIDGET (sidebar), NULL);
+			nolphin_workspace_panel_show_properties_anywhere (list, GTK_WIDGET (sidebar));
 		}
 
 		nolphin_file_list_free (list);

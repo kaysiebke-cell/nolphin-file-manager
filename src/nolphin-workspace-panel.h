@@ -35,6 +35,10 @@ void       nolphin_workspace_panel_show_properties   (GtkWidget *workspace_panel
 						       NolphinWindow *window,
 						       GList *files);
 
+/* Wie _show_properties(), findet das Fenster selbst (Elternfenster von
+ * @parent_widget, sonst das aktive, sonst ein neues). */
+void       nolphin_workspace_panel_show_properties_anywhere (GList *files, GtkWidget *parent_widget);
+
 /* Aktualisiert die Eigenschaften-Seite bei Änderung der Auswahl (nur wenn sichtbar). */
 void       nolphin_workspace_panel_sync_properties   (GtkWidget *workspace_panel,
 						       GList *selection,

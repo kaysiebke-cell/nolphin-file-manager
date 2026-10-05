@@ -58,7 +58,6 @@ nolphinCommon_sources = [
   'nolphin-previewer.c',
   'nolphin-progress-info-widget.c',
   'nolphin-progress-ui-handler.c',
-  'nolphin-properties-window.c',
   'nolphin-query-editor.c',
   'nolphin-template-config-widget.c',
   'nolphin-self-check-functions.c',

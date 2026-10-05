@@ -35,7 +35,6 @@
 
 #include "nolphin-actions.h"
 #include "nolphin-tree-sidebar-model.h"
-#include "nolphin-properties-window.h"
 #include "nolphin-window.h"
 #include "nolphin-window-slot.h"
 #include "nolphin-workspace-panel.h"
@@ -924,7 +923,7 @@ new_folder_done (GFile *new_folder,
 		nolphin_workspace_panel_show_properties (nolphin_window_get_workspace_panel (NOLPHIN_WINDOW (toplevel)),
 							 NOLPHIN_WINDOW (toplevel), list);
 	} else {
-		nolphin_properties_window_present (list, GTK_WIDGET (data), NULL);
+		nolphin_workspace_panel_show_properties_anywhere (list, GTK_WIDGET (data));
 	}
 
         nolphin_file_list_free (list);
@@ -1140,7 +1139,7 @@ fm_tree_view_properties_cb (GtkAction *action,
 		nolphin_workspace_panel_show_properties (nolphin_window_get_workspace_panel (NOLPHIN_WINDOW (toplevel)),
 							 NOLPHIN_WINDOW (toplevel), list);
 	} else {
-		nolphin_properties_window_present (list, GTK_WIDGET (view->details->tree_widget), NULL);
+		nolphin_workspace_panel_show_properties_anywhere (list, GTK_WIDGET (view->details->tree_widget));
 	}
 
         nolphin_file_list_free (list);

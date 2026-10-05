@@ -25,7 +25,7 @@
 #include "nolphin-actions.h"
 #include "nolphin-properties-panel.h"
 #include "nolphin-deb-builder.h"
-#include "nolphin-properties-window.h"
+#include "nolphin-application.h"
 #include "nolphin-terminal.h"
 #include "nolphin-view.h"
 #include "nolphin-window-pane.h"
@@ -2981,6 +2981,7 @@ on_terminal_reset_activate (GtkMenuItem *item, gpointer user_data)
  * (noch) keine echte Funktion (Tabs, Scrollback-Suche). */
 typedef struct {
 	GtkWidget *terminal_widget;
+	NolphinWindow *window;
 } TerminalTabData;
 
 /* Referenz-Reihenfolge "Form der Eingabemarke": 0 = Rechteck (Block),
@@ -4422,10 +4423,21 @@ build_prefs_keybindings_page (void)
     return page;
 }
 
+/* Überschrift der Terminal-Einstellungsseite (früher der Fenstertitel). */
+static void
+prefs_set_title (GtkWidget *page, const gchar *text)
+{
+    GtkWidget *label = g_object_get_data (G_OBJECT (page), "prefs-title-label");
+
+    if (label != NULL) {
+        gtk_label_set_text (GTK_LABEL (label), text);
+    }
+}
+
 static void
 on_prefs_sidebar_row_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
 {
-    GtkWindow *window = GTK_WINDOW (user_data);
+    GtkWidget *window = GTK_WIDGET (user_data);
     GtkStack *stack;
     const gchar *page_name;
 
@@ -4462,77 +4474,99 @@ on_prefs_sidebar_row_selected (GtkListBox *box, GtkListBoxRow *row, gpointer use
     gtk_stack_set_visible_child_name (stack, page_name);
 
     if (g_strcmp0 (page_name, "general") == 0) {
-        gtk_window_set_title (window, _("Einstellungen – Allgemein"));
+        prefs_set_title (window, _("Einstellungen – Allgemein"));
     } else if (g_strcmp0 (page_name, "keybindings") == 0) {
-        gtk_window_set_title (window, _("Einstellungen – Tastenkombinationen"));
+        prefs_set_title (window, _("Einstellungen – Tastenkombinationen"));
     } else {
         gchar *title = g_strdup_printf (_("Einstellungen – Profil »%s«"), prefs_profile_name);
-        gtk_window_set_title (window, title);
+        prefs_set_title (window, title);
         g_free (title);
     }
 }
 
-static void
-on_prefs_profile_rename_response (GtkDialog *rename_dialog, gint response, gpointer user_data)
+/* Ein Popover, das direkt aus einem Menüeintrag geöffnet wird, würde beim
+ * Schließen des Menüs sofort wieder verschwinden: deshalb leicht verzögert. */
+static gboolean
+popover_popup_later_cb (gpointer data)
 {
-    GtkWidget *entry = user_data;
-    GtkWidget *toplevel;
+	GtkWidget *popover = GTK_WIDGET (data);
+	GtkWidget *focus = g_object_get_data (G_OBJECT (popover), "popup-focus");
 
-    if (response == GTK_RESPONSE_OK) {
-        const gchar *new_name = gtk_entry_get_text (GTK_ENTRY (entry));
+	if (gtk_widget_get_parent (popover) != NULL) {
+		gtk_popover_popup (GTK_POPOVER (popover));
+		if (focus != NULL) {
+			gtk_widget_grab_focus (focus);
+		}
+	}
+	g_object_unref (popover);
+	return G_SOURCE_REMOVE;
+}
 
-        if (new_name != NULL && *new_name != '\0') {
-            GtkWidget *row_label;
+static void
+popover_popup_later (GtkWidget *popover, GtkWidget *focus)
+{
+	g_object_set_data (G_OBJECT (popover), "popup-focus", focus);
+	g_timeout_add (150, popover_popup_later_cb, g_object_ref (popover));
+}
 
-            g_free (prefs_profile_name);
-            prefs_profile_name = g_strdup (new_name);
+/* Profil umbenennen: kleines Popover mit Eingabefeld statt eines Dialogs. */
+static void
+prefs_profile_rename_apply (GtkWidget *popover)
+{
+    GtkWidget *entry = g_object_get_data (G_OBJECT (popover), "rename-entry");
+    GtkWidget *row_label = g_object_get_data (G_OBJECT (popover), "rename-row-label");
+    const gchar *new_name = gtk_entry_get_text (GTK_ENTRY (entry));
 
-            row_label = g_object_get_data (G_OBJECT (rename_dialog), "profile-row-label");
-            if (row_label != NULL) {
-                gtk_label_set_text (GTK_LABEL (row_label), prefs_profile_name);
-            }
+    if (new_name != NULL && *new_name != '\0') {
+        GtkWidget *page = g_object_get_data (G_OBJECT (row_label), "prefs-page");
 
-            toplevel = g_object_get_data (G_OBJECT (rename_dialog), "prefs-window");
-            if (GTK_IS_WINDOW (toplevel)) {
-                gchar *title = g_strdup_printf (_("Einstellungen – Profil »%s«"), prefs_profile_name);
-                gtk_window_set_title (GTK_WINDOW (toplevel), title);
-                g_free (title);
-            }
+        g_free (prefs_profile_name);
+        prefs_profile_name = g_strdup (new_name);
+        gtk_label_set_text (GTK_LABEL (row_label), prefs_profile_name);
+        if (page != NULL) {
+            gchar *title = g_strdup_printf (_("Einstellungen – Profil »%s«"), prefs_profile_name);
+
+            prefs_set_title (page, title);
+            g_free (title);
         }
     }
+    gtk_widget_destroy (popover);
+}
 
-    gtk_widget_destroy (GTK_WIDGET (rename_dialog));
+static void
+on_prefs_rename_entry_activate (GtkEntry *entry, gpointer popover)
+{
+    prefs_profile_rename_apply (GTK_WIDGET (popover));
+}
+
+static void
+on_prefs_rename_ok_clicked (GtkButton *button, gpointer popover)
+{
+    prefs_profile_rename_apply (GTK_WIDGET (popover));
 }
 
 static void
 on_prefs_profile_rename_clicked (GtkMenuItem *item, gpointer user_data)
 {
     GtkWidget *row_label = user_data;
-    GtkWidget *window = gtk_widget_get_toplevel (row_label);
-    GtkWidget *dialog, *content, *entry;
+    GtkWidget *popover = gtk_popover_new (row_label);
+    GtkWidget *box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget *entry = gtk_entry_new ();
+    GtkWidget *ok = gtk_button_new_with_label (_("Umbenennen"));
 
     (void) item;
 
-    dialog = gtk_dialog_new_with_buttons (_("Profil umbenennen"),
-                                           GTK_IS_WINDOW (window) ? GTK_WINDOW (window) : NULL,
-                                           GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                           _("Abbrechen"), GTK_RESPONSE_CANCEL,
-                                           _("Umbenennen"), GTK_RESPONSE_OK,
-                                           NULL);
-    content = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
-    gtk_container_set_border_width (GTK_CONTAINER (content), 12);
-
-    entry = gtk_entry_new ();
+    gtk_container_set_border_width (GTK_CONTAINER (box), 8);
     gtk_entry_set_text (GTK_ENTRY (entry), prefs_profile_name);
-    gtk_entry_set_activates_default (GTK_ENTRY (entry), TRUE);
-    gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
-    gtk_box_pack_start (GTK_BOX (content), entry, TRUE, TRUE, 0);
-
-    g_object_set_data (G_OBJECT (dialog), "profile-row-label", row_label);
-    g_object_set_data (G_OBJECT (dialog), "prefs-window", window);
-
-    gtk_widget_show_all (dialog);
-    g_signal_connect (dialog, "response", G_CALLBACK (on_prefs_profile_rename_response), entry);
+    gtk_box_pack_start (GTK_BOX (box), entry, TRUE, TRUE, 0);
+    gtk_box_pack_start (GTK_BOX (box), ok, FALSE, FALSE, 0);
+    gtk_container_add (GTK_CONTAINER (popover), box);
+    g_object_set_data (G_OBJECT (popover), "rename-entry", entry);
+    g_object_set_data (G_OBJECT (popover), "rename-row-label", row_label);
+    g_signal_connect (entry, "activate", G_CALLBACK (on_prefs_rename_entry_activate), popover);
+    g_signal_connect (ok, "clicked", G_CALLBACK (on_prefs_rename_ok_clicked), popover);
+    gtk_widget_show_all (box);
+    popover_popup_later (popover, entry);
 }
 
 static void
@@ -4568,14 +4602,14 @@ on_prefs_profile_menu_clicked (GtkButton *button, gpointer user_data)
 }
 
 static GtkWidget *
-build_prefs_sidebar (GtkWindow *window)
+build_prefs_sidebar (GtkWidget *window)
 {
     GtkWidget *sidebar = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     GtkWidget *global_label, *profile_header, *profile_add_button;
     GtkWidget *nav_list, *profile_list;
     GtkWidget *row, *row_box, *label;
 
-    gtk_widget_set_size_request (sidebar, 220, -1);
+    gtk_widget_set_size_request (sidebar, 170, -1);
     gtk_container_set_border_width (GTK_CONTAINER (sidebar), 8);
 
     global_label = gtk_label_new (NULL);
@@ -4626,6 +4660,7 @@ build_prefs_sidebar (GtkWindow *window)
     label = gtk_label_new (prefs_profile_name);
     gtk_widget_set_halign (label, GTK_ALIGN_START);
     gtk_widget_set_hexpand (label, TRUE);
+    g_object_set_data (G_OBJECT (label), "prefs-page", window);
     gtk_box_pack_start (GTK_BOX (row_box), label, TRUE, TRUE, 0);
     {
         GtkWidget *menu_button = gtk_button_new_from_icon_name ("pan-down-symbolic", GTK_ICON_SIZE_MENU);
@@ -4656,36 +4691,61 @@ build_prefs_sidebar (GtkWindow *window)
 }
 
 static void
+on_prefs_back_to_terminal_clicked (GtkButton *button, gpointer panel)
+{
+    gtk_stack_set_visible_child_name (GTK_STACK (panel), "terminal");
+}
+
+/* Terminal-Einstellungen als Seite im rechten Arbeitsbereich (kein eigenes Fenster). */
+static void
 on_terminal_settings_activate (GtkMenuItem *item, gpointer user_data)
 {
     TerminalTabData *d = user_data;
-    GtkWidget *window, *outer_vbox, *content_hbox, *sidebar, *stack;
-    GtkWidget *button_bar, *help_button, *close_button;
-    GtkWidget *toplevel;
+    GtkWidget *panel, *old, *scroller, *page, *top_bar, *back, *title, *content_hbox, *sidebar, *stack;
 
     (void) item;
+
+    if (d->window == NULL) {
+        return;
+    }
+    panel = nolphin_window_get_workspace_panel (d->window);
+    if (panel == NULL) {
+        return;
+    }
 
     if (prefs_profile_name == NULL) {
         prefs_profile_name = g_strdup (_("Unbenannt"));
     }
 
-    toplevel = gtk_widget_get_toplevel (d->terminal_widget);
-
-    window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-    if (GTK_IS_WINDOW (toplevel)) {
-        gtk_window_set_transient_for (GTK_WINDOW (window), GTK_WINDOW (toplevel));
+    /* Immer frisch aufbauen: eine vorhandene Seite vorher entfernen */
+    old = gtk_stack_get_child_by_name (GTK_STACK (panel), "terminal-prefs");
+    if (old != NULL) {
+        gtk_container_remove (GTK_CONTAINER (panel), old);
     }
-    gtk_window_set_default_size (GTK_WINDOW (window), 760, 560);
 
-    outer_vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
-    gtk_container_add (GTK_CONTAINER (window), outer_vbox);
+    page = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+    gtk_container_set_border_width (GTK_CONTAINER (page), 8);
 
-    content_hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
-    gtk_box_pack_start (GTK_BOX (outer_vbox), content_hbox, TRUE, TRUE, 0);
+    top_bar = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
+    back = gtk_button_new_with_label (_("Zum Terminal"));
+    panel_decorate_button (back, "go-previous-symbolic", FALSE);
+    g_signal_connect (back, "clicked", G_CALLBACK (on_prefs_back_to_terminal_clicked), panel);
+    gtk_box_pack_start (GTK_BOX (top_bar), back, FALSE, FALSE, 0);
+    title = gtk_label_new (_("Einstellungen – Profil »Unbenannt«"));
+    gtk_label_set_ellipsize (GTK_LABEL (title), PANGO_ELLIPSIZE_END);
+    gtk_style_context_add_class (gtk_widget_get_style_context (title), "heading");
+    gtk_box_pack_start (GTK_BOX (top_bar), title, TRUE, TRUE, 0);
+    g_object_set_data (G_OBJECT (page), "prefs-title-label", title);
+    gtk_box_pack_start (GTK_BOX (page), top_bar, FALSE, FALSE, 0);
 
-    sidebar = build_prefs_sidebar (GTK_WINDOW (window));
+    /* Im schmalen Arbeitsbereich liegt die Auswahl über dem Inhalt statt daneben. */
+    content_hbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+    gtk_box_pack_start (GTK_BOX (page), content_hbox, TRUE, TRUE, 0);
+
+    sidebar = build_prefs_sidebar (page);
+    gtk_widget_set_size_request (sidebar, -1, -1);
     gtk_box_pack_start (GTK_BOX (content_hbox), sidebar, FALSE, FALSE, 0);
-    gtk_box_pack_start (GTK_BOX (content_hbox), gtk_separator_new (GTK_ORIENTATION_VERTICAL), FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (content_hbox), gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
     stack = gtk_stack_new ();
     gtk_widget_set_hexpand (stack, TRUE);
@@ -4695,34 +4755,21 @@ on_terminal_settings_activate (GtkMenuItem *item, gpointer user_data)
     gtk_stack_add_named (GTK_STACK (stack), build_prefs_profile_notebook (d->terminal_widget), "profile");
     gtk_stack_set_visible_child_name (GTK_STACK (stack), "profile");
     gtk_box_pack_start (GTK_BOX (content_hbox), stack, TRUE, TRUE, 0);
-    g_object_set_data (G_OBJECT (window), "prefs-stack", stack);
+    g_object_set_data (G_OBJECT (page), "prefs-stack", stack);
 
-    gtk_box_pack_start (GTK_BOX (outer_vbox), gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
+    scroller = gtk_scrolled_window_new (NULL, NULL);
+    gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    gtk_container_add (GTK_CONTAINER (scroller), page);
+    gtk_widget_show_all (scroller);
+    gtk_stack_add_named (GTK_STACK (panel), scroller, "terminal-prefs");
+    gtk_stack_set_visible_child_name (GTK_STACK (panel), "terminal-prefs");
 
-    button_bar = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-    gtk_container_set_border_width (GTK_CONTAINER (button_bar), 8);
-    help_button = gtk_button_new_with_label (_("Hilfe"));
-    gtk_widget_set_sensitive (help_button, FALSE);
-    gtk_box_pack_start (GTK_BOX (button_bar), help_button, FALSE, FALSE, 0);
-    close_button = gtk_button_new_with_label (_("Schließen"));
-    gtk_box_pack_end (GTK_BOX (button_bar), close_button, FALSE, FALSE, 0);
-    g_signal_connect_swapped (close_button, "clicked", G_CALLBACK (gtk_widget_destroy), window);
-    gtk_box_pack_start (GTK_BOX (outer_vbox), button_bar, FALSE, FALSE, 0);
-
-    gtk_window_set_title (GTK_WINDOW (window), _("Einstellungen – Profil »Unbenannt«"));
-
-    gtk_widget_show_all (window);
-
-    /* Erst nach show_all(): GTK waehlt beim ersten Anzeigen einer
-     * GTK_SELECTION_SINGLE-Listbox (hier nav_list) automatisch deren
-     * erste Zeile ("Allgemein") aus und wuerde eine vorher gesetzte
-     * Auswahl sofort wieder ueberschreiben. Die gewuenschte Startseite
-     * (Profil "Unbenannt") wird deshalb erst jetzt erzwungen - dank des
-     * Geschwister-Abgleichs in on_prefs_sidebar_row_selected() raeumt
-     * das automatisch auch die "Allgemein"-Auswahl in nav_list ab. */
+    /* Erst nach show_all(): GTK wählt beim ersten Anzeigen der Listbox
+     * (nav_list) automatisch deren erste Zeile aus und würde eine vorher
+     * gesetzte Auswahl überschreiben. */
     {
-        GtkWidget *profile_list = g_object_get_data (G_OBJECT (window), "prefs-profile-list");
-        GtkWidget *profile_row = g_object_get_data (G_OBJECT (window), "prefs-profile-row");
+        GtkWidget *profile_list = g_object_get_data (G_OBJECT (page), "prefs-profile-list");
+        GtkWidget *profile_row = g_object_get_data (G_OBJECT (page), "prefs-profile-row");
 
         if (profile_list != NULL && profile_row != NULL) {
             gtk_list_box_select_row (GTK_LIST_BOX (profile_list), GTK_LIST_BOX_ROW (profile_row));
@@ -4796,6 +4843,7 @@ build_terminal_tab (NolphinWindow *window, GtkWidget *terminal_widget)
 	GtkWidget *menu_bar;
 
 	d->terminal_widget = terminal_widget;
+	d->window = window;
 	menu_bar = build_terminal_menu_bar (d);
 	g_object_set_data_full (G_OBJECT (box), "terminal-tab-data", d, g_free);
 
@@ -4934,6 +4982,36 @@ nolphin_workspace_panel_show_archive (GtkWidget *workspace_panel, NolphinWindow 
 	}
 
 	workspace_panel_show_page (workspace_panel, window, "archive");
+}
+
+/* Zeigt die Eigenschaften im rechten Arbeitsbereich - auch wenn kein Fenster
+ * als Ausgangspunkt bekannt ist (z. B. Aufruf über D-Bus): dann das aktive
+ * Nolphin-Fenster, sonst ein neues. Ersetzt den früheren Eigenschaften-Dialog. */
+void
+nolphin_workspace_panel_show_properties_anywhere (GList *files, GtkWidget *parent_widget)
+{
+	NolphinWindow *window = NULL;
+	NolphinApplication *app = nolphin_application_get_singleton ();
+	GtkWidget *top = parent_widget != NULL ? gtk_widget_get_toplevel (parent_widget) : NULL;
+
+	g_return_if_fail (files != NULL);
+
+	if (top != NULL && NOLPHIN_IS_WINDOW (top)) {
+		window = NOLPHIN_WINDOW (top);
+	}
+	if (window == NULL) {
+		GtkWindow *active = gtk_application_get_active_window (GTK_APPLICATION (app));
+
+		if (active != NULL && NOLPHIN_IS_WINDOW (active)) {
+			window = NOLPHIN_WINDOW (active);
+		}
+	}
+	if (window == NULL) {
+		window = nolphin_application_create_window (app, gdk_screen_get_default ());
+		gtk_window_present (GTK_WINDOW (window));
+	}
+
+	nolphin_workspace_panel_show_properties (nolphin_window_get_workspace_panel (window), window, files);
 }
 
 /* Zeigt die Archiv-Verwaltung für @archive (Inhalt, Hinzufügen, Entfernen, …). */

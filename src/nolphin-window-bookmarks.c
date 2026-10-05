@@ -29,6 +29,7 @@
 #include <locale.h> 
 
 #include "nolphin-actions.h"
+#include "nolphin-application.h"
 #include "nolphin-bookmark-list.h"
 #include "nolphin-bookmarks-window.h"
 #include "nolphin-window-bookmarks.h"
@@ -152,7 +153,6 @@ add_saved_search_bookmark (NolphinWindow *window, NolphinWindowSlot *slot)
 	gchar *uri, *readable, *dir, *safe, *path, *file_name;
 	NolphinDirectory *directory;
 	NolphinQuery *query;
-	GtkWidget *dialog, *entry;
 	GFile *location;
 	NolphinBookmark *bookmark;
 	gchar *name = NULL;
@@ -172,29 +172,14 @@ add_saved_search_bookmark (NolphinWindow *window, NolphinWindowSlot *slot)
 		return FALSE;
 	}
 
+	/* Kein Dialog (Vertrag 58.1: die Suche läuft im Panel): der Name ergibt sich aus
+	 * der Suche selbst und lässt sich über "Lesezeichen bearbeiten" ändern. */
 	readable = nolphin_query_to_readable_string (query);
-	dialog = gtk_dialog_new_with_buttons (_("Suche speichern"), GTK_WINDOW (window),
-					      GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-					      _("_Abbrechen"), GTK_RESPONSE_CANCEL,
-					      _("_Speichern"), GTK_RESPONSE_OK, NULL);
-	gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
-	entry = gtk_entry_new ();
-	gtk_entry_set_text (GTK_ENTRY (entry), readable);
-	gtk_entry_set_activates_default (GTK_ENTRY (entry), TRUE);
-	gtk_container_set_border_width (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), 12);
-	gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), entry, TRUE, TRUE, 0);
-	gtk_widget_show_all (dialog);
-
-	if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK) {
-		name = g_strstrip (g_strdup (gtk_entry_get_text (GTK_ENTRY (entry))));
-	}
-	gtk_widget_destroy (dialog);
+	name = g_strstrip (g_strdup (readable));
 	g_free (readable);
-
-	if (name == NULL || name[0] == '\0') {
+	if (name[0] == '\0') {
 		g_free (name);
-		g_object_unref (query);
-		return TRUE;
+		name = g_strdup (_("Gespeicherte Suche"));
 	}
 
 	/* Dateiname: nur unkritische Zeichen, Eindeutigkeit über Zähler. */
@@ -223,6 +208,16 @@ add_saved_search_bookmark (NolphinWindow *window, NolphinWindowSlot *slot)
 		nolphin_bookmark_list_append (window->details->bookmark_list, bookmark);
 		g_object_unref (bookmark);
 		g_object_unref (location);
+
+		{
+			GNotification *note = g_notification_new (_("Suche gespeichert"));
+			gchar *body = g_strdup_printf (_("Als Lesezeichen »%s« in der Seitenleiste."), name);
+
+			g_notification_set_body (note, body);
+			g_application_send_notification (G_APPLICATION (nolphin_application_get_singleton ()), NULL, note);
+			g_free (body);
+			g_object_unref (note);
+		}
 	}
 
 	g_free (path);

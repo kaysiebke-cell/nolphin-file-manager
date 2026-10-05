@@ -29,7 +29,7 @@
 #define DEBUG_FLAG NOLPHIN_DEBUG_DBUS
 #include <libnolphin-private/nolphin-debug.h>
 
-#include "nolphin-properties-window.h"
+#include "nolphin-workspace-panel.h"
 
 #include <gio/gio.h>
 
@@ -125,7 +125,7 @@ skeleton_handle_show_item_properties_cb (NolphinFreedesktopFileManager1 *object,
 
 	files = g_list_reverse (files);
 
-	nolphin_properties_window_present (files, NULL, startup_id);
+	nolphin_workspace_panel_show_properties_anywhere (files, NULL);
 
 	nolphin_file_list_free (files);
 
