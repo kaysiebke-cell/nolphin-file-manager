@@ -59,6 +59,11 @@ void       nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_pa
 							  NolphinWindow *window,
 							  GFile *archive);
 
+/* Zeigt die Diagnose-Seite (0 Protokolle, 1 System, 2 Plugins, 3 Fehlerbericht). */
+void       nolphin_workspace_panel_show_diagnostics (GtkWidget *workspace_panel,
+						      NolphinWindow *window,
+						      gint tab);
+
 /* Zeigt die Arbeitsbereiche-Seite (Speichern, Laden, Duplizieren, Löschen). */
 void       nolphin_workspace_panel_show_workspaces (GtkWidget *workspace_panel,
 						     NolphinWindow *window,

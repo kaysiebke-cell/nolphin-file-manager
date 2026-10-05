@@ -29,6 +29,8 @@
 #include <eel/eel-debug.h>
 
 static GList *module_objects = NULL;
+static GList *module_status = NULL;      /* NolphinModuleStatus* */
+static gchar *last_load_error = NULL;
 
 G_DEFINE_TYPE (NolphinModule, nolphin_module, G_TYPE_TYPE_MODULE);
 
@@ -42,6 +44,8 @@ nolphin_module_load (GTypeModule *gmodule)
 	module->library = g_module_open (module->path, G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
 
 	if (!module->library) {
+		g_free (last_load_error);
+		last_load_error = g_strdup (g_module_error ());
 		g_warning ("%s", g_module_error ());
 		return FALSE;
 	}
@@ -56,6 +60,8 @@ nolphin_module_load (GTypeModule *gmodule)
 			      "nolphin_module_list_types",
 			      (gpointer *)&module->list_types)) {
 
+		g_free (last_load_error);
+		last_load_error = g_strdup (g_module_error ());
 		g_warning ("%s", g_module_error ());
 		g_module_close (module->library);
 		
@@ -158,11 +164,21 @@ nolphin_module_load_file (const char *filename)
     module = g_object_new (NOLPHIN_TYPE_MODULE, NULL);
     module->path = g_strdup (filename);
 
-    if (g_type_module_use (G_TYPE_MODULE (module))) {
-        add_module_objects (module);
-        g_type_module_unuse (G_TYPE_MODULE (module));
-    } else {
-        g_object_unref (module);
+    {
+        NolphinModuleStatus *status = g_new0 (NolphinModuleStatus, 1);
+
+        status->path = g_strdup (filename);
+        g_clear_pointer (&last_load_error, g_free);
+
+        if (g_type_module_use (G_TYPE_MODULE (module))) {
+            status->loaded = TRUE;
+            add_module_objects (module);
+            g_type_module_unuse (G_TYPE_MODULE (module));
+        } else {
+            status->error = g_strdup (last_load_error != NULL ? last_load_error : "unbekannter Fehler");
+            g_object_unref (module);
+        }
+        module_status = g_list_append (module_status, status);
     }
 }
 
@@ -203,6 +219,13 @@ free_module_objects (void)
 	}
 	
 	g_list_free (module_objects);
+}
+
+/* Ladestatus aller gefundenen Erweiterungen (nur lesen). */
+const GList *
+nolphin_module_get_status (void)
+{
+	return module_status;
 }
 
 void

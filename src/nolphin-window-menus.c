@@ -134,6 +134,28 @@ action_workspace_callback (GtkAction *action, gpointer user_data)
 }
 
 static void
+action_diagnostics_callback (GtkAction *action, gpointer user_data)
+{
+	NolphinWindow *window;
+	const gchar *name;
+	gint tab = 0;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	name = gtk_action_get_name (action);
+	if (g_strcmp0 (name, "Diag System") == 0) {
+		tab = 1;
+	} else if (g_strcmp0 (name, "Diag Plugins") == 0) {
+		tab = 2;
+	} else if (g_strcmp0 (name, "Diag Report") == 0) {
+		tab = 3;
+	}
+	nolphin_workspace_panel_show_diagnostics (nolphin_window_get_workspace_panel (window), window, tab);
+}
+
+static void
 action_duplicate_pane_callback (GtkAction *action, gpointer user_data)
 {
 	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
@@ -1650,6 +1672,23 @@ static const GtkActionEntry main_entries[] = {
   /* label, accelerator */       N_("_Alle Reiter schließen"), NULL,
   /* tooltip */                  N_("Jeden Reiter in diesem Fenster schließen"),
                                  G_CALLBACK (action_close_all_tabs_callback) },
+  /* name, stock id, label */  { "DiagnosticsMenu", NULL, N_("_Diagnose") },
+  /* name, stock id */         { "Diag Logs", NULL,
+  /* label, accelerator */       N_("_Protokolle anzeigen"), NULL,
+  /* tooltip */                  N_("Das lokale Protokoll von Nolphin anzeigen"),
+                                 G_CALLBACK (action_diagnostics_callback) },
+  /* name, stock id */         { "Diag Report", NULL,
+  /* label, accelerator */       N_("_Fehlerbericht erstellen …"), NULL,
+  /* tooltip */                  N_("Einen Fehlerbericht als lokale Datei erzeugen (wird nicht gesendet)"),
+                                 G_CALLBACK (action_diagnostics_callback) },
+  /* name, stock id */         { "Diag System", NULL,
+  /* label, accelerator */       N_("_Systeminformationen"), NULL,
+  /* tooltip */                  N_("Version, GVFS-Backends und gefundene Werkzeuge anzeigen"),
+                                 G_CALLBACK (action_diagnostics_callback) },
+  /* name, stock id */         { "Diag Plugins", NULL,
+  /* label, accelerator */       N_("P_lugin-Status"), NULL,
+  /* tooltip */                  N_("Geladene und fehlerhafte Erweiterungen anzeigen"),
+                                 G_CALLBACK (action_diagnostics_callback) },
   /* name, stock id, label */  { "WorkspacesMenu", NULL, N_("_Arbeitsbereiche") },
   /* name, stock id */         { "Workspace Save", NULL,
   /* label, accelerator */       N_("_Speichern …"), NULL,

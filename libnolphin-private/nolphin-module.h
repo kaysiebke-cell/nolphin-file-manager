@@ -60,6 +60,13 @@ struct _NolphinModuleClass {
 
 GType nolphin_module_get_type (void);
 
+typedef struct {
+    gchar    *path;
+    gboolean  loaded;
+    gchar    *error;   /* nur bei loaded == FALSE */
+} NolphinModuleStatus;
+
+const GList *nolphin_module_get_status        (void);
 void   nolphin_module_setup                   (void);
 void   nolphin_module_refresh                 (void);
 GList *nolphin_module_get_extensions_for_type (GType  type);

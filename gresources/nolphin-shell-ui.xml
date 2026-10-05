@@ -164,6 +164,12 @@
 		<menuitem action="NolphinHelpLost"/>
 		<menuitem action="NolphinHelpShare"/>    -->
 		<separator/>
+		<menu action="DiagnosticsMenu">
+			<menuitem name="Diag Logs" action="Diag Logs"/>
+			<menuitem name="Diag Report" action="Diag Report"/>
+			<menuitem name="Diag System" action="Diag System"/>
+			<menuitem name="Diag Plugins" action="Diag Plugins"/>
+		</menu>
 		<menuitem name="Build Deb Package" action="Build Deb Package"/>
 		<menuitem name="About Nolphin" action="About Nolphin"/>
 	</menu>

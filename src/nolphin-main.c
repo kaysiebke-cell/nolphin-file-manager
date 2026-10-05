@@ -31,6 +31,7 @@
 #include <config.h>
 
 #include "nolphin-main-application.h"
+#include "nolphin-diagnostics.h"
 
 #include <libnolphin-private/nolphin-debug.h>
 #include <libnolphin-private/nolphin-malloc-utils.h>
@@ -89,6 +90,9 @@ main (int argc, char *argv[])
 	textdomain (GETTEXT_PACKAGE);
 
 	g_set_prgname ("nolphin");
+
+	/* §48: Meldungen zusätzlich lokal protokollieren (Hilfe ▸ Diagnose ▸ Protokolle) */
+	nolphin_diagnostics_init_logging ();
 
 #ifdef HAVE_EXEMPI
 	xmp_init();
