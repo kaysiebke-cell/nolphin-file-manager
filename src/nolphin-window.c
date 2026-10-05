@@ -341,6 +341,7 @@ nolphin_window_toggle_lock_tab (NolphinWindow *window)
 
 	slot->locked = !slot->locked;
 	nolphin_notebook_sync_tab_label (NOLPHIN_NOTEBOOK (slot->pane->notebook), slot);
+	nolphin_notebook_update_tabs_visibility (NOLPHIN_NOTEBOOK (slot->pane->notebook));
 	nolphin_window_sync_tab_actions (window);
 }
 
@@ -2558,6 +2559,15 @@ nolphin_window_save_session_state (NolphinWindow *window)
 
 	left_pane = first_pane_in_widget (child1);
 	right_pane = first_pane_in_widget (child2);
+
+	/* Nach dem Schließen von Bereichen kann der einzige verbliebene in
+	 * child2 liegen: das ist keine Teilung. */
+	if (g_list_length (window->details->panes) <= 1) {
+		if (left_pane == NULL) {
+			left_pane = right_pane;
+		}
+		right_pane = NULL;
+	}
 
 	left_uris = collect_pane_saved_tab_uris (left_pane, &left_active);
 	right_uris = collect_pane_saved_tab_uris (right_pane, &right_active);

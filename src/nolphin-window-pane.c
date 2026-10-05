@@ -1374,9 +1374,8 @@ nolphin_window_pane_remove_slot_unsafe (NolphinWindowPane *pane,
 					   G_CALLBACK (notebook_switch_page_cb),
 					   pane);
 
-	gtk_notebook_set_show_tabs (notebook,
-				    gtk_notebook_get_n_pages (notebook) > 1);
 	pane->slots = g_list_remove (pane->slots, slot);
+	nolphin_notebook_update_tabs_visibility (NOLPHIN_NOTEBOOK (notebook));
 }
 
 NolphinWindowSlot *

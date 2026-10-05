@@ -72,6 +72,7 @@ void		nolphin_notebook_set_show_tabs	(NolphinNotebook *nb,
 
 void		nolphin_notebook_set_dnd_enabled (NolphinNotebook *nb,
 						   gboolean enabled);
+void		nolphin_notebook_update_tabs_visibility (NolphinNotebook *nb);
 void		nolphin_notebook_sync_tab_label (NolphinNotebook *nb,
 						  NolphinWindowSlot *slot);
 void		nolphin_notebook_sync_loading   (NolphinNotebook *nb,

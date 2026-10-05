@@ -286,6 +286,25 @@ nolphin_notebook_sync_loading (NolphinNotebook *notebook,
 	}
 }
 
+/* Die Reiterleiste ist ab zwei Reitern sichtbar - oder wenn ein Reiter
+ * gesperrt ist, damit das Schloss zu sehen ist. */
+void
+nolphin_notebook_update_tabs_visibility (NolphinNotebook *notebook)
+{
+	GtkNotebook *gnotebook = GTK_NOTEBOOK (notebook);
+	gint n = gtk_notebook_get_n_pages (gnotebook), i;
+	gboolean any_locked = FALSE;
+
+	for (i = 0; i < n && !any_locked; i++) {
+		GtkWidget *page = gtk_notebook_get_nth_page (gnotebook, i);
+
+		if (NOLPHIN_IS_WINDOW_SLOT (page) && NOLPHIN_WINDOW_SLOT (page)->locked) {
+			any_locked = TRUE;
+		}
+	}
+	gtk_notebook_set_show_tabs (gnotebook, n > 1 || any_locked);
+}
+
 void
 nolphin_notebook_sync_tab_label (NolphinNotebook *notebook,
 				  NolphinWindowSlot *slot)
@@ -420,8 +439,7 @@ nolphin_notebook_insert_page (GtkNotebook *gnotebook,
 										     menu_label,
 										     position);
 
-	gtk_notebook_set_show_tabs (gnotebook,
-				    gtk_notebook_get_n_pages (gnotebook) > 1);
+	nolphin_notebook_update_tabs_visibility (NOLPHIN_NOTEBOOK (gnotebook));
 	gtk_notebook_set_tab_reorderable (gnotebook, tab_widget, TRUE);
 	gtk_notebook_set_tab_detachable (gnotebook, tab_widget, TRUE);
 
