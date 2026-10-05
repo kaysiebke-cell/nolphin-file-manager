@@ -30,6 +30,7 @@
 #include <config.h>
 
 #include "nolphin-window-private.h"
+#include <glib/gstdio.h>
 
 #include "nolphin-actions.h"
 #include "nolphin-application.h"
@@ -2662,8 +2663,293 @@ open_uri_list_in_pane (NolphinWindowPane *pane, char **uris)
 	}
 }
 
-gboolean
-nolphin_window_restore_saved_tabs (NolphinWindow *window)
+#define WS_GROUP "Workspace"
+#define WS_MAX_PANES 4
+
+static NolphinWindowPane *split_pane_nested (NolphinWindow *window, NolphinWindowPane *active, GtkOrientation orientation);
+
+/* Sperre und eigener Name der Reiter eines Bereichs: parallel zu den
+ * gespeicherten Reiter-Adressen (nur lokale Orte, gleiche Reihenfolge wie
+ * collect_pane_saved_tab_uris()). */
+static void
+workspace_capture_tab_extras (NolphinWindowPane *pane, GKeyFile *kf, const char *group,
+			      const char *lock_key, const char *title_key)
+{
+	GtkNotebook *nb;
+	gint n, i;
+	GArray *locks = g_array_new (FALSE, FALSE, sizeof (gint));
+	GPtrArray *titles = g_ptr_array_new_with_free_func (g_free);
+
+	if (pane != NULL && pane->notebook != NULL) {
+		nb = GTK_NOTEBOOK (pane->notebook);
+		n = gtk_notebook_get_n_pages (nb);
+		for (i = 0; i < n; i++) {
+			NolphinWindowSlot *slot = NOLPHIN_WINDOW_SLOT (gtk_notebook_get_nth_page (nb, i));
+			char *uri = nolphin_window_slot_get_location_uri (slot);
+			gint locked = slot->locked ? 1 : 0;
+
+			if (uri_is_native_session_uri (uri)) {
+				g_array_append_val (locks, locked);
+				g_ptr_array_add (titles, g_strdup (slot->custom_title != NULL ? slot->custom_title : ""));
+			}
+			g_free (uri);
+		}
+	}
+
+	if (locks->len > 0) {
+		g_key_file_set_integer_list (kf, group, lock_key, (gint *) locks->data, locks->len);
+		g_key_file_set_string_list (kf, group, title_key, (const gchar * const *) titles->pdata, titles->len);
+	}
+	g_array_free (locks, TRUE);
+	g_ptr_array_free (titles, TRUE);
+}
+
+static void
+workspace_apply_tab_extras (NolphinWindowPane *pane, GKeyFile *kf, const char *group,
+			    const char *lock_key, const char *title_key)
+{
+	gsize n_locks = 0, n_titles = 0, i;
+	gint *locks = g_key_file_get_integer_list (kf, group, lock_key, &n_locks, NULL);
+	gchar **titles = g_key_file_get_string_list (kf, group, title_key, &n_titles, NULL);
+
+	if (pane != NULL && pane->notebook != NULL) {
+		GtkNotebook *nb = GTK_NOTEBOOK (pane->notebook);
+		gint pages = gtk_notebook_get_n_pages (nb);
+
+		for (i = 0; i < n_locks && (gint) i < pages; i++) {
+			NolphinWindowSlot *slot = NOLPHIN_WINDOW_SLOT (gtk_notebook_get_nth_page (nb, i));
+
+			slot->locked = locks[i] != 0;
+			g_free (slot->custom_title);
+			slot->custom_title = (titles != NULL && i < n_titles && titles[i][0] != '\0') ? g_strdup (titles[i]) : NULL;
+			nolphin_notebook_sync_tab_label (NOLPHIN_NOTEBOOK (pane->notebook), slot);
+		}
+		nolphin_notebook_update_tabs_visibility (NOLPHIN_NOTEBOOK (pane->notebook));
+	}
+	g_free (locks);
+	g_strfreev (titles);
+}
+
+/* --- Layout als Baum: "h(p0,v(p1,p2))" --------------------------------------
+ * p<n> ist ein Bereich (Gruppe "Pane<n>" mit Reitern), h/v eine Teilung
+ * nebeneinander bzw. untereinander mit zwei Kindern. Funktioniert für bis zu
+ * vier Bereiche. */
+
+typedef struct WsNode {
+	gchar kind;     /* 'p', 'h' oder 'v' */
+	gint idx;       /* nur bei 'p' */
+	struct WsNode *a, *b;
+} WsNode;
+
+static void
+ws_node_free (WsNode *n)
+{
+	if (n == NULL) {
+		return;
+	}
+	ws_node_free (n->a);
+	ws_node_free (n->b);
+	g_free (n);
+}
+
+static gint
+ws_node_leaves (WsNode *n)
+{
+	return n == NULL ? 0 : (n->kind == 'p' ? 1 : ws_node_leaves (n->a) + ws_node_leaves (n->b));
+}
+
+static WsNode *
+ws_parse (const gchar **s)
+{
+	WsNode *n = NULL;
+
+	if (**s == 'p') {
+		gchar *end;
+
+		(*s)++;
+		n = g_new0 (WsNode, 1);
+		n->kind = 'p';
+		n->idx = (gint) g_ascii_strtoll (*s, &end, 10);
+		if (end == *s) {
+			ws_node_free (n);
+			return NULL;
+		}
+		*s = end;
+	} else if (**s == 'h' || **s == 'v') {
+		n = g_new0 (WsNode, 1);
+		n->kind = **s;
+		(*s)++;
+		if (**s != '(') {
+			ws_node_free (n);
+			return NULL;
+		}
+		(*s)++;
+		n->a = ws_parse (s);
+		if (n->a == NULL || **s != ',') {
+			ws_node_free (n);
+			return NULL;
+		}
+		(*s)++;
+		n->b = ws_parse (s);
+		if (n->b == NULL || **s != ')') {
+			ws_node_free (n);
+			return NULL;
+		}
+		(*s)++;
+	}
+	return n;
+}
+
+static gchar *
+ws_serialize_node (GtkWidget *w, GKeyFile *kf, gint *counter)
+{
+	if (w == NULL) {
+		return NULL;
+	}
+	if (NOLPHIN_IS_WINDOW_PANE (w)) {
+		NolphinWindowPane *pane = NOLPHIN_WINDOW_PANE (w);
+		gint idx = (*counter)++, active = 0;
+		gchar **uris = collect_pane_saved_tab_uris (pane, &active);
+		gchar *group = g_strdup_printf ("Pane%d", idx);
+
+		g_key_file_set_string_list (kf, group, "tabs", (const gchar * const *) uris, g_strv_length (uris));
+		g_key_file_set_integer (kf, group, "active", active);
+		workspace_capture_tab_extras (pane, kf, group, "locked", "titles");
+		g_free (group);
+		g_strfreev (uris);
+		return g_strdup_printf ("p%d", idx);
+	}
+	if (GTK_IS_PANED (w)) {
+		gchar *a = ws_serialize_node (gtk_paned_get_child1 (GTK_PANED (w)), kf, counter);
+		gchar *b = ws_serialize_node (gtk_paned_get_child2 (GTK_PANED (w)), kf, counter);
+		gchar *result;
+
+		if (a != NULL && b != NULL) {
+			result = g_strdup_printf ("%c(%s,%s)",
+						  gtk_orientable_get_orientation (GTK_ORIENTABLE (w)) == GTK_ORIENTATION_HORIZONTAL ? 'h' : 'v',
+						  a, b);
+			g_free (a);
+			g_free (b);
+		} else {
+			result = a != NULL ? a : b;
+		}
+		return result;
+	}
+	return NULL;
+}
+
+/* Schreibt Layout und Bereiche des Fensters in @kf. Rückgabe: Zahl der Bereiche. */
+static gint
+workspace_capture_layout (NolphinWindow *window, GKeyFile *kf)
+{
+	gint counter = 0;
+	gchar *layout = ws_serialize_node (window->details->split_view_hpane, kf, &counter);
+
+	if (layout != NULL) {
+		g_key_file_set_string (kf, WS_GROUP, "layout", layout);
+	}
+	g_free (layout);
+	return counter;
+}
+
+static void
+ws_restore_leaf (NolphinWindowPane *pane, GKeyFile *kf, gint idx)
+{
+	gchar *group = g_strdup_printf ("Pane%d", idx);
+	gchar **uris = g_key_file_get_string_list (kf, group, "tabs", NULL, NULL);
+	gint active = g_key_file_get_integer (kf, group, "active", NULL);
+
+	if (pane != NULL && uris != NULL && uris[0] != NULL) {
+		clear_pane_to_single_slot (pane);
+		open_uri_list_in_pane (pane, uris);
+		if (pane->notebook != NULL) {
+			GtkNotebook *nb = GTK_NOTEBOOK (pane->notebook);
+			gint n = gtk_notebook_get_n_pages (nb);
+
+			if (n > 0) {
+				gtk_notebook_set_current_page (nb, CLAMP (active, 0, n - 1));
+			}
+		}
+		workspace_apply_tab_extras (pane, kf, group, "locked", "titles");
+	}
+	g_strfreev (uris);
+	g_free (group);
+}
+
+static void
+ws_restore_node (NolphinWindow *window, WsNode *n, NolphinWindowPane *pane, GKeyFile *kf, gboolean is_root)
+{
+	GtkOrientation o;
+	NolphinWindowPane *pa, *pb;
+
+	if (n->kind == 'p') {
+		ws_restore_leaf (pane, kf, n->idx);
+		return;
+	}
+
+	o = n->kind == 'h' ? GTK_ORIENTATION_HORIZONTAL : GTK_ORIENTATION_VERTICAL;
+	if (is_root) {
+		GtkPaned *root = GTK_PANED (window->details->split_view_hpane);
+
+		gtk_orientable_set_orientation (GTK_ORIENTABLE (root), o);
+		nolphin_window_split_view_on (window);
+		pa = first_pane_in_widget (gtk_paned_get_child1 (root));
+		pb = first_pane_in_widget (gtk_paned_get_child2 (root));
+	} else {
+		pa = pane;
+		pb = split_pane_nested (window, pane, o);
+	}
+	ws_restore_node (window, n->a, pa, kf, FALSE);
+	ws_restore_node (window, n->b, pb, kf, FALSE);
+}
+
+/* Baut Teilung und Reiter nach dem Layout in @kf neu auf. FALSE, wenn @kf
+ * kein brauchbares Layout enthält (dann bleibt das Fenster unverändert). */
+static gboolean
+workspace_apply_layout (NolphinWindow *window, GKeyFile *kf)
+{
+	gchar *layout = g_key_file_get_string (kf, WS_GROUP, "layout", NULL);
+	const gchar *p = layout;
+	WsNode *root = layout != NULL ? ws_parse (&p) : NULL;
+	NolphinWindowPane *start;
+	GtkPaned *rootp;
+
+	g_free (layout);
+	if (root == NULL || ws_node_leaves (root) > WS_MAX_PANES) {
+		ws_node_free (root);
+		return FALSE;
+	}
+
+	/* Auf einen einzigen Bereich zurückführen und von dort neu aufbauen */
+	if (nolphin_window_split_view_showing (window)) {
+		nolphin_window_split_view_off (window);
+	}
+	start = nolphin_window_get_active_pane (window);
+	ws_restore_node (window, root, start, kf, TRUE);
+	ws_node_free (root);
+
+	rootp = GTK_PANED (window->details->split_view_hpane);
+	start = first_pane_in_widget (gtk_paned_get_child1 (rootp));
+	if (start == NULL) {
+		start = first_pane_in_widget (gtk_paned_get_child2 (rootp));
+	}
+	if (start != NULL) {
+		nolphin_window_set_active_pane (window, start);
+	}
+	nolphin_window_update_show_hide_ui_elements (window);
+	return TRUE;
+}
+
+/* Automatische Sitzung mit mehr als zwei Bereichen: GSettings kennt nur links
+ * und rechts, daher liegt das volle Layout in dieser Datei. */
+static gchar *
+last_session_path (void)
+{
+	return g_build_filename (g_get_user_config_dir (), "nolphin", "last-session.ini", NULL);
+}
+
+static gboolean
+restore_saved_tabs_from_settings (NolphinWindow *window)
 {
 	NolphinWindowPane *left_pane;
 	NolphinWindowPane *right_pane;
@@ -2762,74 +3048,6 @@ nolphin_window_restore_saved_tabs (NolphinWindow *window)
  * Teilung samt Ausrichtung, Fenstergröße und die Sichtbarkeit von
  * Seitenleiste, Vorschau und Terminal. Er nutzt dieselben Werte wie die
  * automatische Sitzungswiederherstellung. */
-#define WS_GROUP "Workspace"
-
-/* Sperre und eigener Name der Reiter eines Bereichs: parallel zu den
- * gespeicherten Reiter-Adressen (nur lokale Orte, gleiche Reihenfolge wie
- * collect_pane_saved_tab_uris()). */
-static void
-workspace_capture_tab_extras (NolphinWindowPane *pane, GKeyFile *kf, const char *side)
-{
-	GtkNotebook *nb;
-	gint n, i;
-	GArray *locks = g_array_new (FALSE, FALSE, sizeof (gint));
-	GPtrArray *titles = g_ptr_array_new_with_free_func (g_free);
-	gchar *lock_key = g_strconcat ("locked-", side, NULL), *title_key = g_strconcat ("titles-", side, NULL);
-
-	if (pane != NULL && pane->notebook != NULL) {
-		nb = GTK_NOTEBOOK (pane->notebook);
-		n = gtk_notebook_get_n_pages (nb);
-		for (i = 0; i < n; i++) {
-			NolphinWindowSlot *slot = NOLPHIN_WINDOW_SLOT (gtk_notebook_get_nth_page (nb, i));
-			char *uri = nolphin_window_slot_get_location_uri (slot);
-			gint locked = slot->locked ? 1 : 0;
-
-			if (uri_is_native_session_uri (uri)) {
-				g_array_append_val (locks, locked);
-				g_ptr_array_add (titles, g_strdup (slot->custom_title != NULL ? slot->custom_title : ""));
-			}
-			g_free (uri);
-		}
-	}
-
-	if (locks->len > 0) {
-		g_key_file_set_integer_list (kf, WS_GROUP, lock_key, (gint *) locks->data, locks->len);
-		g_key_file_set_string_list (kf, WS_GROUP, title_key, (const gchar * const *) titles->pdata, titles->len);
-	}
-	g_array_free (locks, TRUE);
-	g_ptr_array_free (titles, TRUE);
-	g_free (lock_key);
-	g_free (title_key);
-}
-
-static void
-workspace_apply_tab_extras (NolphinWindowPane *pane, GKeyFile *kf, const char *side)
-{
-	gchar *lock_key = g_strconcat ("locked-", side, NULL), *title_key = g_strconcat ("titles-", side, NULL);
-	gsize n_locks = 0, n_titles = 0, i;
-	gint *locks = g_key_file_get_integer_list (kf, WS_GROUP, lock_key, &n_locks, NULL);
-	gchar **titles = g_key_file_get_string_list (kf, WS_GROUP, title_key, &n_titles, NULL);
-
-	if (pane != NULL && pane->notebook != NULL) {
-		GtkNotebook *nb = GTK_NOTEBOOK (pane->notebook);
-		gint pages = gtk_notebook_get_n_pages (nb);
-
-		for (i = 0; i < n_locks && (gint) i < pages; i++) {
-			NolphinWindowSlot *slot = NOLPHIN_WINDOW_SLOT (gtk_notebook_get_nth_page (nb, i));
-
-			slot->locked = locks[i] != 0;
-			g_free (slot->custom_title);
-			slot->custom_title = (titles != NULL && i < n_titles && titles[i][0] != '\0') ? g_strdup (titles[i]) : NULL;
-			nolphin_notebook_sync_tab_label (NOLPHIN_NOTEBOOK (pane->notebook), slot);
-		}
-		nolphin_notebook_update_tabs_visibility (NOLPHIN_NOTEBOOK (pane->notebook));
-	}
-	g_free (locks);
-	g_strfreev (titles);
-	g_free (lock_key);
-	g_free (title_key);
-}
-
 void
 nolphin_window_workspace_capture (NolphinWindow *window, GKeyFile *kf)
 {
@@ -2862,9 +3080,11 @@ nolphin_window_workspace_capture (NolphinWindow *window, GKeyFile *kf)
 			}
 			rp = NULL;
 		}
-		workspace_capture_tab_extras (lp, kf, "left");
-		workspace_capture_tab_extras (rp, kf, "right");
+		workspace_capture_tab_extras (lp, kf, WS_GROUP, "locked-left", "titles-left");
+		workspace_capture_tab_extras (rp, kf, WS_GROUP, "locked-right", "titles-right");
 	}
+
+	workspace_capture_layout (window, kf);
 
 	gtk_window_get_size (GTK_WINDOW (window), &width, &height);
 	g_key_file_set_integer (kf, WS_GROUP, "width", width);
@@ -2899,33 +3119,41 @@ nolphin_window_workspace_apply (NolphinWindow *window, GKeyFile *kf)
 		right = g_new0 (gchar *, 1);
 	}
 
-	/* Werte in die Sitzungsschlüssel schreiben und die bewährte
-	 * Wiederherstellung der Sitzung verwenden. */
-	g_settings_set_boolean (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_SPLIT_VIEW, g_key_file_get_boolean (kf, WS_GROUP, "split", NULL));
-	g_settings_set_strv (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_TABS_LEFT, (const gchar * const *) left);
-	g_settings_set_strv (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_TABS_RIGHT, (const gchar * const *) right);
-	g_settings_set_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_LEFT, g_key_file_get_integer (kf, WS_GROUP, "active-left", NULL));
-	g_settings_set_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_RIGHT, g_key_file_get_integer (kf, WS_GROUP, "active-right", NULL));
-	g_strfreev (left);
-	g_strfreev (right);
+	if (workspace_apply_layout (window, kf)) {
+		restored = TRUE;
+		g_strfreev (left);
+		g_strfreev (right);
+	} else {
+		/* Werte in die Sitzungsschlüssel schreiben und die bewährte
+		 * Wiederherstellung der Sitzung verwenden. */
+		g_settings_set_boolean (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_SPLIT_VIEW, g_key_file_get_boolean (kf, WS_GROUP, "split", NULL));
+		g_settings_set_strv (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_TABS_LEFT, (const gchar * const *) left);
+		g_settings_set_strv (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_TABS_RIGHT, (const gchar * const *) right);
+		g_settings_set_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_LEFT, g_key_file_get_integer (kf, WS_GROUP, "active-left", NULL));
+		g_settings_set_int (nolphin_window_state, NOLPHIN_WINDOW_STATE_SAVED_ACTIVE_TAB_RIGHT, g_key_file_get_integer (kf, WS_GROUP, "active-right", NULL));
+		g_strfreev (left);
+		g_strfreev (right);
 
-	gtk_orientable_set_orientation (GTK_ORIENTABLE (window->details->split_view_hpane),
-					g_key_file_get_boolean (kf, WS_GROUP, "split-vertical", NULL)
-					? GTK_ORIENTATION_VERTICAL : GTK_ORIENTATION_HORIZONTAL);
-	restored = nolphin_window_restore_saved_tabs (window);
-	{
-		GtkWidget *c1 = gtk_paned_get_child1 (GTK_PANED (window->details->split_view_hpane));
-		GtkWidget *c2 = gtk_paned_get_child2 (GTK_PANED (window->details->split_view_hpane));
-		NolphinWindowPane *lp = first_pane_in_widget (c1), *rp = first_pane_in_widget (c2);
+		gtk_orientable_set_orientation (GTK_ORIENTABLE (window->details->split_view_hpane),
+						g_key_file_get_boolean (kf, WS_GROUP, "split-vertical", NULL)
+						? GTK_ORIENTATION_VERTICAL : GTK_ORIENTATION_HORIZONTAL);
+		restored = restore_saved_tabs_from_settings (window);
+		{
+			GtkWidget *c1 = gtk_paned_get_child1 (GTK_PANED (window->details->split_view_hpane));
+			GtkWidget *c2 = gtk_paned_get_child2 (GTK_PANED (window->details->split_view_hpane));
+			NolphinWindowPane *lp = first_pane_in_widget (c1), *rp = first_pane_in_widget (c2);
 
-		if (g_list_length (window->details->panes) <= 1) {
-			if (lp == NULL) {
-				lp = rp;
+			if (g_list_length (window->details->panes) <= 1) {
+				if (lp == NULL) {
+					lp = rp;
+				}
+				rp = NULL;
 			}
-			rp = NULL;
+			workspace_apply_tab_extras (lp, kf, WS_GROUP, "locked-left", "titles-left");
+			workspace_apply_tab_extras (rp, kf, WS_GROUP, "locked-right", "titles-right");
 		}
-		workspace_apply_tab_extras (lp, kf, "left");
-		workspace_apply_tab_extras (rp, kf, "right");
+
+
 	}
 
 	if (g_key_file_has_key (kf, WS_GROUP, "sidebar", NULL)) {
@@ -2954,12 +3182,62 @@ nolphin_window_workspace_apply (NolphinWindow *window, GKeyFile *kf)
 	return restored;
 }
 
+/* Sitzung beim Start wiederherstellen: ein gespeichertes Layout mit mehr als
+ * zwei Bereichen hat Vorrang, sonst die bewährte Wiederherstellung aus
+ * GSettings (links/rechts). */
+gboolean
+nolphin_window_restore_saved_tabs (NolphinWindow *window)
+{
+	gchar *path;
+	GKeyFile *kf;
+	gboolean ok = FALSE;
+
+	g_return_val_if_fail (NOLPHIN_IS_WINDOW (window), FALSE);
+
+	if (nolphin_window_is_desktop (window)) {
+		return FALSE;
+	}
+
+	path = last_session_path ();
+	kf = g_key_file_new ();
+	if (g_key_file_load_from_file (kf, path, G_KEY_FILE_NONE, NULL)) {
+		ok = workspace_apply_layout (window, kf);
+	}
+	g_key_file_free (kf);
+	g_free (path);
+
+	return ok || restore_saved_tabs_from_settings (window);
+}
+
 static void
 real_window_close (NolphinWindow *window)
 {
 	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
 
 	nolphin_window_save_session_state (window);
+
+	/* Mehr als zwei Bereiche passen nicht in die GSettings-Schlüssel: dann das
+	 * volle Layout in die Sitzungsdatei, sonst eine veraltete Datei entfernen. */
+	if (!nolphin_window_is_desktop (window)) {
+		gchar *path = last_session_path ();
+
+		if (g_list_length (window->details->panes) > 2) {
+			GKeyFile *kf = g_key_file_new ();
+			gchar *dir = g_path_get_dirname (path), *data;
+
+			workspace_capture_layout (window, kf);
+			g_mkdir_with_parents (dir, 0700);
+			data = g_key_file_to_data (kf, NULL, NULL);
+			g_file_set_contents (path, data, -1, NULL);
+			g_free (data);
+			g_free (dir);
+			g_key_file_free (kf);
+		} else {
+			g_remove (path);
+		}
+		g_free (path);
+	}
+
 	nolphin_window_save_geometry (window);
 
 	gtk_widget_destroy (GTK_WIDGET (window));
@@ -3195,6 +3473,42 @@ center_nested_paned (GtkWidget *paned, GdkRectangle *allocation, gpointer user_d
 	g_signal_handlers_disconnect_by_func (paned, center_nested_paned, user_data);
 }
 
+/* Setzt @active in einen eigenen, verschachtelten GtkPaned der Ausrichtung
+ * @orientation und legt daneben einen neuen Bereich an (zweites Kind).
+ * Rückgabe: der neue Bereich, mit einem Reiter, aber noch ohne Ort. */
+static NolphinWindowPane *
+split_pane_nested (NolphinWindow *window, NolphinWindowPane *active, GtkOrientation orientation)
+{
+	NolphinWindowPane *pane;
+	GtkPaned *parent, *nested;
+	gboolean was_child1;
+
+	parent = GTK_PANED (gtk_widget_get_parent (GTK_WIDGET (active)));
+	was_child1 = gtk_paned_get_child1 (parent) == GTK_WIDGET (active);
+
+	pane = nolphin_window_pane_new (window);
+	window->details->panes = g_list_append (window->details->panes, pane);
+
+	nested = GTK_PANED (gtk_paned_new (orientation));
+	g_object_ref (active);
+	gtk_container_remove (GTK_CONTAINER (parent), GTK_WIDGET (active));
+	gtk_paned_pack1 (nested, GTK_WIDGET (active), TRUE, FALSE);
+	gtk_paned_pack2 (nested, GTK_WIDGET (pane), TRUE, FALSE);
+	g_object_unref (active);
+	if (was_child1) {
+		gtk_paned_pack1 (parent, GTK_WIDGET (nested), TRUE, FALSE);
+	} else {
+		gtk_paned_pack2 (parent, GTK_WIDGET (nested), TRUE, FALSE);
+	}
+	g_signal_connect (nested, "size-allocate", G_CALLBACK (center_nested_paned), NULL);
+	gtk_widget_show (GTK_WIDGET (nested));
+
+	gtk_widget_hide (pane->tool_bar);
+	pane->active_slot = nolphin_window_pane_open_slot (NOLPHIN_WINDOW_PANE (pane), NOLPHIN_WINDOW_OPEN_SLOT_APPEND);
+
+	return pane;
+}
+
 /* Bereich duplizieren: öffnet einen weiteren Bereich (bis zu vier) am
  * Ort des aktiven Bereichs. Ab dem dritten Bereich wird der aktive Bereich
  * in einen eigenen, verschachtelten GtkPaned mit umgekehrter Ausrichtung
@@ -3204,9 +3518,8 @@ nolphin_window_split_view_add_pane (NolphinWindow *window)
 {
 	NolphinWindowPane *active, *pane;
 	NolphinWindowSlot *slot, *old_slot;
-	GtkPaned *parent, *nested;
+	GtkPaned *parent;
 	GFile *location = NULL;
-	gboolean was_child1;
 	GtkOrientation orientation;
 
 	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
@@ -3227,30 +3540,11 @@ nolphin_window_split_view_add_pane (NolphinWindow *window)
 	}
 	old_slot = active->active_slot;
 	parent = GTK_PANED (gtk_widget_get_parent (GTK_WIDGET (active)));
-	was_child1 = gtk_paned_get_child1 (parent) == GTK_WIDGET (active);
 	orientation = gtk_orientable_get_orientation (GTK_ORIENTABLE (parent)) == GTK_ORIENTATION_HORIZONTAL
 		      ? GTK_ORIENTATION_VERTICAL : GTK_ORIENTATION_HORIZONTAL;
 
-	pane = nolphin_window_pane_new (window);
-	window->details->panes = g_list_append (window->details->panes, pane);
-
-	nested = GTK_PANED (gtk_paned_new (orientation));
-	g_object_ref (active);
-	gtk_container_remove (GTK_CONTAINER (parent), GTK_WIDGET (active));
-	gtk_paned_pack1 (nested, GTK_WIDGET (active), TRUE, FALSE);
-	gtk_paned_pack2 (nested, GTK_WIDGET (pane), TRUE, FALSE);
-	g_object_unref (active);
-	if (was_child1) {
-		gtk_paned_pack1 (parent, GTK_WIDGET (nested), TRUE, FALSE);
-	} else {
-		gtk_paned_pack2 (parent, GTK_WIDGET (nested), TRUE, FALSE);
-	}
-	g_signal_connect (nested, "size-allocate", G_CALLBACK (center_nested_paned), NULL);
-	gtk_widget_show (GTK_WIDGET (nested));
-
-	gtk_widget_hide (pane->tool_bar);
-	slot = nolphin_window_pane_open_slot (NOLPHIN_WINDOW_PANE (pane), NOLPHIN_WINDOW_OPEN_SLOT_APPEND);
-	pane->active_slot = slot;
+	pane = split_pane_nested (window, active, orientation);
+	slot = pane->active_slot;
 
 	if (old_slot != NULL) {
 		location = nolphin_window_slot_get_location (old_slot);
