@@ -61,6 +61,7 @@ nolphin_private_sources = [
   'nolphin-link.c',
   'nolphin-merged-directory.c',
   'nolphin-media.c',
+  'nolphin-search-expression.c',
   'nolphin-metadata.c',
   'nolphin-mime-application-chooser.c',
   'nolphin-module.c',

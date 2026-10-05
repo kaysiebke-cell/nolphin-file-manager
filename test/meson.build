@@ -161,3 +161,12 @@ test('Media info test',
   ),
   args: []
 )
+
+test('Search expression test',
+  executable('test-nolphin-search-expression',
+    [ 'test-nolphin-search-expression.c' ],
+    include_directories: [ rootInclude, ],
+    dependencies: [ gtk, nolphin_private ],
+  ),
+  args: []
+)

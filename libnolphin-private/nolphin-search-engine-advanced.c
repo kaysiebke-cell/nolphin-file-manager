@@ -22,6 +22,7 @@
 #include "nolphin-directory.h"
 #include "nolphin-file-utilities.h"
 #include "nolphin-search-engine-advanced.h"
+#include "nolphin-search-expression.h"
 #include "nolphin-global-preferences.h"
 
 #include <limits.h>
@@ -66,7 +67,7 @@ typedef struct {
     GRegex *newline_re;
 
     GRegex *filename_re;
-    GList *filename_glob_patterns;
+    NolphinSearchExpression *filename_expr;
 
     GMutex hit_list_lock;
     GList *hit_list; // holds FileSearchResults
@@ -445,7 +446,6 @@ search_thread_data_new (NolphinSearchEngineAdvanced *engine,
         }
     } else {
         gchar *text, *normalized, *cased;
-        gchar **words;
 
         text = nolphin_query_get_file_pattern (query);
         normalized = g_utf8_normalize (text, -1, G_NORMALIZE_NFD);
@@ -456,37 +456,9 @@ search_thread_data_new (NolphinSearchEngineAdvanced *engine,
             cased = g_strdup (normalized);
         }
 
-        /* In (< 6.6), whitespace between words was treated as AND, and implied a filename
-         * must include *this* AND *that* AND *other*. To preserve this behavior, split
-         * the search text and wrap segments individually (*segment*) if no wildcard characters
-         * already included, and generate a GPatternSpec for each segment. */
-        words = g_strsplit_set (cased, " \t\r\n", -1);
-        data->filename_glob_patterns = NULL;
-
-        for (gint i = 0; words[i] != NULL; i++) {
-            if (words[i][0] != '\0') {
-                g_autofree gchar *word_pattern = NULL;
-
-                if (strchr (words[i], '*') == NULL && strchr (words[i], '?') == NULL) {
-                    word_pattern = g_strdup_printf ("*%s*", words[i]);
-                } else {
-                    word_pattern = g_strdup (words[i]);
-                }
-
-                DEBUG ("pattern is '%s'", word_pattern);
-
-                data->filename_glob_patterns = g_list_prepend (data->filename_glob_patterns,
-                                                               g_pattern_spec_new (word_pattern));
-            }
-        }
-
-        g_strfreev (words);
-
-        data->filename_glob_patterns = g_list_reverse (data->filename_glob_patterns);
-
-        if (data->filename_glob_patterns == NULL) {
-            data->filename_glob_patterns = g_list_prepend (NULL, g_pattern_spec_new ("*"));
-        }
+        /* Leerzeichen = UND (wie bisher); zusätzlich ODER, NICHT, "exakt"
+         * und Platzhalter, siehe nolphin-search-expression.h (§33). */
+        data->filename_expr = nolphin_search_expression_new (cased);
 
         g_free (text);
         g_free (normalized);
@@ -571,7 +543,7 @@ search_thread_data_free (SearchThreadData *data)
     g_clear_pointer (&data->content_re, g_regex_unref);
     g_clear_pointer (&data->newline_re, g_regex_unref);
     g_clear_pointer (&data->filename_re, g_regex_unref);
-    g_list_free_full (data->filename_glob_patterns, (GDestroyNotify) g_pattern_spec_free);
+    nolphin_search_expression_free (data->filename_expr);
     g_timer_destroy (data->timer);
     g_mutex_clear (&data->hit_list_lock);
 
@@ -1039,20 +1011,9 @@ visit_directory (GFile *dir, SearchThreadData *data)
                 cased = g_strdup (normalized);
             }
 
-            gchar *cased_reversed = g_utf8_strreverse (cased, -1);
-            gsize len = strlen (cased);
-
-            hit = TRUE;
-            for (GList *l = data->filename_glob_patterns; l != NULL; l = l->next) {
-                GPatternSpec *pattern = l->data;
-                if (!g_pattern_spec_match (pattern, len, cased, cased_reversed)) {
-                    hit = FALSE;
-                    break;
-                }
-            }
+            hit = nolphin_search_expression_matches (data->filename_expr, cased);
 
             g_free (cased);
-            g_free (cased_reversed);
         }
 
         g_free (normalized);

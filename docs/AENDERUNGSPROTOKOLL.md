@@ -45,6 +45,24 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - ÄNDERUNG: Panel mit Protokoll, Systeminformationen, Plugin-Status, Fehlerbericht; drei Knöpfe auf den Einstellungsseiten.
 - TEST: GUI: Systeminformationen. Export/Import/Zurücksetzen nur als dconf-Ablauf geprüft, nicht über die Knöpfe.
 
+## Suche mit Operatoren
+- REQUIREMENT: Erweiterte Suche, Abschnitt 33 (UND, ODER, NICHT, exakte Übereinstimmung, Platzhalter).
+- DATEI: `libnolphin-private/nolphin-search-expression.{c,h}`, `libnolphin-private/nolphin-search-engine-advanced.c`.
+- ÄNDERUNG: Neues Modul parst den Suchtext in ODER-Gruppen aus UND-Begriffen mit optionalem NICHT; die Engine nutzt es statt der festen Liste von Mustern. Ohne Operatoren bleibt das alte Verhalten (Leerzeichen = UND, Begriff = „enthält“).
+- WARUM: Die Operatoren fehlten; reguläre Ausdrücke und Platzhalter gab es schon.
+- TEST: Meson „Search expression test“ (Ausdrücke) und „Search Engine test“ (Suche in Temp-Ordner); GUI: „notizen ODER tabelle NICHT kopie“.
+  Nicht umgesetzt: Suche in Tags und Kommentaren, Kriterien Besitzer/Gruppe/Berechtigungen.
+
+## Tests statt Demo-Programme
+- REQUIREMENT: Nur Getestetes gilt als implementiert (Abschnitt „Implementiert“).
+- DATEI: `test/test-copy.c`, `test/test-nolphin-search-engine.c`, `test/test-nolphin-directory-async.c`, `test/meson.build`.
+- ÄNDERUNG: Die drei Demo-Programme aus dem Nemo-Ursprung (Argumente nötig bzw. Endlosschleife) prüfen jetzt Ergebnisse in einem Temp-Ordner; `test-copy` behält mit Argumenten den manuellen Modus.
+- TEST: `meson test -C build`: 20 von 20 bestanden.
+
+## Entscheidung zu Regeln, SVN und Mercurial
+- Regeln werden laut Vertrag nur manuell auf einen gewählten Ordner angewendet; automatisches Auslösen ist nicht vorgesehen und wird nicht gebaut.
+- SVN/Mercurial-Overlays stehen nicht im Vertrag, die Programme sind nicht installiert; nicht gebaut.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

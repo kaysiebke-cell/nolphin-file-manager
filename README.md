@@ -48,6 +48,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 * **Git direkt im Dateimanager:** Overlay-Symbole an den Dateien (hinzugefügt, geändert, unversioniert), Panel für Status, Speichern, Server-Abgleich, Verlauf und Unterschiede.
 * **Archive:** Komprimieren, Entpacken, Prüfen und – im **Archiv-Manager** – Inhalt auflisten sowie Dateien hinzufügen, ersetzen und entfernen.
 * **Werkzeuge:** Ordner **vergleichen und synchronisieren** (rsync, löscht nie), **Regeln anwenden**, **Duplikate finden**, **Versionen** einer Datei speichern und wiederherstellen.
+* **Suche mit Operatoren:** im Dateinamen UND, ODER, NICHT, „exakt“ und Platzhalter, dazu reguläre Ausdrücke.
 * **Mehrere Bereiche:** geteilte Ansicht mit bis zu vier Bereichen und **Arbeitsbereiche**, die Reiter, Teilung und Fenstergröße speichern.
 * **Gehe zu:** Verlauf, häufig verwendete Orte und die Reiter des Fensters im Menü.
 * **Diagnose:** Protokolle, Systeminformationen, Plugin-Status und Fehlerbericht im Panel.
@@ -220,6 +221,19 @@ Der Git-Status jeder Datei erscheint als Overlay-Symbol im Ordner. Das Panel fü
 * **Duplikate finden:** nach Name, Größe oder Inhalt (Prüfsumme) in einem Ordner samt Unterordnern; gelöscht wird nur in den Papierkorb und nach Bestätigung.
 * **Versionen:** Nolphin sichert Versionen einer Datei in `~/.local/share/nolphin/versions`; wiederherstellen, löschen und – bei Textdateien – mit der aktuellen Datei vergleichen.
 
+### Suche
+
+Die Dateinamensuche versteht neben Platzhaltern (`*`, `?`) und regulären Ausdrücken (Schalter `.*`) diese Operatoren:
+
+| Eingabe | Bedeutung |
+| ------- | --------- |
+| `jahr bericht` | UND: beide Begriffe im Namen (Leerzeichen) |
+| `foto ODER bericht` | ODER (auch `OR` oder `\|`); UND bindet stärker als ODER |
+| `bericht NICHT entwurf` | NICHT (auch `NOT` oder `-entwurf`) |
+| `"mein bericht.txt"` | exakt: der ganze Name muss übereinstimmen |
+
+Die Schlüsselwörter gelten unabhängig von der Groß-/Kleinschreibung; ein Begriff, der selbst „nicht“ oder „oder“ heißt, lässt sich deshalb nur in Anführungszeichen suchen.
+
 ### Fenster, Reiter und Orte
 
 * **Geteilte Ansicht:** bis zu vier Bereiche, Aufteilung waagerecht oder senkrecht, Bereiche duplizieren, maximieren und schließen.
@@ -300,20 +314,23 @@ Nolphin ist Entwicklungssoftware: Funktionen können sich ändern.
 
 ### Geplant und bekannte Grenzen
 
-* [ ] Erweiterte Suche: UND, ODER, NICHT, kombinierbare Filter
-* [ ] Netzwerk: SFTP, FTP, WebDAV prüfen
-* [ ] PDF und Medien direkt über Poppler-GLib und GStreamer-Bibliotheken statt über Kommandozeilenwerkzeuge
-* [ ] Regeln dauerhaft speichern und automatisch auslösen
-* [ ] Überlagerungen für SVN und Mercurial (bisher nur Git)
-* [ ] Vollständige Übersetzung aller Einstellungstexte
-* [ ] Eigene Tests und Dokumentation für die neuen Module
+* [ ] Erweiterte Suche: weitere Kriterien (Besitzer, Gruppe, Berechtigungen) und Suche in Tags und Kommentaren
+* [ ] Netzwerk: SFTP, FTP, WebDAV mit echten Servern prüfen (die GVfs-Backends sind vorhanden, siehe Diagnose)
+* [ ] PDF und Medien direkt über Poppler-GLib und GStreamer-Bibliotheken statt über Kommandozeilenwerkzeuge (braucht Entwicklungspakete)
+* [ ] Vollständige Übersetzung aller Einstellungstexte prüfen
+* [ ] Tests und Dokumentation für die Werkzeuge (Sync, Regeln, Duplikate, Versionen) und die Fensterfunktionen
+
+Regeln werden laut Vertrag nur manuell auf einen gewählten Ordner angewendet; ein automatisches Auslösen ist deshalb nicht vorgesehen. Überlagerungen für SVN und Mercurial stehen nicht im Vertrag und sind nicht geplant.
 
 ### Teststand
 
-`meson test -C build` (Stand: 5. Oktober 2026): **13 von 16 Tests bestehen.**
+`meson test -C build` (Stand: 5. Oktober 2026): **alle 20 Tests bestehen.**
 
-| Test | Ergebnis |
-| ---- | -------- |
+Die drei bisher offenen Tests (Copy, Search Engine, Directory Async) waren Demo-Programme aus dem Nemo-Ursprung, die Argumente erwarteten oder endlos liefen. Sie sind jetzt echte Tests: Kopieren in einen Temp-Ordner, Namensuche mit den Operatoren und Laden eines Ordners samt neuer Datei.
+
+Die Tests brauchen eine laufende grafische Sitzung (GTK). Für die Werkzeuge Sync, Regeln, Duplikate und Versionen sowie die Fensterfunktionen gibt es noch keine automatischen Tests.
+
+---- | -------- |
 | Copy test | Fehler |
 | Search Engine test | Timeout nach 30 s |
 | Directory Async test | Timeout nach 30 s |
@@ -345,6 +362,7 @@ Diese drei Punkte sind offen und nicht als erledigt zu betrachten.
 | Arbeitsbereiche, bis zu vier Bereiche | – | ✓ |
 | Diagnose-Panel mit Fehlerbericht | – | ✓ |
 | Einstellungen exportieren und importieren | – | ✓ |
+| Suche mit UND, ODER, NICHT, exakt | – | ✓ |
 
 ---
 
