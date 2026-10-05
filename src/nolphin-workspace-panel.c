@@ -2915,7 +2915,7 @@ apply_workspace_panel_background (GtkWidget *stack)
 					 "stack.nolphin-workspace-panel, "
 					 "stack.nolphin-workspace-panel > * { "
 					 "  background-image: none; "
-					 "  background-color: #383838; "
+					 "  background-color: shade(@theme_bg_color, 0.92); "
 					 "}",
 					 -1, NULL);
 	gtk_style_context_add_class (gtk_widget_get_style_context (stack), "nolphin-workspace-panel");

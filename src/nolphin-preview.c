@@ -847,8 +847,8 @@ nolphin_preview_init (NolphinPreview *preview)
 
         gtk_css_provider_load_from_data (provider,
                                          "textview.nolphin-preview-text text selection {"
-                                         "  background-color: #3584e4;"
-                                         "  color: #ffffff;"
+                                         "  background-color: @theme_selected_bg_color;"
+                                         "  color: @theme_selected_fg_color;"
                                          "}",
                                          -1, NULL);
         gtk_style_context_add_provider (gtk_widget_get_style_context (preview->text_view),

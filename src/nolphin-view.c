@@ -8173,11 +8173,13 @@ checksum_update_match_label (ChecksumDialogData *data)
     }
 
     if (nolphin_checksum_matches (result, expected)) {
-        gtk_label_set_markup (GTK_LABEL (data->match_label),
-                              _("<span foreground=\"#2ecc71\">Stimmt überein</span>"));
+        gtk_label_set_text (GTK_LABEL (data->match_label), _("Stimmt überein"));
+        gtk_style_context_remove_class (gtk_widget_get_style_context (data->match_label), "error");
+        gtk_style_context_add_class (gtk_widget_get_style_context (data->match_label), "success");
     } else {
-        gtk_label_set_markup (GTK_LABEL (data->match_label),
-                              _("<span foreground=\"#e74c3c\">Stimmt nicht überein</span>"));
+        gtk_label_set_text (GTK_LABEL (data->match_label), _("Stimmt nicht überein"));
+        gtk_style_context_remove_class (gtk_widget_get_style_context (data->match_label), "success");
+        gtk_style_context_add_class (gtk_widget_get_style_context (data->match_label), "error");
     }
 }
 
@@ -12121,6 +12123,12 @@ real_update_menus (NolphinView *view)
 	action = gtk_action_group_get_action (view->details->dir_action_group,
 					      NOLPHIN_ACTION_CREATE_LINK);
 	gtk_action_set_sensitive (action, can_link_files);
+    gtk_action_set_visible (action, !selection_contains_recent && !selection_contains_favorites);
+	g_object_set (action, "label",
+		      ngettext ("_Verknüpfung anlegen",
+			      	"_Verknüpfungen anlegen",
+				selection_count),
+		      NULL);
 
 	action = gtk_action_group_get_action (view->details->dir_action_group, "CreateHardlink");
 	gtk_action_set_sensitive (action, can_link_files);
@@ -12128,12 +12136,6 @@ real_update_menus (NolphinView *view)
 
 	action = gtk_action_group_get_action (view->details->dir_action_group, "CopyAsMenu");
 	gtk_action_set_sensitive (action, selection_count > 0);
-    gtk_action_set_visible (action, !selection_contains_recent && !selection_contains_favorites);
-	g_object_set (action, "label",
-		      ngettext ("_Verknüpfung anlegen",
-			      	"_Verknüpfungen anlegen",
-				selection_count),
-		      NULL);
 
 	show_properties = (!is_desktop_view || selection_count > 0);
 

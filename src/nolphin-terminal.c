@@ -1279,6 +1279,7 @@ nolphin_terminal_init (NolphinTerminal *terminal)
     terminal->child_pid = -1;
 
     terminal->vte = vte_terminal_new ();
+    g_signal_connect_swapped (terminal->vte, "style-updated", G_CALLBACK (apply_colors), terminal);
     g_signal_connect (terminal->vte, "child-exited", G_CALLBACK (on_child_exited), terminal);
     g_object_set_data_full (G_OBJECT (terminal), "nolphin-context-menu",
                              build_context_menu (terminal), (GDestroyNotify) gtk_widget_destroy);
