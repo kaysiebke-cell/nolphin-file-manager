@@ -179,3 +179,4 @@ src/nolphin-window-pane.c
 src/nolphin-window-slot.c
 src/nolphin-window-slot-dnd.c
 src/nolphin-x-content-bar.c
+gresources/nolphin-file-management-properties.glade

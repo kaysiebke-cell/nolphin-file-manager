@@ -5850,66 +5850,6 @@ msgstr "%s öffnen"
 #~ "<b><big>Schreibtischsymbole sind derzeit nicht für diesen Bildschirm "
 #~ "aktiviert.</big></b>"
 
-#~ msgid "<b>Bulk Rename</b>"
-#~ msgstr "<b>Umbenennen mehrerer Elemente</b>"
-
-#~ msgid "<b>Compact View Defaults</b>"
-#~ msgstr "<b>Vorgaben für Kompaktansicht</b>"
-
-#~ msgid "<b>Date</b>"
-#~ msgstr "<b>Datum</b>"
-
-#~ msgid "<b>Default View</b>"
-#~ msgstr "<b>Vorgabeansicht</b>"
-
-#~ msgid "<b>Executable Text Files</b>"
-#~ msgstr "<b>Ausführbare Textdateien</b>"
-
-#~ msgid "<b>File Properties</b>"
-#~ msgstr "<b>Dateieigenschaften</b>"
-
-#~ msgid "<b>File Size</b>"
-#~ msgstr "<b>Dateigröße</b>"
-
-#~ msgid "<b>Folders</b>"
-#~ msgstr "<b>Ordner</b>"
-
-#~ msgid "<b>Icon Captions</b>"
-#~ msgstr "<b>Symbolbeschriftungen</b>"
-
-#~ msgid "<b>Icon View Defaults</b>"
-#~ msgstr "<b>Vorgaben für Symbolansicht</b>"
-
-#~ msgid "<b>List Columns</b>"
-#~ msgstr "<b>Listenspalten</b>"
-
-#~ msgid "<b>List View Defaults</b>"
-#~ msgstr "<b>Vorgaben für Listenansicht</b>"
-
-#~ msgid "<b>Media Handling</b>"
-#~ msgstr "<b>Handhabung von Datenträgern</b>"
-
-#~ msgid "<b>Move/Copy To Menu</b>"
-#~ msgstr "<b>Menüpunkt »Verschieben/Kopieren nach«</b>"
-
-#~ msgid "<b>Navigation</b>"
-#~ msgstr "<b>Navigation</b>"
-
-#~ msgid "<b>Previewable Files</b>"
-#~ msgstr "<b>Vorschaubare Dateien</b>"
-
-#~ msgid "<b>Tooltips</b>"
-#~ msgstr "<b>Kurzinfos</b>"
-
-#~ msgid "<b>Trash</b>"
-#~ msgstr "<b>Papierkorb</b>"
-
-#~ msgid "<b>Tree View Defaults</b>"
-#~ msgstr "<b>Vorgaben für Baumansicht</b>"
-
-#~ msgid "<b>Window and Tab Titles</b>"
-#~ msgstr "<b>Fenster- und Reitertitel</b>"
-
 #~ msgid "<b>_Bookmarks</b>"
 #~ msgstr "<b>_Lesezeichen</b>"
 
@@ -5926,14 +5866,8 @@ msgstr "%s öffnen"
 #~ "<i>Als Vorgabe, wird eine Ordnerkurzinfo die Elementeanzahl anzeigen und Dateien deren Größe.\n"
 #~ "    Bitte zusätzliche Informationen auswählen, um die Kurzinfo anzuzeigen:</i>"
 
-#~ msgid "A_ll columns have the same width"
-#~ msgstr "Alle S_palten haben die selbe Breite"
-
 #~ msgid "Access and organize files"
 #~ msgstr "Dateien aufrufen und organisieren"
-
-#~ msgid "Accessed date"
-#~ msgstr "Zugriffsdatum"
 
 #~ msgid "Add Cinnamon desklets"
 #~ msgstr "Cinnamon-Desklets hinzufügen"
@@ -5950,21 +5884,8 @@ msgstr "%s öffnen"
 #~ msgid "Adjust vertical grid spacing"
 #~ msgstr "Den senkrechten Rasterabstand einstellen"
 
-#~ msgid "Always"
-#~ msgstr "immer"
-
-#~ msgid "Always start in dual-pane view"
-#~ msgstr "Immer in Zweispaltenansicht starten"
-
 #~ msgid "Appearance:"
 #~ msgstr "Erscheinungsbild:"
-
-#~ msgid "Ask before _emptying the Trash or deleting files"
-#~ msgstr ""
-#~ "Vor dem Leeren des Papierkorbs oder dem Löschen von Dateien _nachfragen"
-
-#~ msgid "Ask before moving files to the Trash"
-#~ msgstr "Vor dem Verschieben von Dateien in den Papierkorb nachfragen"
 
 #~ msgid ""
 #~ "Automatically close the device's tab, pane, or window when a device is "
@@ -5973,57 +5894,12 @@ msgstr "%s öffnen"
 #~ "Automatisch den Reiter, die Leiste oder Fenster des Mediums schließen, wenn "
 #~ "es ausgehängt oder ausgeworfen wurde"
 
-#~ msgid "Automatically expand rows during drag-and-drop"
-#~ msgstr "Automatisches Erweitern von Zeilen beim Ziehen und Ablegen"
-
-#~ msgid "Automatically mount removable media when inserted and on startup"
-#~ msgstr ""
-#~ "Automatisches Einhängen von Wechseldatenträgern beim Einlegen und beim "
-#~ "Starten"
-
-#~ msgid "Automatically open a folder for automounted media"
-#~ msgstr ""
-#~ "Für automatisch eingehängte Geräte, automatisch einen neuen Ordner öffnen"
-
-#~ msgid "Background"
-#~ msgstr "Hintergrund"
-
 #~ msgid ""
 #~ "Before running Nemo, please create the following folder, or set permissions "
 #~ "such that Nemo can create it."
 #~ msgstr ""
 #~ "Bevor Sie Nemo benutzen, erstellen Sie bitte folgenden Ordner oder erteilen "
 #~ "Sie Nemo die Zugriffsrechte, diesen anzulegen."
-
-#~ msgid "Behavior"
-#~ msgstr "Verhalten"
-
-#~ msgid "Binary (long format)"
-#~ msgstr "Binär (langes Format)"
-
-#~ msgid "By Access Date"
-#~ msgstr "nach Zugriffsdatum"
-
-#~ msgid "By Detailed Type"
-#~ msgstr "nach datailliertem Dateityp"
-
-#~ msgid "By Modification Date"
-#~ msgstr "nach Änderungsdatum"
-
-#~ msgid "By Name"
-#~ msgstr "nach Namen"
-
-#~ msgid "By Size"
-#~ msgstr "nach Größe"
-
-#~ msgid "By Trashed Date"
-#~ msgstr "nach Löschdatum"
-
-#~ msgid "By Type"
-#~ msgstr "nach Typ"
-
-#~ msgid "Bypass the Trash when the Delete key is pressed"
-#~ msgstr "Den Papierkorb umgehen, wenn die Entfernentaste gedrückt wird"
 
 #~ msgid "Case sensitive"
 #~ msgstr "Groß-/Kleinschreibung"
@@ -6045,34 +5921,14 @@ msgstr "%s öffnen"
 #~ "Symbolnamen angezeigt werden sollen. Je mehr Sie die Ansicht vergrößern, "
 #~ "desto mehr Informationen werden angezeigt."
 
-#~ msgid "Choose the order of information to appear in the list view."
-#~ msgstr ""
-#~ "Die Reihenfolge festlegen, in welcher, in der Listenansicht, Informationen "
-#~ "angezeigt werden sollen."
-
 #~ msgid "Choose..."
 #~ msgstr "Auswählen …"
-
-#~ msgid "Click on a file's name twice to rename it"
-#~ msgstr "Auf einen Dateinamen zweimal klicken, um Datei umzubenennen"
 
 #~ msgid "Click to add a shortcut"
 #~ msgstr "Anklicken, um eine Verknüpfung hinzuzufügen"
 
-#~ msgid "Command to invoke when renaming multiple items:"
-#~ msgstr "Befehl, der beim Umbenennen mehrerer Elemente ausgeführt wird:"
-
-#~ msgid "Compact view"
-#~ msgstr "Kompaktansicht"
-
 #~ msgid "Containing:"
 #~ msgstr "Enthält:"
-
-#~ msgid "Context Menus"
-#~ msgstr "Kontextmenü"
-
-#~ msgid "Count _number of items:"
-#~ msgstr "_Anzahl der Objekte anzeigen:"
 
 #~ msgid "Create a new l_auncher here..."
 #~ msgstr "Neuen _Starter hier erstellen …"
@@ -6092,26 +5948,11 @@ msgstr "%s öffnen"
 #~ "--geometry=+100+100, nemo --geometry=600x400, nemo "
 #~ "--geometry=600x400+100+100+100."
 
-#~ msgid "Created date"
-#~ msgstr "Erstelldatum"
-
 #~ msgid "Current Monitor Layout"
 #~ msgstr "Aktuelle Bildschirmanordnung"
 
 #~ msgid "Customize the layout and appearance of your actions in Nemo's menus"
 #~ msgstr "Anordnung und Aussehen der Aktionen in den Menüs von Nemo anpassen"
-
-#~ msgid "D_efault zoom level:"
-#~ msgstr "_Voreingestellte Vergrößerungsstufe:"
-
-#~ msgid "Decimal"
-#~ msgstr "Dezimal"
-
-#~ msgid "Decimal (long format)"
-#~ msgstr "Dezimal (langes Format)"
-
-#~ msgid "Default _zoom level:"
-#~ msgstr "_Voreingestellte Vergrößerungsstufe:"
 
 #~ msgid "Desktop Icons"
 #~ msgstr "Schreibtischsymbole"
@@ -6119,40 +5960,8 @@ msgstr "%s öffnen"
 #~ msgid "Desktop Layout"
 #~ msgstr "Schreibtischanordnung"
 
-#~ msgctxt "Desktop icon size"
-#~ msgid "Large"
-#~ msgstr "Groß"
-
-#~ msgctxt "Desktop icon size"
-#~ msgid "Larger"
-#~ msgstr "Größer"
-
-#~ msgctxt "Desktop icon size"
-#~ msgid "Normal"
-#~ msgstr "Normal"
-
-#~ msgctxt "Desktop icon size"
-#~ msgid "Small"
-#~ msgstr "Klein"
-
-#~ msgctxt "Desktop icon size"
-#~ msgid "Smaller"
-#~ msgstr "Kleiner"
-
-#~ msgid "Detailed file type"
-#~ msgstr "De­tail­lierter Dateityp"
-
-#~ msgid "Detect content of media and suggest application to open"
-#~ msgstr "Medieninhalt erkennen und Anwendung zum Öffnen vorschlagen"
-
 #~ msgid "Direction"
 #~ msgstr "Richtung"
-
-#~ msgid "Disable file operation queueing"
-#~ msgstr "Dateivorgänge nicht in Warteschlange einreihen"
-
-#~ msgid "Display"
-#~ msgstr "Anzeigen"
 
 #~ msgid "Display Nemo help"
 #~ msgstr "Nemo-Hilfethemen anzeigen"
@@ -6166,31 +5975,11 @@ msgstr "%s öffnen"
 #~ msgid "Do you want to replace it?"
 #~ msgstr "Möchten Sie es ersetzen?"
 
-#~ msgid "Document Templates"
-#~ msgstr "Dokumentvorlagen"
-
-#~ msgid "Double-click on a blank area to go to the parent folder"
-#~ msgstr ""
-#~ "Auf einen leeren Bereich doppelklicken, um zum übergeordneten Ordner zu "
-#~ "gehen"
-
 #~ msgid "Edit Bookmarks"
 #~ msgstr "Lesezeichen bearbeiten"
 
 #~ msgid "Edit Nemo preferences"
 #~ msgstr "Nemo-Einstellungen bearbeiten"
-
-#~ msgid "Extra Pane"
-#~ msgstr "Zusätzliche Leiste"
-
-#~ msgid "Favorite"
-#~ msgstr "Favorit"
-
-#~ msgid "File Management Preferences"
-#~ msgstr "Einstellungen zur Verwaltung von Dateien"
-
-#~ msgid "File or folder location"
-#~ msgstr "Speicherort der Datei oder des Ordners"
 
 #~ msgid "Files"
 #~ msgstr "Dateien"
@@ -6198,20 +5987,11 @@ msgstr "%s öffnen"
 #~ msgid "Horizontal"
 #~ msgstr "Horizontal"
 
-#~ msgid "I_nclude a Delete command that bypasses Trash"
-#~ msgstr "Einen _Löschbefehl bereitstellen, der den Papierkorb umgeht"
-
 #~ msgid "Icon"
 #~ msgstr "Symbol"
 
 #~ msgid "Icon Size"
 #~ msgstr "Symbolgröße"
-
-#~ msgid "Icon view"
-#~ msgstr "Symbolansicht"
-
-#~ msgid "Ignore per-folder view preferences"
-#~ msgstr "Ordnerspezifische Ansichtseinstellungen ignorieren"
 
 #~ msgid "Jump to new workspace"
 #~ msgstr "Zu neuer Arbeitsfläche wechseln"
@@ -6222,32 +6002,8 @@ msgstr "%s öffnen"
 #~ msgid "Layout"
 #~ msgstr "Ansicht"
 
-#~ msgid "List Columns"
-#~ msgstr "Listenspalten"
-
-#~ msgid "List bookmarks in the menu"
-#~ msgstr "Lesezeichen im Menü auflisten"
-
-#~ msgid "List devices and network locations in the menu"
-#~ msgstr "Geräte und Netzlaufwerke im Menü auflisten"
-
-#~ msgid "List view"
-#~ msgstr "Listenansicht"
-
-#~ msgid "Local Files Only"
-#~ msgstr "nur lokale Dateien"
-
-#~ msgid "Location entry toggle"
-#~ msgstr "Pfadeingabe umschalten"
-
 #~ msgid "Manage workspaces (Expo)"
 #~ msgstr "Arbeitsflächenübersicht"
-
-#~ msgid "Matching monospace font"
-#~ msgstr "Passende nichtproportionale Schrift"
-
-#~ msgid "Modified date"
-#~ msgstr "Änderungsdatum"
 
 #~ msgid "Mount %f to browse its contents"
 #~ msgstr "%f einhängen, um den Inhalt zu durchsuchen"
@@ -6321,17 +6077,11 @@ msgstr "%s öffnen"
 #~ msgid "Nemo's main menu is now hidden"
 #~ msgstr "Nemos Hauptmenü ist nun ausgeblendet"
 
-#~ msgid "Never"
-#~ msgstr "nie"
-
 #~ msgid "New separator"
 #~ msgstr "Neues Trennzeichen"
 
 #~ msgid "New submenu"
 #~ msgstr "Neues Untermenü"
-
-#~ msgid "Next"
-#~ msgstr "Vorwärts"
 
 #~ msgid "No"
 #~ msgstr "Nein"
@@ -6341,9 +6091,6 @@ msgstr "%s öffnen"
 
 #~ msgid "No icon"
 #~ msgstr "Kein Symbol"
-
-#~ msgid "Normal font"
-#~ msgstr "Normale Schrift"
 
 #~ msgid "Open Expo to add, remove, or organize workspaces"
 #~ msgstr ""
@@ -6356,31 +6103,11 @@ msgstr "%s öffnen"
 #~ msgid "Open another Nemo window for the displayed location"
 #~ msgstr "Ein neues Nemo-Fenster für den angezeigten Ort öffnen"
 
-#~ msgid "Open each _folder in its own window"
-#~ msgstr "Jeden Ordner in seinem eigenen _Fenster öffnen"
-
-#~ msgid "Open in terminal"
-#~ msgstr "Im Terminal öffnen"
-
 #~ msgid "Open user actions folder"
 #~ msgstr "Ordner Benutzeraktionen öffnen"
 
 #~ msgid "Options"
 #~ msgstr "Optionen"
-
-#~ msgid "Plugins"
-#~ msgstr "Module"
-
-#~ msgid "Preview"
-#~ msgstr "Vorschau"
-
-#~ msgid "Previous"
-#~ msgstr "Zurück"
-
-#~ msgid "Prompt or autorun/autostart programs when media are inserted"
-#~ msgstr ""
-#~ "Eingabeaufforderung oder Programme automatisch starten, wenn ein Medium "
-#~ "eingesteckt/eingelegt wurde"
 
 #~ msgid "Quit"
 #~ msgstr "Beenden"
@@ -6390,9 +6117,6 @@ msgstr "%s öffnen"
 
 #~ msgid "Quit Nemo."
 #~ msgstr "Nemo beenden."
-
-#~ msgid "Refresh"
-#~ msgstr "Auffrischen"
 
 #~ msgid "Regular expression"
 #~ msgstr "Regulärer Ausdruck"
@@ -6424,23 +6148,11 @@ msgstr "%s öffnen"
 #~ msgid "Search for files:"
 #~ msgstr "Nach Dateien suchen:"
 
-#~ msgid "Selection"
-#~ msgstr "Auswahl"
-
 #~ msgid "Set as Wallpaper..."
 #~ msgstr "Als Hintergrund festlegen …"
 
 #~ msgid "Set the selected image as your Cinnamon desktop wallpaper"
 #~ msgstr "Ausgewähltes Bild als Cinnamons Schreibtischhintergrund einstellen"
-
-#~ msgid "Show _only folders"
-#~ msgstr "_Nur Ordner anzeigen"
-
-#~ msgid "Show _thumbnails:"
-#~ msgstr "_Vorschaubilder anzeigen:"
-
-#~ msgid "Show advanced permissions in the file property dialog"
-#~ msgstr "Erweiterte Zugriffsrechte im Dateieigenschaftsdialog anzeigen"
 
 #~ msgid "Show desktop icons on all monitors"
 #~ msgstr "Schreibtischsymbole auf allen Bildschirmen anzeigen"
@@ -6451,38 +6163,11 @@ msgstr "%s öffnen"
 #~ msgid "Show desktop icons on primary monitor only"
 #~ msgstr "Schreibtischsymbole nur auf dem Hauptbildschirm anzeigen"
 
-#~ msgid "Show folder expanders"
-#~ msgstr "Ordnererweiterungen anzeigen"
-
 #~ msgid "Show icons from missing monitors"
 #~ msgstr "Symbole von fehlenden Bildschirmen anzeigen"
 
-#~ msgid "Show the full p_ath in the title bar and tab bars"
-#~ msgstr "Den kompletten Pfad in der Titel- oder Reiterleiste anzeigen"
-
-#~ msgid "Show tooltips in icon and compact views"
-#~ msgstr "Kurzinfos in Symbol- und Kompaktansicht anzeigen"
-
-#~ msgid "Show tooltips in list views"
-#~ msgstr "Kurzinfos in Listenansicht anzeigen"
-
-#~ msgid "Show tooltips on the desktop"
-#~ msgstr "Kurzinfos auf dem Schreibtisch anzeigen"
-
-#~ msgid "Sort _favorites before other files"
-#~ msgstr "_Favoriten vor anderen Dateien sortieren"
-
-#~ msgid "Sort _folders before files"
-#~ msgstr "_Ordner vor Dateien anzeigen"
-
 #~ msgid "Sort items by"
 #~ msgstr "Einträge sortieren nach"
-
-#~ msgid "Style:"
-#~ msgstr "Stil:"
-
-#~ msgid "System monospace font"
-#~ msgstr "Nichtproportionale Schrift des Systems"
 
 #~ msgid "The layout has changed. Save it?"
 #~ msgstr "Die Anordnung hat sich geändert. Möchten Sie diese speichern?"
@@ -6509,26 +6194,11 @@ msgstr "%s öffnen"
 #~ msgid "Vertical"
 #~ msgstr "Senkrecht"
 
-#~ msgid "View _new folders using:"
-#~ msgstr "_Neue Ordner anzeigen mit:"
-
-#~ msgid "Views"
-#~ msgstr "Ansichten"
-
-#~ msgid "Visible Buttons"
-#~ msgstr "Sichtbare Knöpfe"
-
-#~ msgid "Visible Entries"
-#~ msgstr "Sichtbare Einträge"
-
 #~ msgid ""
 #~ "Visible action and extension entries can be configured in the Plugins tab"
 #~ msgstr ""
 #~ "Sichtbare Aktions- und Erweiterungseinträge können auf der Seite »Module« "
 #~ "konfiguriert werden"
-
-#~ msgid "Yes"
-#~ msgstr "Ja"
 
 #~ msgid ""
 #~ "You should have received a copy of the GNU General Public License along with"
@@ -6539,50 +6209,11 @@ msgstr "%s öffnen"
 #~ "haben; falls nicht, schreiben Sie an die  Free Software Foundation, Inc., 51"
 #~ " Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA"
 
-#~ msgid "_Arrange items:"
-#~ msgstr "Objekte _anordnen:"
-
-#~ msgid "_Ask each time"
-#~ msgstr "_Jedes Mal nachfragen"
-
-#~ msgid "_Default zoom level:"
-#~ msgstr "Vorein_gestellte Vergrößerungsstufe:"
-
-#~ msgid "_Double click to open items"
-#~ msgstr "_Doppelklick zum Öffnen von Objekten"
-
-#~ msgid "_Format:"
-#~ msgstr "_Format:"
-
-#~ msgid "_Inherit thumbnail visibility from parent"
-#~ msgstr "_Die Symbolansicht von übergeordneter Seite vererben"
-
-#~ msgid "_Inherit view type from parent"
-#~ msgstr "_Den Ansichtstyp von übergeordneter Seite vererben"
-
 #~ msgid "_Launch Anyway"
 #~ msgstr "_Trotzdem starten"
 
-#~ msgid "_Only for files smaller than:"
-#~ msgstr "_Nur für Dateien kleiner als:"
-
-#~ msgid "_Prefixes:"
-#~ msgstr "_Präfixe:"
-
 #~ msgid "_Restore"
 #~ msgstr "_Wiederherstellen"
-
-#~ msgid "_Run executable text files when they are opened"
-#~ msgstr "Ausführbare Textdateien _starten, wenn sie geöffnet werden"
-
-#~ msgid "_Single click to open items"
-#~ msgstr "_Einfacher Klick zum Öffnen von Objekten"
-
-#~ msgid "_Text beside icons"
-#~ msgstr "_Text neben Symbolen"
-
-#~ msgid "_View executable text files when they are opened"
-#~ msgstr "Ausführbare Textdateien an_zeigen, wenn sie geöffnet werden"
 
 #~ msgid "anything"
 #~ msgstr "irgendetwas"
@@ -6607,10 +6238,6 @@ msgstr "%s öffnen"
 #~ msgctxt "shortcut window"
 #~ msgid "Close window or tab"
 #~ msgstr "Reiter oder Fenster schließen"
-
-#~ msgctxt "shortcut window"
-#~ msgid "Compact view"
-#~ msgstr "Kompaktansicht"
 
 #~ msgctxt "shortcut window"
 #~ msgid "Copy"
@@ -6685,10 +6312,6 @@ msgstr "%s öffnen"
 #~ msgstr "Auswahl umkehren"
 
 #~ msgctxt "shortcut window"
-#~ msgid "List view"
-#~ msgstr "Listenansicht"
-
-#~ msgctxt "shortcut window"
 #~ msgid "Make link"
 #~ msgstr "Verknüpfung erstellen"
 
@@ -6745,24 +6368,12 @@ msgstr "%s öffnen"
 #~ msgstr "Auswahl anheften/aufheben"
 
 #~ msgctxt "shortcut window"
-#~ msgid "Redo"
-#~ msgstr "Wiederholen"
-
-#~ msgctxt "shortcut window"
 #~ msgid "Refresh view"
 #~ msgstr "﻿Ansicht auffrischen"
 
 #~ msgctxt "shortcut window"
-#~ msgid "Rename"
-#~ msgstr "Umbenennen"
-
-#~ msgctxt "shortcut window"
 #~ msgid "Reset zoom"
 #~ msgstr "Vergrößerung zurücksetzen"
-
-#~ msgctxt "shortcut window"
-#~ msgid "Search"
-#~ msgstr "Suchen"
 
 #~ msgctxt "shortcut window"
 #~ msgid "Select all"
@@ -6813,10 +6424,6 @@ msgstr "%s öffnen"
 #~ msgstr "Pfadeingabe umschalten"
 
 #~ msgctxt "shortcut window"
-#~ msgid "Undo"
-#~ msgstr "Rückgängig"
-
-#~ msgctxt "shortcut window"
 #~ msgid "View"
 #~ msgstr "Ansicht"
 
@@ -6827,3 +6434,460 @@ msgstr "%s öffnen"
 #~ msgctxt "shortcut window"
 #~ msgid "Zoom out"
 #~ msgstr "Verkleinern"
+
+# Einstellungsseite (gresources/nolphin-file-management-properties.glade)
+#: gresources/nolphin-file-management-properties.glade
+msgid "Matching monospace font"
+msgstr "Passende nichtproportionale Schrift"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "System monospace font"
+msgstr "Nichtproportionale Schrift des Systems"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Normal font"
+msgstr "Normale Schrift"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Always"
+msgstr "immer"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Local Files Only"
+msgstr "nur lokale Dateien"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Never"
+msgstr "nie"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Decimal"
+msgstr "Dezimal"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Decimal (long format)"
+msgstr "Dezimal (langes Format)"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Binary (long format)"
+msgstr "Binär (langes Format)"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "By Name"
+msgstr "nach Namen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "By Size"
+msgstr "nach Größe"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "By Type"
+msgstr "nach Typ"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "By Detailed Type"
+msgstr "nach datailliertem Dateityp"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "By Modification Date"
+msgstr "nach Änderungsdatum"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "By Access Date"
+msgstr "nach Zugriffsdatum"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "By Trashed Date"
+msgstr "nach Löschdatum"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Yes"
+msgstr "Ja"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "File Management Preferences"
+msgstr "Einstellungen zur Verwaltung von Dateien"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Default View</b>"
+msgstr "<b>Vorgabeansicht</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "View _new folders using:"
+msgstr "_Neue Ordner anzeigen mit:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Inherit view type from parent"
+msgstr "_Den Ansichtstyp von übergeordneter Seite vererben"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Arrange items:"
+msgstr "Objekte _anordnen:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Sort _folders before files"
+msgstr "_Ordner vor Dateien anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Sort _favorites before other files"
+msgstr "_Favoriten vor anderen Dateien sortieren"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Icon View Defaults</b>"
+msgstr "<b>Vorgaben für Symbolansicht</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Default _zoom level:"
+msgstr "_Voreingestellte Vergrößerungsstufe:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Text beside icons"
+msgstr "_Text neben Symbolen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Compact View Defaults</b>"
+msgstr "<b>Vorgaben für Kompaktansicht</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Default zoom level:"
+msgstr "Vorein_gestellte Vergrößerungsstufe:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "A_ll columns have the same width"
+msgstr "Alle S_palten haben die selbe Breite"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>List View Defaults</b>"
+msgstr "<b>Vorgaben für Listenansicht</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "D_efault zoom level:"
+msgstr "_Voreingestellte Vergrößerungsstufe:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Show folder expanders"
+msgstr "Ordnererweiterungen anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Tree View Defaults</b>"
+msgstr "<b>Vorgaben für Baumansicht</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Show _only folders"
+msgstr "_Nur Ordner anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Views"
+msgstr "Ansichten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Navigation</b>"
+msgstr "<b>Navigation</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Single click to open items"
+msgstr "_Einfacher Klick zum Öffnen von Objekten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Double click to open items"
+msgstr "_Doppelklick zum Öffnen von Objekten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Double-click on a blank area to go to the parent folder"
+msgstr "Doppelklick auf eine leere Fläche wechselt zum übergeordneten Ordner"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Open each _folder in its own window"
+msgstr "Jeden Ordner in seinem eigenen _Fenster öffnen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Behavior"
+msgstr "Verhalten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Click on a file's name twice to rename it"
+msgstr "Auf einen Dateinamen zweimal klicken, um Datei umzubenennen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Ignore per-folder view preferences"
+msgstr "Ordnerspezifische Ansichtseinstellungen ignorieren"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Disable file operation queueing"
+msgstr "Dateivorgänge nicht in Warteschlange einreihen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Always start in dual-pane view"
+msgstr "Immer in Zweispaltenansicht starten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Restore last window tabs on startup"
+msgstr "Reiter des letzten Fensters beim Start wiederherstellen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Automatically expand rows during drag-and-drop"
+msgstr "Automatisches Erweitern von Zeilen beim Ziehen und Ablegen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Executable Text Files</b>"
+msgstr "<b>Ausführbare Textdateien</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Run executable text files when they are opened"
+msgstr "Ausführbare Textdateien _starten, wenn sie geöffnet werden"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_View executable text files when they are opened"
+msgstr "Ausführbare Textdateien an_zeigen, wenn sie geöffnet werden"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Ask each time"
+msgstr "_Jedes Mal nachfragen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Trash</b>"
+msgstr "<b>Papierkorb</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Ask before moving files to the Trash"
+msgstr "Vor dem Verschieben von Dateien in den Papierkorb nachfragen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Ask before _emptying the Trash or deleting files"
+msgstr "Vor dem _Leeren des Papierkorbs oder dem Löschen von Dateien nachfragen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "I_nclude a Delete command that bypasses Trash"
+msgstr "Einen _Löschbefehl bereitstellen, der den Papierkorb umgeht"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Bypass the Trash when the Delete key is pressed"
+msgstr "Den Papierkorb umgehen, wenn die Entfernentaste gedrückt wird"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Media Handling</b>"
+msgstr "<b>Handhabung von Datenträgern</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Automatically mount removable media when inserted and on startup"
+msgstr "Wechselmedien beim Einlegen und beim Start automatisch einbinden"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Automatically open a folder for automounted media"
+msgstr "Für automatisch eingebundene Medien automatisch einen Ordner öffnen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Prompt or autorun/autostart programs when media are inserted"
+msgstr "Beim Einlegen von Medien nachfragen oder Programme automatisch starten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Detect content of media and suggest application to open"
+msgstr "Medieninhalt erkennen und Anwendung zum Öffnen vorschlagen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Bulk Rename</b>"
+msgstr "<b>Umbenennen mehrerer Elemente</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Command to invoke when renaming multiple items:"
+msgstr "Befehl, der beim Umbenennen mehrerer Elemente ausgeführt wird:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Icon Captions</b>"
+msgstr "<b>Symbolbeschriftungen</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Date</b>"
+msgstr "<b>Datum</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Format:"
+msgstr "_Format:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Style:"
+msgstr "Stil:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Window and Tab Titles</b>"
+msgstr "<b>Fenster- und Reitertitel</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Show the full p_ath in the title bar and tab bars"
+msgstr "Den kompletten Pfad in der Titel- oder Reiterleiste anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>File Size</b>"
+msgstr "<b>Dateigröße</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Prefixes:"
+msgstr "_Präfixe:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>File Properties</b>"
+msgstr "<b>Dateieigenschaften</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Show advanced permissions in the file property dialog"
+msgstr "Erweiterte Zugriffsrechte im Dateieigenschaftsdialog anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Move/Copy To Menu</b>"
+msgstr "<b>Menüpunkt »Verschieben/Kopieren nach«</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "List bookmarks in the menu"
+msgstr "Lesezeichen im Menü auflisten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "List devices and network locations in the menu"
+msgstr "Geräte und Netzlaufwerke im Menü auflisten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Display"
+msgstr "Anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>List Columns</b>"
+msgstr "<b>Listenspalten</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Choose the order of information to appear in the list view."
+msgstr "Reihenfolge der Angaben in der Listenansicht festlegen."
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "List Columns"
+msgstr "Listenspalten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Previewable Files</b>"
+msgstr "<b>Vorschaubare Dateien</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Show _thumbnails:"
+msgstr "_Vorschaubilder anzeigen:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Inherit thumbnail visibility from parent"
+msgstr "_Die Symbolansicht von übergeordneter Seite vererben"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "_Only for files smaller than:"
+msgstr "_Nur für Dateien kleiner als:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Folders</b>"
+msgstr "<b>Ordner</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Count _number of items:"
+msgstr "_Anzahl der Objekte anzeigen:"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "<b>Tooltips</b>"
+msgstr "<b>Kurzinfos</b>"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Show tooltips in icon and compact views"
+msgstr "Kurzinfos in Symbol- und Kompaktansicht anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Show tooltips in list views"
+msgstr "Kurzinfos in Listenansicht anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Show tooltips on the desktop"
+msgstr "Kurzinfos auf dem Schreibtisch anzeigen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Detailed file type"
+msgstr "De­tail­lierter Dateityp"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Modified date"
+msgstr "Änderungsdatum"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Created date"
+msgstr "Erstelldatum"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Accessed date"
+msgstr "Zugriffsdatum"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "File or folder location"
+msgstr "Speicherort der Datei oder des Ordners"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Preview"
+msgstr "Vorschau"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Visible Buttons"
+msgstr "Sichtbare Knöpfe"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Previous"
+msgstr "Zurück"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Next"
+msgstr "Vorwärts"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Refresh"
+msgstr "Auffrischen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Location entry toggle"
+msgstr "Pfadeingabe umschalten"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Open in terminal"
+msgstr "Im Terminal öffnen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Icon view"
+msgstr "Symbolansicht"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "List view"
+msgstr "Listenansicht"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Compact view"
+msgstr "Kompaktansicht"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Extra Pane"
+msgstr "Zusätzliche Leiste"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Visible Entries"
+msgstr "Sichtbare Einträge"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Selection"
+msgstr "Auswahl"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Favorite"
+msgstr "Favorit"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Background"
+msgstr "Hintergrund"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Context Menus"
+msgstr "Kontextmenü"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Document Templates"
+msgstr "Dokumentvorlagen"
+
+#: gresources/nolphin-file-management-properties.glade
+msgid "Plugins"
+msgstr "Module"

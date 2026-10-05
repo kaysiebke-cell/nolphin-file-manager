@@ -80,8 +80,11 @@ main (int argc, char *argv[])
 		setlocale (LC_ALL, "");
 	}
 
-	/* Initialize gettext support */
-	bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
+	/* Initialize gettext support. NOLPHIN_LOCALEDIR erlaubt es, aus einem
+	 * Build-Ordner zu starten (z. B. build/po), ohne die installierte
+	 * Übersetzung unter LOCALEDIR zu benötigen. */
+	bindtextdomain (GETTEXT_PACKAGE,
+			g_getenv ("NOLPHIN_LOCALEDIR") != NULL ? g_getenv ("NOLPHIN_LOCALEDIR") : LOCALEDIR);
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
 	textdomain (GETTEXT_PACKAGE);
 
