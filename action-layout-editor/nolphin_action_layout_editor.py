@@ -16,8 +16,10 @@ import os
 
 import leconfig
 
-locale.bindtextdomain("nolphin", leconfig.LOCALE_DIR)
-gettext.bindtextdomain("nolphin", leconfig.LOCALE_DIR)
+# NOLPHIN_LOCALEDIR wie im Hauptprogramm: Übersetzungen auch aus dem Build-Ordner
+LOCALE_DIR = os.environ.get("NOLPHIN_LOCALEDIR", leconfig.LOCALE_DIR)
+locale.bindtextdomain("nolphin", LOCALE_DIR)
+gettext.bindtextdomain("nolphin", LOCALE_DIR)
 gettext.textdomain("nolphin")
 _ = gettext.gettext
 
