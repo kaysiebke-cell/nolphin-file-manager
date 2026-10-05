@@ -55,6 +55,8 @@
 		<placeholder name="Global Edit Items Placeholder">
 			<menu action="ToolsMenu">
 				<menuitem name="Tool Sync" action="Tool Sync"/>
+				<menuitem name="Tool Rules" action="Tool Rules"/>
+				<menuitem name="Tool Batch" action="Tool Batch"/>
 				<menuitem name="Tool Duplicates" action="Tool Duplicates"/>
 				<menu action="VersionsMenu">
 					<menuitem name="Version Save" action="Version Save"/>

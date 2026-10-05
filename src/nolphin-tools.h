@@ -36,6 +36,11 @@ gboolean   nolphin_versions_save_file (GFile *file, const gchar *comment, GError
 GtkWidget *nolphin_sync_page_new  (NolphinWindow *window);
 void       nolphin_sync_page_open (GtkWidget *page, GFile *local_folder);
 
+/* Regeln anwenden und Stapelverarbeitung (§43). @selection: GList von Pfaden
+ * (gchar *); NULL = Ordner @folder durchsuchen. */
+GtkWidget *nolphin_rules_page_new  (NolphinWindow *window);
+void       nolphin_rules_page_open (GtkWidget *page, GFile *folder, GList *selection_paths, gboolean batch_mode);
+
 G_END_DECLS
 
 #endif /* NOLPHIN_TOOLS_H */

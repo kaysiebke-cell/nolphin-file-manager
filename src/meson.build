@@ -48,6 +48,7 @@ nolphinCommon_sources = [
   'nolphin-location-bar.c',
   'nolphin-diagnostics.c',
   'nolphin-duplicates.c',
+  'nolphin-rules.c',
   'nolphin-sync.c',
   'nolphin-tools.c',
   'nolphin-versions.c',

@@ -221,6 +221,43 @@ action_version_show_callback (GtkAction *action, gpointer user_data)
 }
 
 static void
+action_tool_rules_callback (GtkAction *action, gpointer user_data)
+{
+	NolphinWindow *window;
+	GFile *folder;
+	gboolean batch = g_strcmp0 (gtk_action_get_name (action), "Tool Batch") == 0;
+	GList *paths = NULL;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	folder = tools_current_folder (window);
+	if (batch) {
+		GList *selection = tools_selection (window), *l;
+
+		for (l = selection; l != NULL; l = l->next) {
+			GFile *loc = nolphin_file_get_location (NOLPHIN_FILE (l->data));
+			gchar *p = g_file_get_path (loc);
+
+			if (p != NULL) {
+				paths = g_list_append (paths, p);
+			}
+			g_object_unref (loc);
+		}
+		nolphin_file_list_free (selection);
+		if (paths == NULL) {
+			tools_notify (_("Stapelverarbeitung"), _("Keine lokalen Dateien ausgewählt."));
+			g_object_unref (folder);
+			return;
+		}
+	}
+	nolphin_workspace_panel_show_rules (nolphin_window_get_workspace_panel (window), window, folder, paths, batch);
+	g_list_free_full (paths, g_free);
+	g_object_unref (folder);
+}
+
+static void
 action_tool_sync_callback (GtkAction *action, gpointer user_data)
 {
 	NolphinWindow *window;
@@ -1799,6 +1836,14 @@ static const GtkActionEntry main_entries[] = {
   /* label, accelerator */       N_("Versionen _anzeigen …"), NULL,
   /* tooltip */                  N_("Gespeicherte Versionen der gewählten Datei anzeigen, wiederherstellen oder vergleichen"),
                                  G_CALLBACK (action_version_show_callback) },
+  /* name, stock id */         { "Tool Rules", NULL,
+  /* label, accelerator */       N_("_Regeln anwenden …"), NULL,
+  /* tooltip */                  N_("Wenn Dateityp, Name, Größe oder Datum zutreffen, dann eine Aktion ausführen (mit Vorschau)"),
+                                 G_CALLBACK (action_tool_rules_callback) },
+  /* name, stock id */         { "Tool Batch", NULL,
+  /* label, accelerator */       N_("_Stapelverarbeitung …"), NULL,
+  /* tooltip */                  N_("Eine Aktion auf die gewählten Dateien anwenden (mit Vorschau)"),
+                                 G_CALLBACK (action_tool_rules_callback) },
   /* name, stock id */         { "Tool Sync", NULL,
   /* label, accelerator */       N_("Ordner _vergleichen / synchronisieren …"), NULL,
   /* tooltip */                  N_("Zwei Ordner vergleichen und einseitig über rsync abgleichen (mit Vorschau)"),

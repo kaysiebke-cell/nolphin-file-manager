@@ -4911,6 +4911,7 @@ nolphin_workspace_panel_new (NolphinWindow *window, GtkWidget *preview_widget, G
 	add_stack_page (GTK_STACK (stack), nolphin_duplicates_page_new (window), "duplicates");
 	add_stack_page (GTK_STACK (stack), nolphin_versions_page_new (window), "versions");
 	add_stack_page (GTK_STACK (stack), nolphin_sync_page_new (window), "sync");
+	add_stack_page (GTK_STACK (stack), nolphin_rules_page_new (window), "rules");
 
 	/* Terminal-Widget selbst kommt bereits sichtbar aus
 	 * nolphin_terminal_new() (wie im frueheren unteren Bereich auch) -
@@ -5052,6 +5053,22 @@ nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_panel, Nolphi
 	gtk_stack_set_visible_child_name (GTK_STACK (inner), "manage");
 	workspace_panel_show_page (workspace_panel, window, "archive");
 	archive_manager_reload (d);
+}
+
+/* Zeigt Regeln/Stapelverarbeitung: @selection_paths NULL = Ordner @folder. */
+void
+nolphin_workspace_panel_show_rules (GtkWidget *workspace_panel, NolphinWindow *window, GFile *folder,
+				    GList *selection_paths, gboolean batch_mode)
+{
+	GtkWidget *page;
+
+	g_return_if_fail (GTK_IS_STACK (workspace_panel));
+
+	page = gtk_stack_get_child_by_name (GTK_STACK (workspace_panel), "rules");
+	if (page != NULL) {
+		nolphin_rules_page_open (page, folder, selection_paths, batch_mode);
+	}
+	workspace_panel_show_page (workspace_panel, window, "rules");
 }
 
 /* Zeigt Vergleich/Synchronisation mit @folder als lokalem Ordner. */

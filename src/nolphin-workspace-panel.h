@@ -59,6 +59,13 @@ void       nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_pa
 							  NolphinWindow *window,
 							  GFile *archive);
 
+/* Zeigt Regeln anwenden (Ordner) bzw. Stapelverarbeitung (Auswahl, Pfadliste). */
+void       nolphin_workspace_panel_show_rules (GtkWidget *workspace_panel,
+					       NolphinWindow *window,
+					       GFile *folder,
+					       GList *selection_paths,
+					       gboolean batch_mode);
+
 /* Zeigt Ordner vergleichen/synchronisieren mit @folder als lokalem Ordner. */
 void       nolphin_workspace_panel_show_sync (GtkWidget *workspace_panel,
 					      NolphinWindow *window,
