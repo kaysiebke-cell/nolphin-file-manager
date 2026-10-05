@@ -221,6 +221,21 @@ action_version_show_callback (GtkAction *action, gpointer user_data)
 }
 
 static void
+action_tool_sync_callback (GtkAction *action, gpointer user_data)
+{
+	NolphinWindow *window;
+	GFile *folder;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	folder = tools_current_folder (window);
+	nolphin_workspace_panel_show_sync (nolphin_window_get_workspace_panel (window), window, folder);
+	g_object_unref (folder);
+}
+
+static void
 action_tool_duplicates_callback (GtkAction *action, gpointer user_data)
 {
 	NolphinWindow *window;
@@ -1784,6 +1799,10 @@ static const GtkActionEntry main_entries[] = {
   /* label, accelerator */       N_("Versionen _anzeigen …"), NULL,
   /* tooltip */                  N_("Gespeicherte Versionen der gewählten Datei anzeigen, wiederherstellen oder vergleichen"),
                                  G_CALLBACK (action_version_show_callback) },
+  /* name, stock id */         { "Tool Sync", NULL,
+  /* label, accelerator */       N_("Ordner _vergleichen / synchronisieren …"), NULL,
+  /* tooltip */                  N_("Zwei Ordner vergleichen und einseitig über rsync abgleichen (mit Vorschau)"),
+                                 G_CALLBACK (action_tool_sync_callback) },
   /* name, stock id */         { "Tool Duplicates", NULL,
   /* label, accelerator */       N_("_Duplikate finden …"), NULL,
   /* tooltip */                  N_("Doppelte Dateien in einem Ordner suchen (Name, Größe oder Inhalt)"),

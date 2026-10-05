@@ -32,6 +32,10 @@ void       nolphin_versions_page_open (GtkWidget *page, GFile *file);
 /* Speichert den aktuellen Stand von @file sofort als neue Version. */
 gboolean   nolphin_versions_save_file (GFile *file, const gchar *comment, GError **error);
 
+/* Ordner vergleichen / synchronisieren (§44) */
+GtkWidget *nolphin_sync_page_new  (NolphinWindow *window);
+void       nolphin_sync_page_open (GtkWidget *page, GFile *local_folder);
+
 G_END_DECLS
 
 #endif /* NOLPHIN_TOOLS_H */

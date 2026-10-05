@@ -59,6 +59,11 @@ void       nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_pa
 							  NolphinWindow *window,
 							  GFile *archive);
 
+/* Zeigt Ordner vergleichen/synchronisieren mit @folder als lokalem Ordner. */
+void       nolphin_workspace_panel_show_sync (GtkWidget *workspace_panel,
+					      NolphinWindow *window,
+					      GFile *folder);
+
 /* Zeigt die Versionen einer Datei (Bearbeiten ▸ Werkzeuge ▸ Versionen). */
 void       nolphin_workspace_panel_show_versions (GtkWidget *workspace_panel,
 						  NolphinWindow *window,

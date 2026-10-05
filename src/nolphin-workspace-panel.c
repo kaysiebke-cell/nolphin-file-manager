@@ -4910,6 +4910,7 @@ nolphin_workspace_panel_new (NolphinWindow *window, GtkWidget *preview_widget, G
 	add_stack_page (GTK_STACK (stack), nolphin_diagnostics_page_new (window), "diagnostics");
 	add_stack_page (GTK_STACK (stack), nolphin_duplicates_page_new (window), "duplicates");
 	add_stack_page (GTK_STACK (stack), nolphin_versions_page_new (window), "versions");
+	add_stack_page (GTK_STACK (stack), nolphin_sync_page_new (window), "sync");
 
 	/* Terminal-Widget selbst kommt bereits sichtbar aus
 	 * nolphin_terminal_new() (wie im frueheren unteren Bereich auch) -
@@ -5051,6 +5052,21 @@ nolphin_workspace_panel_show_archive_manager (GtkWidget *workspace_panel, Nolphi
 	gtk_stack_set_visible_child_name (GTK_STACK (inner), "manage");
 	workspace_panel_show_page (workspace_panel, window, "archive");
 	archive_manager_reload (d);
+}
+
+/* Zeigt Vergleich/Synchronisation mit @folder als lokalem Ordner. */
+void
+nolphin_workspace_panel_show_sync (GtkWidget *workspace_panel, NolphinWindow *window, GFile *folder)
+{
+	GtkWidget *page;
+
+	g_return_if_fail (GTK_IS_STACK (workspace_panel));
+
+	page = gtk_stack_get_child_by_name (GTK_STACK (workspace_panel), "sync");
+	if (page != NULL && folder != NULL) {
+		nolphin_sync_page_open (page, folder);
+	}
+	workspace_panel_show_page (workspace_panel, window, "sync");
 }
 
 /* Zeigt die Versionen der Datei @file. */
