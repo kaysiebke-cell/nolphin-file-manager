@@ -163,6 +163,172 @@ test_github_layout (GtkTextBuffer *buffer)
 	g_free (text);
 }
 
+/* Eigenschaft "invisible" eines benannten Tags. */
+static gboolean
+tag_invisible (GtkTextBuffer *buffer, const gchar *name, gboolean *found)
+{
+	GtkTextTag *tag = gtk_text_tag_table_lookup (gtk_text_buffer_get_tag_table (buffer), name);
+	gboolean inv = FALSE;
+
+	*found = tag != NULL;
+	if (tag != NULL)
+		g_object_get (tag, "invisible", &inv, NULL);
+	return inv;
+}
+
+/* HTML-Teilmenge (§60.3): Inline-Elemente, Entities, ausgerichtete Blöcke,
+ * Überschriften, <details> und <hr>. */
+static void
+test_html (GtkTextBuffer *buffer)
+{
+	gchar *dir = g_dir_make_tmp ("nolphin-md-html-XXXXXX", NULL);
+	gchar *png = g_build_filename (dir, "bild.png", NULL);
+	GdkPixbuf *pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, 20, 10);
+	gchar *text, *expected_desc;
+	gboolean found;
+
+	gdk_pixbuf_fill (pixbuf, 0x336699ff);
+	gdk_pixbuf_save (pixbuf, png, "png", NULL, NULL);
+	g_object_unref (pixbuf);
+
+	/* Entities */
+	expect_text (buffer, "a &amp; b &lt;c&gt; &copy; &#65; &#x42; &unbekannt; &", "a & b <c> © A B &unbekannt; &\n", "Entities");
+
+	/* Inline-Elemente */
+	nolphin_markdown_render_to_buffer (buffer, "<b>fett</b> <i>kurs</i> <kbd>Strg</kbd> H<sub>2</sub>O x<sup>2</sup> <u>unter</u> <s>weg</s> <code>cd</code>");
+	text = buffer_text (buffer);
+	if (g_strcmp0 (text, "fett kurs Strg H2O x2 unter weg cd\n") != 0)
+		fail ("Inline-HTML: Klartext stimmt nicht");
+	if (!has_tag_at (buffer, text, "fett", "bold") || !has_tag_at (buffer, text, "kurs", "italic") ||
+	    !has_tag_at (buffer, text, "Strg", "kbd") || !has_tag_at (buffer, text, "2O", "sub") ||
+	    !has_tag_at (buffer, text, "2 unter", "sup") || !has_tag_at (buffer, text, "unter", "u-html") ||
+	    !has_tag_at (buffer, text, "weg", "strike") || !has_tag_at (buffer, text, "cd", "code"))
+		fail ("Inline-HTML: Tags fehlen");
+	if (has_tag_at (buffer, text, "kurs", "bold"))
+		fail ("Inline-HTML: bold läuft über");
+	g_free (text);
+
+	nolphin_markdown_render_to_buffer (buffer, "<b>fett <i>beides</i></b> danach");
+	text = buffer_text (buffer);
+	if (!has_tag_at (buffer, text, "beides", "bold") || !has_tag_at (buffer, text, "beides", "italic") ||
+	    has_tag_at (buffer, text, "danach", "bold"))
+		fail ("verschachteltes Inline-HTML falsch getaggt");
+	g_free (text);
+
+	nolphin_markdown_render_to_buffer (buffer, "<a href=\"https://example.org/x\">Link</a>");
+	text = buffer_text (buffer);
+	if (g_strcmp0 (href_at (buffer, text, "Link"), "https://example.org/x") != 0)
+		fail ("<a href> ohne Link-Ziel");
+	g_free (text);
+
+	expect_text (buffer, "a<br>b<br/>c<BR />d", "a\nb\nc\nd\n", "<br>-Varianten");
+	expect_text (buffer, "<foo>x</foo> <bar/>y", "x y\n", "unbekannte Tags entfallen");
+	expect_text (buffer, "<b>nie geschlossen", "nie geschlossen\n", "ungeschlossenes Tag");
+	expect_text (buffer, "a < b und c > d", "a < b und c > d\n", "Kleiner-Zeichen im Text");
+	expect_text (buffer, "<ul><li>eins</li><li>zwei</li></ul>", "\n• eins\n• zwei\n", "ul/li als Aufzählung");
+
+	/* Bilder mit Breite/Höhe */
+	nolphin_markdown_render_to_buffer_with_base (buffer, "<img src=\"bild.png\" width=\"200\" alt=\"A\">", dir);
+	expected_desc = g_strdup_printf ("image:%s|w=200|h=", png);
+	{
+		gchar *d = anchor_at (buffer, 0);
+
+		if (g_strcmp0 (d, expected_desc) != 0)
+			fail ("<img> ohne Breite im Anker");
+		g_free (d);
+	}
+	g_free (expected_desc);
+	nolphin_markdown_render_to_buffer_with_base (buffer, "<img src='https://example.org/y.png' alt='Alt'>", dir);
+	text = buffer_text (buffer);
+	if (g_strcmp0 (text, "Alt\n") != 0)
+		fail ("entferntes <img> wurde nicht zu Alternativtext");
+	g_free (text);
+	nolphin_markdown_render_to_buffer_with_base (buffer, "<a href=\"https://e.org\"><img src=\"bild.png\"></a>", dir);
+	text = buffer_text (buffer);
+	if (g_strcmp0 (href_at (buffer, text, "\xEF\xBF\xBC"), "https://e.org") != 0)
+		fail ("<a><img></a>: Bild ohne Link-Ziel");
+	g_free (text);
+
+	/* Ausgerichtete Blöcke */
+	nolphin_markdown_render_to_buffer (buffer, "<p align=\"center\">Mitte</p>\n\n<div align=\"right\">Rechts</div>\n\n<center>Zentriert</center>\n\nNormal");
+	text = buffer_text (buffer);
+	if (g_strcmp0 (text, "Mitte\nRechts\nZentriert\nNormal\n") != 0)
+		fail ("ausgerichtete Blöcke: Klartext stimmt nicht");
+	if (!has_tag_at (buffer, text, "Mitte", "jc") || !has_tag_at (buffer, text, "Rechts", "jr") ||
+	    !has_tag_at (buffer, text, "Zentriert", "jc") || has_tag_at (buffer, text, "Normal", "jc") ||
+	    has_tag_at (buffer, text, "Normal", "jr"))
+		fail ("ausgerichtete Blöcke: Ausrichtung falsch");
+	g_free (text);
+
+	nolphin_markdown_render_to_buffer_with_base (buffer, "<p align=\"center\">\n  <img src=\"bild.png\" width=\"50%\">\n</p>", dir);
+	text = buffer_text (buffer);
+	if (g_strcmp0 (text, "\xEF\xBF\xBC\n") != 0 || !has_tag_at (buffer, text, "\xEF\xBF\xBC", "jc"))
+		fail ("zentriertes Bild in <p> mehrzeilig falsch");
+	g_free (text);
+
+	expect_text (buffer, "<p>a</p> Rest", "a\nRest\n", "Text nach schließendem Tag");
+	expect_text (buffer, "<p>nie geschlossen", "nie geschlossen\n", "ungeschlossener Block");
+	expect_text (buffer, "<div>\n\n# Titel\n\n- eins\n\n</div>", "Titel\n• eins\n", "div mit Markdown");
+
+	/* Überschriften in HTML */
+	nolphin_markdown_render_to_buffer (buffer, "<h1 align=\"center\">Titel</h1>\n<h3>Klein</h3>");
+	text = buffer_text (buffer);
+	if (g_strcmp0 (text, "Titel\nKlein\n") != 0 || !has_tag_at (buffer, text, "Titel", "h1") ||
+	    !has_tag_at (buffer, text, "Titel", "jc") || !has_tag_at (buffer, text, "Klein", "h3") ||
+	    has_tag_at (buffer, text, "Klein", "jc"))
+		fail ("HTML-Überschriften falsch");
+	g_free (text);
+
+	/* <details>: zugeklappt, Titel mit beiden Pfeilen */
+	nolphin_markdown_render_to_buffer (buffer, "Vor\n\n<details>\n<summary>Mehr <b>Info</b></summary>\n\nInhalt **fett**\n\n</details>\n\nNach");
+	text = buffer_text (buffer);
+	if (g_strcmp0 (text, "Vor\n▸ ▾ Mehr Info\nInhalt fett\nNach\n") != 0)
+		fail ("<details>: Klartext stimmt nicht");
+	if (!has_tag_at (buffer, text, "Inhalt", "det-0") || has_tag_at (buffer, text, "Nach", "det-0") ||
+	    has_tag_at (buffer, text, "Mehr", "det-0"))
+		fail ("<details>: Inhalts-Tag falsch verteilt");
+	if (!tag_invisible (buffer, "det-0", &found) || !found)
+		fail ("<details>: Inhalt ist nicht zugeklappt");
+	if (tag_invisible (buffer, "det-0-c", &found) || !found)
+		fail ("<details>: Pfeil 'zu' nicht sichtbar");
+	if (!tag_invisible (buffer, "det-0-o", &found) || !found)
+		fail ("<details>: Pfeil 'auf' sichtbar");
+	if (!has_tag_at (buffer, text, "Mehr", "det-0-s"))
+		fail ("<details>: Titel nicht anklickbar markiert");
+	g_free (text);
+
+	nolphin_markdown_render_to_buffer (buffer, "<details open>\n<summary>S</summary>\nInhalt\n</details>");
+	if (tag_invisible (buffer, "det-0", &found))
+		fail ("<details open>: Inhalt ist zugeklappt");
+	nolphin_markdown_render_to_buffer (buffer, "<details>Nur Inhalt</details>");
+	text = buffer_text (buffer);
+	if (strstr (text, "Details") == NULL || strstr (text, "Nur Inhalt") == NULL)
+		fail ("<details> ohne <summary>: Standardtitel fehlt");
+	g_free (text);
+
+	/* <hr> */
+	nolphin_markdown_render_to_buffer (buffer, "a\n\n<hr>\n\nb");
+	text = buffer_text (buffer);
+	if (g_strcmp0 (text, "a\n\nb\n") != 0)
+		fail ("<hr>: Klartext stimmt nicht");
+	{
+		GtkTextIter it;
+		GtkTextTag *hr = gtk_text_tag_table_lookup (gtk_text_buffer_get_tag_table (buffer), "hr");
+
+		gtk_text_buffer_get_iter_at_offset (buffer, &it, 2);
+		if (!gtk_text_iter_has_tag (&it, hr))
+			fail ("<hr>: Linienzeile ohne hr-Tag");
+	}
+	g_free (text);
+
+	{
+		gchar *cmd[] = { "rm", "-rf", dir, NULL };
+		g_spawn_sync (NULL, cmd, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, NULL);
+	}
+	g_free (png);
+	g_free (dir);
+}
+
 /* Bilder (§60.3): lokale Bilder innerhalb des Basisordners werden zu
  * Ankern, alles andere bleibt Alternativtext. */
 static void
@@ -333,6 +499,7 @@ main (int argc, char **argv)
 
 	test_images (buffer);
 	test_github_layout (buffer);
+	test_html (buffer);
 
 	g_object_unref (buffer);
 	if (exit_code == 0)

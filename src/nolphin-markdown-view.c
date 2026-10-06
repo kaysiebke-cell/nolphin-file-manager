@@ -16,6 +16,9 @@
 #define CHECK_KEY "nolphin-md-check"
 #define DECOR_KEY "nolphin-md-decor"
 #define KIND_KEY "nolphin-md-kind"
+#define IMG_W_KEY "nolphin-md-image-w"
+#define IMG_H_KEY "nolphin-md-image-h"
+#define TOGGLE_KEY "nolphin-md-toggle"
 #define IMG_PATH_KEY "nolphin-md-image-path"
 #define IMG_ALT_KEY "nolphin-md-image-alt"
 #define KIDS_KEY "nolphin-md-children"
@@ -48,6 +51,13 @@ typedef struct {
 	gint      end;
 	gint      level;
 } Decor;
+
+/* Aufklappbarer Abschnitt (<details>): Inhalt und die beiden Pfeile. */
+typedef struct {
+	GtkTextTag *content;
+	GtkTextTag *closed;   /* Pfeil "zu" */
+	GtkTextTag *open;     /* Pfeil "auf" */
+} DetInfo;
 
 /* Tabelle (Spalten, Ausrichtung 0 links / 1 Mitte / 2 rechts, Zeilen als
  * NULL-terminierte Listen von Pango-Markup, Zeile 0 ist die Kopfzeile). */
@@ -101,6 +111,13 @@ setup_tags (GtkTextBuffer *buffer)
 	gtk_text_buffer_create_tag (buffer, "code-first", "pixels-above-lines", 16, NULL);
 	gtk_text_buffer_create_tag (buffer, "code-last", "pixels-below-lines", 32, NULL);
 	gtk_text_buffer_create_tag (buffer, "link", "underline", PANGO_UNDERLINE_SINGLE, NULL);
+	/* HTML-Teilmenge: <kbd>, <sub>, <sup>, <u> und Ausrichtung */
+	gtk_text_buffer_create_tag (buffer, "kbd", "family", "monospace", "scale", 0.8, NULL);
+	gtk_text_buffer_create_tag (buffer, "sub", "rise", -3 * PANGO_SCALE, "scale", 0.8, NULL);
+	gtk_text_buffer_create_tag (buffer, "sup", "rise", 5 * PANGO_SCALE, "scale", 0.8, NULL);
+	gtk_text_buffer_create_tag (buffer, "u-html", "underline", PANGO_UNDERLINE_SINGLE, NULL);
+	gtk_text_buffer_create_tag (buffer, "jc", "justification", GTK_JUSTIFY_CENTER, NULL);
+	gtk_text_buffer_create_tag (buffer, "jr", "justification", GTK_JUSTIFY_RIGHT, NULL);
 	gtk_text_buffer_create_tag (buffer, "quote", NULL);
 	/* Zeile der horizontalen Linie: winzige Schrift, Rand 24px; die Linie wird gezeichnet. */
 	gtk_text_buffer_create_tag (buffer, "hr",
@@ -311,7 +328,8 @@ resolve_local_image (Ctx *c, const gchar *src, gsize len)
 
 /* Setzt einen Anker für ein lokales Bild; die Ansicht hängt das Widget ein. */
 static void
-insert_image_anchor (Ctx *c, const gchar *path, const gchar *alt, gsize alt_len, GPtrArray *tags)
+insert_image_anchor (Ctx *c, const gchar *path, const gchar *alt, gsize alt_len, GPtrArray *tags,
+		     const gchar *width_attr, const gchar *height_attr)
 {
 	GtkTextIter it, a;
 	GtkTextChildAnchor *anchor;
@@ -323,10 +341,298 @@ insert_image_anchor (Ctx *c, const gchar *path, const gchar *alt, gsize alt_len,
 	anchor = gtk_text_buffer_create_child_anchor (c->buffer, &it);
 	g_object_set_data_full (G_OBJECT (anchor), IMG_PATH_KEY, g_strdup (path), g_free);
 	g_object_set_data_full (G_OBJECT (anchor), IMG_ALT_KEY, g_strndup (alt, alt_len), g_free);
+	if (width_attr != NULL && *width_attr != '\0')
+		g_object_set_data_full (G_OBJECT (anchor), IMG_W_KEY, g_strdup (width_attr), g_free);
+	if (height_attr != NULL && *height_attr != '\0')
+		g_object_set_data_full (G_OBJECT (anchor), IMG_H_KEY, g_strdup (height_attr), g_free);
 	gtk_text_buffer_get_iter_at_offset (c->buffer, &a, start);
 	gtk_text_buffer_get_end_iter (c->buffer, &it);
 	for (i = 0; i < tags->len; i++)
 		gtk_text_buffer_apply_tag (c->buffer, g_ptr_array_index (tags, i), &a, &it);
+}
+
+/* ------------------------------------------------------------------ */
+/* HTML-Teilmenge und Entities                                         */
+/* ------------------------------------------------------------------ */
+
+typedef struct {
+	const gchar *name;      /* Tag-Name (nicht nullterminiert) */
+	gsize        name_len;
+	gboolean     closing;   /* </name> */
+	const gchar *attrs;     /* Attribute: [attrs, attrs_end) */
+	const gchar *attrs_end;
+	const gchar *tag_end;   /* erstes Zeichen nach '>' */
+	gboolean     self_closing;
+} HtmlTag;
+
+static gboolean
+parse_html_tag (const gchar *p, const gchar *end, HtmlTag *t)
+{
+	const gchar *q = p + 1;
+	gchar quote = 0;
+
+	if (p >= end || *p != '<' || q >= end)
+		return FALSE;
+	t->closing = FALSE;
+	if (*q == '/') {
+		t->closing = TRUE;
+		q++;
+	}
+	if (q >= end || !g_ascii_isalpha (*q))
+		return FALSE;
+	t->name = q;
+	while (q < end && (g_ascii_isalnum (*q) || *q == '-'))
+		q++;
+	t->name_len = (gsize) (q - t->name);
+	t->attrs = q;
+	for (; q < end; q++) {
+		if (quote != 0) {
+			if (*q == quote)
+				quote = 0;
+		} else if (*q == '"' || *q == '\'') {
+			quote = *q;
+		} else if (*q == '>') {
+			break;
+		}
+	}
+	if (q >= end)
+		return FALSE;
+	t->attrs_end = q;
+	t->tag_end = q + 1;
+	t->self_closing = (q > t->attrs && q[-1] == '/');
+	return TRUE;
+}
+
+static gboolean
+html_tag_is (const HtmlTag *t, const gchar *name)
+{
+	return strlen (name) == t->name_len && g_ascii_strncasecmp (t->name, name, t->name_len) == 0;
+}
+
+/* Wert eines Attributs (neu angelegt) oder NULL; Attribute ohne Wert liefern "". */
+static gchar *
+html_attr (const HtmlTag *t, const gchar *attr)
+{
+	const gchar *p = t->attrs, *e = t->attrs_end;
+	gsize al = strlen (attr);
+
+	while (p < e) {
+		const gchar *ns;
+		gsize nl;
+		gchar *val = NULL;
+
+		while (p < e && (g_ascii_isspace (*p) || *p == '/'))
+			p++;
+		ns = p;
+		while (p < e && !g_ascii_isspace (*p) && *p != '=' && *p != '/')
+			p++;
+		nl = (gsize) (p - ns);
+		while (p < e && g_ascii_isspace (*p))
+			p++;
+		if (p < e && *p == '=') {
+			const gchar *vs;
+
+			p++;
+			while (p < e && g_ascii_isspace (*p))
+				p++;
+			if (p < e && (*p == '"' || *p == '\'')) {
+				gchar q = *p++;
+
+				vs = p;
+				while (p < e && *p != q)
+					p++;
+				val = g_strndup (vs, (gsize) (p - vs));
+				if (p < e)
+					p++;
+			} else {
+				vs = p;
+				while (p < e && !g_ascii_isspace (*p))
+					p++;
+				val = g_strndup (vs, (gsize) (p - vs));
+			}
+		}
+		if (nl > 0 && nl == al && g_ascii_strncasecmp (ns, attr, nl) == 0)
+			return val != NULL ? val : g_strdup ("");
+		g_free (val);
+	}
+	return NULL;
+}
+
+/* Schließendes Tag zu @open ab @from (Verschachtelung gleichnamiger Tags
+ * wird gezählt); liefert die Stelle des '<' oder NULL, @close_out bekommt
+ * das schließende Tag. */
+static const gchar *
+find_close_tag (const gchar *from, const gchar *end, const HtmlTag *open, HtmlTag *close_out)
+{
+	const gchar *q = from;
+	gint depth = 1;
+
+	while (q < end) {
+		HtmlTag t;
+		const gchar *lt = memchr (q, '<', (gsize) (end - q));
+
+		if (lt == NULL)
+			return NULL;
+		if (parse_html_tag (lt, end, &t) && t.name_len == open->name_len &&
+		    g_ascii_strncasecmp (t.name, open->name, t.name_len) == 0) {
+			if (t.closing) {
+				if (--depth == 0) {
+					*close_out = t;
+					return lt;
+				}
+			} else if (!t.self_closing) {
+				depth++;
+			}
+			q = t.tag_end;
+		} else {
+			q = lt + 1;
+		}
+	}
+	return NULL;
+}
+
+/* "&name;", "&#N;", "&#xH;" → UTF-8 (neu angelegt) und Stelle dahinter, sonst NULL. */
+static gchar *
+decode_entity (const gchar *p, const gchar *end, const gchar **next)
+{
+	static const struct { const gchar *name; const gchar *text; } named[] = {
+		{ "amp", "&" }, { "lt", "<" }, { "gt", ">" }, { "quot", "\"" }, { "apos", "'" },
+		{ "nbsp", " " }, { "copy", "©" }, { "reg", "®" }, { "trade", "™" },
+		{ "hellip", "…" }, { "mdash", "—" }, { "ndash", "–" },
+		{ "laquo", "«" }, { "raquo", "»" }, { "middot", "·" }, { "bull", "•" },
+		{ "rarr", "→" }, { "larr", "←" }, { "uarr", "↑" }, { "darr", "↓" },
+		{ "times", "×" }, { "deg", "°" }, { "check", "✓" },
+	};
+	const gchar *semi = memchr (p, ';', MIN ((gsize) (end - p), (gsize) 12));
+	gsize len;
+	guint i;
+
+	if (semi == NULL || semi < p + 2)
+		return NULL;
+	len = (gsize) (semi - p - 1);
+	if (p[1] == '#') {
+		gunichar ch = 0;
+		gchar *tail = NULL;
+		gchar *num = g_strndup (p + 2, len - 1);
+
+		ch = (num[0] == 'x' || num[0] == 'X') ? (gunichar) g_ascii_strtoull (num + 1, &tail, 16)
+						      : (gunichar) g_ascii_strtoull (num, &tail, 10);
+		if (tail == NULL || *tail != '\0' || !g_unichar_validate (ch) || ch == 0) {
+			g_free (num);
+			return NULL;
+		}
+		g_free (num);
+		*next = semi + 1;
+		{
+			gchar buf[8];
+			gint n = g_unichar_to_utf8 (ch, buf);
+
+			return g_strndup (buf, (gsize) n);
+		}
+	}
+	for (i = 0; i < G_N_ELEMENTS (named); i++) {
+		if (strlen (named[i].name) == len && strncmp (p + 1, named[i].name, len) == 0) {
+			*next = semi + 1;
+			return g_strdup (named[i].text);
+		}
+	}
+	return NULL;
+}
+
+static void render_inline (Ctx *c, const gchar *s, const gchar *end, GPtrArray *tags);
+
+/* Ein HTML-Element im Fließtext. Liefert die Stelle hinter dem verarbeiteten
+ * Teil oder NULL, wenn das Tag nicht unterstützt wird (der Aufrufer entfernt
+ * es dann). Der Text vor @p ist bereits eingefügt. */
+static const gchar *
+html_inline (Ctx *c, const gchar *p, const gchar *end, GPtrArray *tags)
+{
+	HtmlTag t, close;
+	const gchar *close_at;
+	const gchar *fmt = NULL;
+	gboolean plain = FALSE, is_link = FALSE;
+	guint pushed = 0;
+	gchar *href = NULL;
+
+	if (!parse_html_tag (p, end, &t))
+		return NULL;
+	if (t.closing)
+		return t.tag_end;   /* verwaistes schließendes Tag: weglassen */
+
+	if (html_tag_is (&t, "br")) {
+		insert_literal (c, "\n", tags);
+		return t.tag_end;
+	}
+	if (html_tag_is (&t, "wbr") || html_tag_is (&t, "hr"))
+		return t.tag_end;
+	if (html_tag_is (&t, "li")) {
+		insert_literal (c, "\n• ", tags);
+		return t.tag_end;
+	}
+	if (html_tag_is (&t, "img")) {
+		gchar *src = html_attr (&t, "src"), *alt = html_attr (&t, "alt");
+		gchar *w = html_attr (&t, "width"), *h = html_attr (&t, "height");
+		gchar *img = src != NULL ? resolve_local_image (c, src, strlen (src)) : NULL;
+
+		if (img != NULL) {
+			insert_image_anchor (c, img, alt != NULL ? alt : "", alt != NULL ? strlen (alt) : 0, tags, w, h);
+		} else if (alt != NULL && *alt != '\0') {
+			g_ptr_array_add (tags, T (c, "italic"));
+			insert_literal (c, alt, tags);
+			g_ptr_array_remove_index (tags, tags->len - 1);
+		}
+		g_free (img);
+		g_free (src);
+		g_free (alt);
+		g_free (w);
+		g_free (h);
+		return t.tag_end;
+	}
+
+	if (html_tag_is (&t, "b") || html_tag_is (&t, "strong"))
+		fmt = "bold";
+	else if (html_tag_is (&t, "i") || html_tag_is (&t, "em") || html_tag_is (&t, "cite"))
+		fmt = "italic";
+	else if (html_tag_is (&t, "s") || html_tag_is (&t, "del") || html_tag_is (&t, "strike"))
+		fmt = "strike";
+	else if (html_tag_is (&t, "u") || html_tag_is (&t, "ins"))
+		fmt = "u-html";
+	else if (html_tag_is (&t, "code") || html_tag_is (&t, "tt"))
+		fmt = "code";
+	else if (html_tag_is (&t, "kbd"))
+		fmt = "kbd";
+	else if (html_tag_is (&t, "sub"))
+		fmt = "sub";
+	else if (html_tag_is (&t, "sup"))
+		fmt = "sup";
+	else if (html_tag_is (&t, "a"))
+		is_link = TRUE;
+	else if (html_tag_is (&t, "span") || html_tag_is (&t, "mark") || html_tag_is (&t, "small") || html_tag_is (&t, "big") ||
+		 html_tag_is (&t, "font") || html_tag_is (&t, "abbr") || html_tag_is (&t, "q"))
+		plain = TRUE;
+	else
+		return NULL;
+
+	close_at = find_close_tag (t.tag_end, end, &t, &close);
+	if (close_at == NULL)
+		return t.tag_end;   /* nicht geschlossen: nur das Tag weglassen */
+
+	if (is_link) {
+		href = html_attr (&t, "href");
+		if (href != NULL && *href != '\0') {
+			g_ptr_array_add (tags, T (c, "link"));
+			g_ptr_array_add (tags, make_link_tag (c, href, strlen (href)));
+			pushed = 2;
+		}
+		g_free (href);
+	} else if (fmt != NULL) {
+		g_ptr_array_add (tags, T (c, fmt));
+		pushed = 1;
+	}
+	(void) plain;
+	render_inline (c, t.tag_end, close_at, tags);
+	g_ptr_array_set_size (tags, tags->len - pushed);
+	return close.tag_end;
 }
 
 static void
@@ -446,7 +752,7 @@ render_inline (Ctx *c, const gchar *s, const gchar *end, GPtrArray *tags)
 						gchar *img = resolve_local_image (c, ds, de - ds);
 
 						if (img != NULL) {
-							insert_image_anchor (c, img, open + 1, close - open - 1, tags);
+							insert_image_anchor (c, img, open + 1, close - open - 1, tags, NULL, NULL);
 							g_free (img);
 						} else {
 							/* Entfernte oder nicht auffindbare Bilder: Alternativtext, kursiv. */
@@ -488,19 +794,33 @@ render_inline (Ctx *c, const gchar *s, const gchar *end, GPtrArray *tags)
 					continue;
 				}
 				if (g_ascii_isalpha (*in) || *in == '/' || *in == '!') {
-					gboolean br = (g_ascii_strncasecmp (in, "br", 2) == 0 &&
-						       (len == 2 || in[2] == '/' || g_ascii_isspace (in[2])));
+					const gchar *next;
 
 					insert_run (c, run, p, tags);
-					if (br)
-						insert_literal (c, "\n", tags);
-					p = gt + 1;
+					run = p;
+					next = html_inline (c, p, end, tags);
+					if (next == NULL)
+						next = gt + 1;   /* unbekanntes Tag: weglassen, Text bleibt */
+					p = next;
 					run = p;
 					continue;
 				}
 			}
 			p++;
 			continue;
+		}
+		if (ch == '&') {
+			const gchar *next = NULL;
+			gchar *decoded = decode_entity (p, end, &next);
+
+			if (decoded != NULL) {
+				insert_run (c, run, p, tags);
+				insert_literal (c, decoded, tags);
+				g_free (decoded);
+				p = next;
+				run = p;
+				continue;
+			}
 		}
 		if (ch == 'h' && (p == s || !g_ascii_isalnum (p[-1])) &&
 		    (strncmp (p, "http://", MIN (7, end - p)) == 0 || strncmp (p, "https://", MIN (8, end - p)) == 0) &&
@@ -592,6 +912,19 @@ is_hr (const gchar *line)
 	const gchar *s = skip_spaces (line);
 	gchar ch = *s;
 	gint n = 0;
+
+	/* HTML: <hr>, <hr/>, <hr /> allein in der Zeile */
+	if (g_ascii_strncasecmp (s, "<hr", 3) == 0) {
+		const gchar *q = s + 3;
+
+		while (*q == ' ')
+			q++;
+		if (*q == '/')
+			q++;
+		if (*q == '>')
+			return is_blank (q + 1);
+		return FALSE;
+	}
 
 	if (ch != '-' && ch != '*' && ch != '_')
 		return FALSE;
@@ -728,10 +1061,25 @@ is_table_start (gchar **lines, gint i, gint n)
 	return ok;
 }
 
+/* Beginn eines unterstützten HTML-Blocks: p, div, center, details, h1 bis h6. */
+static gboolean
+html_block_open (const gchar *line, HtmlTag *t)
+{
+	const gchar *ls = skip_spaces (line);
+
+	if (*ls != '<' || !parse_html_tag (ls, ls + strlen (ls), t) || t->closing)
+		return FALSE;
+	if (html_tag_is (t, "p") || html_tag_is (t, "div") || html_tag_is (t, "center") ||
+	    html_tag_is (t, "details"))
+		return TRUE;
+	return t->name_len == 2 && (t->name[0] == 'h' || t->name[0] == 'H') && t->name[1] >= '1' && t->name[1] <= '6';
+}
+
 static gboolean
 starts_block (gchar **lines, gint i, gint n)
 {
 	const gchar *line = lines[i], *t;
+	HtmlTag html;
 	gchar ch;
 	gint len, ind, nl;
 	const gchar *num, *content;
@@ -745,6 +1093,8 @@ starts_block (gchar **lines, gint i, gint n)
 	if (is_table_start (lines, i, n))
 		return TRUE;
 	if (g_str_has_prefix (skip_spaces (line), "<!--"))
+		return TRUE;
+	if (html_block_open (line, &html))
 		return TRUE;
 	return FALSE;
 }
@@ -994,6 +1344,204 @@ emit_heading (Ctx *c, const gchar *text, gint level)
 
 static void render_blocks (Ctx *c, gchar **lines, gint n, gint quote);
 
+/* Ausrichtung eines HTML-Blocks: "jc" (Mitte), "jr" (rechts) oder NULL. */
+static const gchar *
+html_justify_tag (const HtmlTag *t)
+{
+	gchar *align = html_attr (t, "align"), *style = html_attr (t, "style");
+	const gchar *result = NULL;
+
+	if (html_tag_is (t, "center"))
+		result = "jc";
+	if (align != NULL) {
+		if (g_ascii_strcasecmp (align, "center") == 0)
+			result = "jc";
+		else if (g_ascii_strcasecmp (align, "right") == 0)
+			result = "jr";
+	}
+	if (style != NULL) {
+		gchar *flat = g_strdup (style), *w = flat, *r;
+
+		for (r = flat; *r != '\0'; r++)
+			if (!g_ascii_isspace (*r))
+				*w++ = g_ascii_tolower (*r);
+		*w = '\0';
+		if (strstr (flat, "text-align:center") != NULL)
+			result = "jc";
+		else if (strstr (flat, "text-align:right") != NULL)
+			result = "jr";
+		g_free (flat);
+	}
+	g_free (align);
+	g_free (style);
+	return result;
+}
+
+static void
+apply_tag_range (Ctx *c, GtkTextTag *tag, gint start, gint end)
+{
+	GtkTextIter a, b;
+
+	if (tag == NULL || end <= start)
+		return;
+	gtk_text_buffer_get_iter_at_offset (c->buffer, &a, start);
+	gtk_text_buffer_get_iter_at_offset (c->buffer, &b, end);
+	gtk_text_buffer_apply_tag (c->buffer, tag, &a, &b);
+}
+
+static gchar *
+one_line (const gchar *text)
+{
+	gchar *copy = g_strdup (text), *r;
+
+	for (r = copy; *r != '\0'; r++)
+		if (*r == '\n' || *r == '\r')
+			*r = ' ';
+	return g_strstrip (copy);
+}
+
+/* <details>: Pfeil und Titel (anklickbar) plus Inhalt, standardmäßig
+ * zugeklappt wie bei GitHub (Attribut "open" klappt auf). Der Inhalt trägt
+ * ein "invisible"-Tag, das der Klick umschaltet. */
+static void
+render_details (Ctx *c, const HtmlTag *open, const gchar *inner, gint quote)
+{
+	gchar *open_attr = html_attr (open, "open");
+	gboolean is_open = open_attr != NULL;
+	const gchar *end = inner + strlen (inner), *p = inner, *content = inner;
+	gchar *summary = NULL, *name;
+	HtmlTag st, sc;
+	gint idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (c->buffer), "nolphin-md-det-count"));
+	DetInfo *info = g_new0 (DetInfo, 1);
+	GtkTextTag *stag;
+	GPtrArray *tags = g_ptr_array_new ();
+	gint start, cstart;
+	gchar **lines;
+
+	g_free (open_attr);
+	while (p < end && g_ascii_isspace (*p))
+		p++;
+	if (p < end && *p == '<' && parse_html_tag (p, end, &st) && !st.closing && html_tag_is (&st, "summary")) {
+		const gchar *sclose = find_close_tag (st.tag_end, end, &st, &sc);
+
+		if (sclose != NULL) {
+			gchar *raw = g_strndup (st.tag_end, (gsize) (sclose - st.tag_end));
+
+			summary = one_line (raw);
+			g_free (raw);
+			content = sc.tag_end;
+		}
+	}
+	if (summary == NULL || *summary == '\0') {
+		g_free (summary);
+		summary = g_strdup ("Details");
+	}
+	g_object_set_data (G_OBJECT (c->buffer), "nolphin-md-det-count", GINT_TO_POINTER (idx + 1));
+
+	name = g_strdup_printf ("det-%d", idx);
+	info->content = gtk_text_buffer_create_tag (c->buffer, name, "invisible", !is_open, NULL);
+	g_free (name);
+	name = g_strdup_printf ("det-%d-c", idx);
+	info->closed = gtk_text_buffer_create_tag (c->buffer, name, "invisible", is_open, NULL);
+	g_free (name);
+	name = g_strdup_printf ("det-%d-o", idx);
+	info->open = gtk_text_buffer_create_tag (c->buffer, name, "invisible", !is_open, NULL);
+	g_free (name);
+	name = g_strdup_printf ("det-%d-s", idx);
+	stag = gtk_text_buffer_create_tag (c->buffer, name, NULL);
+	g_free (name);
+	g_object_set_data_full (G_OBJECT (stag), TOGGLE_KEY, info, g_free);
+
+	/* Titelzeile */
+	start = buffer_length (c);
+	g_ptr_array_add (tags, para_tag (c, quote * 16, 0, 16));
+	g_ptr_array_add (tags, stag);
+	g_ptr_array_add (tags, info->closed);
+	insert_literal (c, "\u25B8 ", tags);
+	g_ptr_array_set_size (tags, tags->len - 1);
+	g_ptr_array_add (tags, info->open);
+	insert_literal (c, "\u25BE ", tags);
+	g_ptr_array_set_size (tags, tags->len - 1);
+	render_inline (c, summary, summary + strlen (summary), tags);
+	end_paragraph (c, tags, start);
+	g_ptr_array_free (tags, TRUE);
+
+	/* Inhalt */
+	cstart = buffer_length (c);
+	lines = g_strsplit (content, "\n", -1);
+	render_blocks (c, lines, (gint) g_strv_length (lines), quote);
+	g_strfreev (lines);
+	apply_tag_range (c, info->content, cstart, buffer_length (c));
+	g_free (summary);
+}
+
+/* Unterstützte HTML-Blöcke: p, div, center (mit Ausrichtung), h1 bis h6,
+ * details. Liefert die Anzahl verbrauchter Zeilen oder -1, wenn der Block
+ * nicht geschlossen ist (dann gilt die Zeile als normaler Text). */
+static gint
+render_html_block (Ctx *c, gchar **lines, gint n, gint i, gint quote, GString *para)
+{
+	HtmlTag open, close;
+	const gchar *ls = skip_spaces (lines[i]);
+	GString *joined;
+	const gchar *all, *close_at, *nl;
+	gchar *inner, *remainder;
+	gint consumed = 1, k, start, level = 0;
+	const gchar *jtag;
+
+	if (!html_block_open (lines[i], &open))
+		return -1;
+	joined = g_string_new (NULL);
+	for (k = i; k < n; k++) {
+		if (k > i)
+			g_string_append_c (joined, '\n');
+		g_string_append (joined, lines[k]);
+	}
+	all = joined->str;
+	if (!parse_html_tag (all + (ls - lines[i]), all + joined->len, &open) ||
+	    (close_at = find_close_tag (open.tag_end, all + joined->len, &open, &close)) == NULL) {
+		g_string_free (joined, TRUE);
+		return -1;
+	}
+	inner = g_strndup (open.tag_end, (gsize) (close_at - open.tag_end));
+	nl = strchr (close.tag_end, '\n');
+	remainder = g_strndup (close.tag_end, nl != NULL ? (gsize) (nl - close.tag_end) : strlen (close.tag_end));
+	for (nl = all; nl < close.tag_end; nl++)
+		if (*nl == '\n')
+			consumed++;
+
+	flush_paragraph (c, para, quote);
+	jtag = html_justify_tag (&open);
+	start = buffer_length (c);
+	if (open.name_len == 2 && (open.name[0] == 'h' || open.name[0] == 'H'))
+		level = open.name[1] - '0';
+
+	if (level > 0) {
+		gchar *text = one_line (inner);
+
+		emit_heading (c, text, level);
+		g_free (text);
+	} else if (html_tag_is (&open, "details")) {
+		render_details (c, &open, inner, quote);
+	} else {
+		gchar **inner_lines = g_strsplit (inner, "\n", -1);
+
+		render_blocks (c, inner_lines, (gint) g_strv_length (inner_lines), quote);
+		g_strfreev (inner_lines);
+	}
+	if (jtag != NULL)
+		apply_tag_range (c, T (c, jtag), start, buffer_length (c));
+	if (!is_blank (remainder)) {
+		gchar *rem[2] = { remainder, NULL };
+
+		render_blocks (c, rem, 1, quote);
+	}
+	g_free (inner);
+	g_free (remainder);
+	g_string_free (joined, TRUE);
+	return consumed;
+}
+
 static void
 render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 {
@@ -1024,6 +1572,20 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 				i++;
 			i++;
 			continue;
+		}
+
+		/* HTML-Block: p, div, center, h1 bis h6, details */
+		{
+			HtmlTag probe;
+
+			if (html_block_open (line, &probe)) {
+				gint used = render_html_block (c, lines, n, i, quote, para);
+
+				if (used > 0) {
+					i += used;
+					continue;
+				}
+			}
 		}
 
 		/* Eingezäunter Codeblock */
@@ -1243,6 +1805,35 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 	g_string_free (para, TRUE);
 }
 
+/* Beim erneuten Rendern in denselben Puffer bleiben die Tags der früheren
+ * <details>-Abschnitte in der Tag-Tabelle; sie werden entfernt, damit die
+ * Namen wieder frei sind. */
+static void
+collect_details_tag (GtkTextTag *tag, gpointer data)
+{
+	gchar *name = NULL;
+
+	g_object_get (tag, "name", &name, NULL);
+	if (name != NULL && g_str_has_prefix (name, "det-"))
+		*(GSList **) data = g_slist_prepend (*(GSList **) data, g_object_ref (tag));
+	g_free (name);
+}
+
+static void
+forget_details_tags (GtkTextBuffer *buffer)
+{
+	GtkTextTagTable *table = gtk_text_buffer_get_tag_table (buffer);
+	GSList *old = NULL, *l;
+
+	gtk_text_tag_table_foreach (table, collect_details_tag, &old);
+	for (l = old; l != NULL; l = l->next) {
+		gtk_text_tag_table_remove (table, l->data);
+		g_object_unref (l->data);
+	}
+	g_slist_free (old);
+	g_object_set_data (G_OBJECT (buffer), "nolphin-md-det-count", GINT_TO_POINTER (0));
+}
+
 void
 nolphin_markdown_render_to_buffer (GtkTextBuffer *buffer, const gchar *markdown)
 {
@@ -1260,6 +1851,7 @@ nolphin_markdown_render_to_buffer_with_base (GtkTextBuffer *buffer, const gchar 
 
 	gtk_text_buffer_set_text (buffer, "", -1);
 	setup_tags (buffer);
+	forget_details_tags (buffer);
 	g_object_set_data_full (G_OBJECT (buffer), DECOR_KEY, g_array_new (FALSE, TRUE, sizeof (Decor)),
 				decor_array_free);
 	if (markdown == NULL || *markdown == '\0')
@@ -1337,6 +1929,8 @@ href_at_iter (const GtkTextIter *iter)
 static gboolean
 iter_for_event (GtkWidget *view, gdouble x, gdouble y, GtkTextIter *iter);
 
+static void update_children_visibility (GtkWidget *view);
+
 static void
 set_image_width (GtkWidget *box, gint width)
 {
@@ -1348,7 +1942,15 @@ set_image_width (GtkWidget *box, gint width)
 		return;
 	ow = gdk_pixbuf_get_width (orig);
 	oh = gdk_pixbuf_get_height (orig);
-	target = MAX (1, MIN (ow, width));
+	{
+		/* Gewünschte Breite aus dem HTML (px; negativ = Prozent der Textbreite). */
+		gint want = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (box), "nolphin-md-want-w"));
+
+		if (want < 0)
+			target = MAX (1, width * (-want) / 100);
+		else
+			target = MAX (1, MIN (want > 0 ? want : ow, width));
+	}
 	if (GPOINTER_TO_INT (g_object_get_data (G_OBJECT (box), "nolphin-md-cur-width")) == target)
 		return;
 	g_object_set_data (G_OBJECT (box), "nolphin-md-cur-width", GINT_TO_POINTER (target));
@@ -1378,7 +1980,8 @@ on_image_release (GtkWidget *box, GdkEventButton *event, gpointer view)
 /* Widget für ein lokales Bild; kann es nicht geladen werden, erscheint der
  * Alternativtext. */
 static GtkWidget *
-make_image_widget (GtkWidget *view, const gchar *path, const gchar *alt, const gchar *href)
+make_image_widget (GtkWidget *view, const gchar *path, const gchar *alt, const gchar *href,
+		   const gchar *width_attr, const gchar *height_attr)
 {
 	GStatBuf st;
 	GdkPixbuf *pixbuf = NULL;
@@ -1401,6 +2004,21 @@ make_image_widget (GtkWidget *view, const gchar *path, const gchar *alt, const g
 	if (alt != NULL && *alt != '\0')
 		gtk_widget_set_tooltip_text (box, alt);
 	g_object_set_data_full (G_OBJECT (box), "nolphin-md-pixbuf", pixbuf, g_object_unref);
+	{
+		gint want = 0;
+
+		if (width_attr != NULL && *width_attr != '\0') {
+			gdouble v = g_ascii_strtod (width_attr, NULL);
+
+			want = strchr (width_attr, '%') != NULL ? -(gint) v : (gint) v;
+		} else if (height_attr != NULL && *height_attr != '\0' && strchr (height_attr, '%') == NULL) {
+			gdouble v = g_ascii_strtod (height_attr, NULL);
+
+			if (v > 0 && gdk_pixbuf_get_height (pixbuf) > 0)
+				want = (gint) (v * gdk_pixbuf_get_width (pixbuf) / gdk_pixbuf_get_height (pixbuf));
+		}
+		g_object_set_data (G_OBJECT (box), "nolphin-md-want-w", GINT_TO_POINTER (want));
+	}
 	if (href != NULL) {
 		g_object_set_data_full (G_OBJECT (box), "nolphin-md-img-href", g_strdup (href), g_free);
 		g_signal_connect (box, "button-release-event", G_CALLBACK (on_image_release), view);
@@ -1510,7 +2128,7 @@ static GtkWidget *
 make_table_widget (GtkWidget *view, const TableData *t)
 {
 	GtkWidget *grid = gtk_grid_new ();
-	GtkWidget *box;
+	GtkWidget *box, *scroller;
 	guint r, c;
 
 	ensure_table_css ();
@@ -1547,10 +2165,20 @@ make_table_widget (GtkWidget *view, const TableData *t)
 	g_object_set_data (G_OBJECT (grid), "nolphin-md-cols", GUINT_TO_POINTER (t->ncols));
 	g_object_set_data (G_OBJECT (grid), "nolphin-md-rows", GUINT_TO_POINTER (t->rows->len));
 	gtk_widget_show_all (grid);
+	/* Zu breite Tabellen scrollen waagerecht (wie GitHub); senkrechtes
+	 * Scrollen reicht das innere Fenster an die Seite weiter. */
+	scroller = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_EXTERNAL);
+	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroller), GTK_SHADOW_NONE);
+	gtk_scrolled_window_set_min_content_width (GTK_SCROLLED_WINDOW (scroller), 1);
+	gtk_scrolled_window_set_min_content_height (GTK_SCROLLED_WINDOW (scroller), 1);
+	gtk_container_add (GTK_CONTAINER (scroller), grid);
+	gtk_widget_show (scroller);
 	box = g_object_new (md_fixed_box_get_type (), NULL);
 	((MdFixedBox *) box)->width = 1;
 	((MdFixedBox *) box)->height = 1;
-	gtk_container_add (GTK_CONTAINER (box), grid);
+	g_object_set_data (G_OBJECT (box), "nolphin-md-grid", grid);
+	gtk_container_add (GTK_CONTAINER (box), scroller);
 	gtk_widget_show (box);
 	return box;
 }
@@ -1563,7 +2191,7 @@ make_table_widget (GtkWidget *view, const TableData *t)
 static void
 set_table_width (GtkWidget *box, gint avail)
 {
-	GtkWidget *grid = gtk_bin_get_child (GTK_BIN (box));
+	GtkWidget *grid = g_object_get_data (G_OBJECT (box), "nolphin-md-grid");
 	gint total = 0, height = 0;
 	guint ncols = GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (grid), "nolphin-md-cols"));
 	guint nrows = GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (grid), "nolphin-md-rows"));
@@ -1601,8 +2229,9 @@ set_table_width (GtkWidget *box, gint avail)
 	}
 	/* Höhe bei genau dieser Breite, dem Container fest vorgeben. */
 	gtk_widget_get_preferred_height_for_width (grid, total, &height, NULL);
-	((MdFixedBox *) box)->width = total;
-	((MdFixedBox *) box)->height = height;
+	/* sichtbar höchstens die Textbreite; darüber hinaus scrollt die Tabelle */
+	((MdFixedBox *) box)->width = MAX (1, MIN (total, avail));
+	((MdFixedBox *) box)->height = height + (total > avail ? 14 : 0);
 	gtk_widget_queue_resize (box);
 	g_free (minw);
 	g_free (natw);
@@ -1644,11 +2273,14 @@ attach_children (GtkWidget *view)
 			kind = "check";
 		} else if (img_path != NULL) {
 			child = make_image_widget (view, img_path, g_object_get_data (G_OBJECT (anchor), IMG_ALT_KEY),
-						   href_at_iter (&it));
+						   href_at_iter (&it),
+						   g_object_get_data (G_OBJECT (anchor), IMG_W_KEY),
+						   g_object_get_data (G_OBJECT (anchor), IMG_H_KEY));
 			kind = "image";
 		}
 		if (child != NULL) {
 			g_object_set_data (G_OBJECT (child), KIND_KEY, (gpointer) kind);
+			g_object_set_data (G_OBJECT (child), "nolphin-md-anchor", anchor);
 			gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (view), child, anchor);
 			gtk_widget_show (child);
 			g_ptr_array_add (kids, child);
@@ -1656,6 +2288,7 @@ attach_children (GtkWidget *view)
 	} while (gtk_text_iter_forward_char (&it));
 	g_object_set_data_full (G_OBJECT (view), KIDS_KEY, kids, (GDestroyNotify) g_ptr_array_unref);
 	g_object_set_data (G_OBJECT (view), "nolphin-md-sep-width", GINT_TO_POINTER (0));
+	update_children_visibility (view);
 }
 
 /* GtkTextView misst ein eingebettetes Widget nur beim Layouten der Zeile.
@@ -1673,6 +2306,7 @@ revalidate_idle (gpointer data)
 	gint v = gtk_text_view_get_pixels_inside_wrap (tv);
 
 	g_object_set_data (G_OBJECT (view), "nolphin-md-revalidate", NULL);
+	update_children_visibility (view);
 	gtk_text_view_set_pixels_inside_wrap (tv, v + 1);
 	gtk_text_view_set_pixels_inside_wrap (tv, v);
 	gtk_widget_queue_resize (view);
@@ -1686,6 +2320,42 @@ schedule_revalidate (GtkWidget *view)
 		return;
 	g_object_set_data (G_OBJECT (view), "nolphin-md-revalidate", GINT_TO_POINTER (1));
 	g_idle_add_full (G_PRIORITY_DEFAULT_IDLE, revalidate_idle, g_object_ref (view), g_object_unref);
+}
+
+/* Eingebettete Widgets in eingeklapptem Text (<details>) ausblenden. */
+static gboolean
+iter_is_invisible (const GtkTextIter *iter)
+{
+	GSList *tags = gtk_text_iter_get_tags (iter), *l;
+	gboolean hidden = FALSE;
+
+	for (l = tags; l != NULL && !hidden; l = l->next) {
+		gboolean inv = FALSE;
+
+		g_object_get (l->data, "invisible", &inv, NULL);
+		hidden = inv;
+	}
+	g_slist_free (tags);
+	return hidden;
+}
+
+static void
+update_children_visibility (GtkWidget *view)
+{
+	GtkTextBuffer *buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (view));
+	GPtrArray *kids = g_object_get_data (G_OBJECT (view), KIDS_KEY);
+	guint i;
+
+	for (i = 0; kids != NULL && i < kids->len; i++) {
+		GtkWidget *kid = g_ptr_array_index (kids, i);
+		GtkTextChildAnchor *anchor = g_object_get_data (G_OBJECT (kid), "nolphin-md-anchor");
+		GtkTextIter it;
+
+		if (anchor == NULL || gtk_text_child_anchor_get_deleted (anchor))
+			continue;
+		gtk_text_buffer_get_iter_at_child_anchor (buffer, &it, anchor);
+		gtk_widget_set_visible (kid, !iter_is_invisible (&it));
+	}
 }
 
 /* Tabellen und Bilder passen sich der Textbreite der Ansicht an. */
@@ -1755,8 +2425,8 @@ on_draw_after (GtkWidget *view, cairo_t *cr, gpointer user_data)
 		gtk_text_view_buffer_to_window_coords (tv, GTK_TEXT_WINDOW_TEXT, 0, y2, NULL, &wy2);
 		top = wy1;
 		bottom = wy2 + h2;
-		if (bottom < cy1 || top > cy2)
-			continue;
+		if (bottom < cy1 || top > cy2 || bottom - top < 2)
+			continue;   /* außerhalb des Bildes oder eingeklappt */
 
 		switch (d->type) {
 		case DECOR_BOX: {
@@ -1803,6 +2473,21 @@ iter_for_event (GtkWidget *view, gdouble x, gdouble y, GtkTextIter *iter)
 	return gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW (view), iter, bx, by);
 }
 
+/* Titelzeile eines <details>-Abschnitts an dieser Stelle, sonst NULL. */
+static DetInfo *
+toggle_at_iter (const GtkTextIter *iter)
+{
+	GSList *tags = gtk_text_iter_get_tags (iter), *l;
+	DetInfo *info = NULL;
+
+	for (l = tags; l != NULL && info == NULL; l = l->next)
+		info = g_object_get_data (G_OBJECT (l->data), TOGGLE_KEY);
+	g_slist_free (tags);
+	return info;
+}
+
+static void schedule_revalidate (GtkWidget *view);
+
 static gboolean
 on_button_release (GtkWidget *view, GdkEventButton *event, gpointer user_data)
 {
@@ -1810,15 +2495,28 @@ on_button_release (GtkWidget *view, GdkEventButton *event, gpointer user_data)
 	LinkHandler *handler = g_object_get_data (G_OBJECT (view), HANDLER_KEY);
 	GtkTextIter iter;
 	const gchar *href;
+	DetInfo *det;
 
-	if (event->button != GDK_BUTTON_PRIMARY || handler == NULL || handler->func == NULL)
+	if (event->button != GDK_BUTTON_PRIMARY)
 		return GDK_EVENT_PROPAGATE;
 	if (gtk_text_buffer_get_has_selection (buffer))
 		return GDK_EVENT_PROPAGATE;
 	if (!iter_for_event (view, event->x, event->y, &iter))
 		return GDK_EVENT_PROPAGATE;
+	det = toggle_at_iter (&iter);
+	if (det != NULL) {
+		gboolean collapsed;
+
+		g_object_get (det->content, "invisible", &collapsed, NULL);
+		collapsed = !collapsed;
+		g_object_set (det->content, "invisible", collapsed, NULL);
+		g_object_set (det->closed, "invisible", !collapsed, NULL);
+		g_object_set (det->open, "invisible", collapsed, NULL);
+		schedule_revalidate (view);
+		return GDK_EVENT_PROPAGATE;
+	}
 	href = href_at_iter (&iter);
-	if (href != NULL)
+	if (href != NULL && handler != NULL && handler->func != NULL)
 		handler->func (view, href, handler->data);
 	return GDK_EVENT_PROPAGATE;
 }
@@ -1828,7 +2526,8 @@ on_motion (GtkWidget *view, GdkEventMotion *event, gpointer user_data)
 {
 	GtkTextIter iter;
 	GdkWindow *win = gtk_text_view_get_window (GTK_TEXT_VIEW (view), GTK_TEXT_WINDOW_TEXT);
-	gboolean over = iter_for_event (view, event->x, event->y, &iter) && href_at_iter (&iter) != NULL;
+	gboolean over = iter_for_event (view, event->x, event->y, &iter) &&
+			(href_at_iter (&iter) != NULL || toggle_at_iter (&iter) != NULL);
 	gboolean was = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (view), "nolphin-md-over"));
 
 	if (win != NULL && over != was) {
@@ -1928,7 +2627,13 @@ nolphin_markdown_anchor_describe (GtkTextChildAnchor *anchor)
 	}
 	if (check != 0)
 		return g_strdup_printf ("check:%d", check == 1 ? 1 : 0);
-	if (img != NULL)
+	if (img != NULL) {
+		const gchar *w = g_object_get_data (G_OBJECT (anchor), IMG_W_KEY);
+		const gchar *h = g_object_get_data (G_OBJECT (anchor), IMG_H_KEY);
+
+		if (w != NULL || h != NULL)
+			return g_strdup_printf ("image:%s|w=%s|h=%s", img, w != NULL ? w : "", h != NULL ? h : "");
 		return g_strdup_printf ("image:%s", img);
+	}
 	return NULL;
 }
