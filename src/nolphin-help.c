@@ -2,154 +2,195 @@
 /*
  * nolphin-help.c: Hilfe zu den Funktionen von Nolphin
  *
- * Textformat der Themen: "# " Überschrift, "## " Zwischenüberschrift,
- * "- " Aufzählungspunkt, "  " (zwei Leerzeichen) Code/Eingabe, sonst Absatz.
- * Die Texte beschreiben nur, was im Programm vorhanden ist.
+ * Die Themen sind Markdown-Dateien (docs/hilfe/NN-thema.md, installiert
+ * nach <datadir>/nolphin/help/hilfe/); Bilder liegen in .../help/bilder/.
+ * Dargestellt werden sie mit der Markdown-Ansicht der GID-Projekte. Das
+ * Hilfeverzeichnis wird in dieser Reihenfolge gesucht: NOLPHIN_HELPDIR,
+ * die installierte Stelle, dann docs/ neben dem Quellbaum (für Läufe aus
+ * dem Build-Ordner).
  */
 
 #include <config.h>
 
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "nolphin-help.h"
+#include "nolphin-markdown-view.h"
+
+#define HELP_MAX_BYTES (512 * 1024)
 
 typedef struct {
-	const gchar *id;
-	const gchar *title;
-	const gchar *text;
+	gchar *id;       /* Dateiname ohne Nummer und Endung, z. B. "git" */
+	gchar *title;    /* erste Überschrift */
+	gchar *text;     /* ganzer Markdown-Text */
+	gchar *folded;   /* kleingeschriebener Text samt Titel, für die Suche */
 } HelpTopic;
 
-static const HelpTopic topics[] = {
-	{ "ueberblick", N_("Überblick"),
-	  "# Überblick\n"
-	  "Nolphin zeigt links die Orte, in der Mitte die Dateien und rechts einen festen Arbeitsbereich. Die Funktion kommt zur Datei: Vorschau, Eigenschaften, Archive, Terminal, Git und die Werkzeuge öffnen sich rechts, ohne dass ein zusätzliches Fenster erscheint.\n"
-	  "## Der Arbeitsbereich\n"
-	  "- F11 blendet den Arbeitsbereich ein und aus. In Ruhe zeigt er die Vorschau und die Informationen zur gewählten Datei.\n"
-	  "- F4 öffnet das Terminal im aktuellen Ordner.\n"
-	  "- „Zur Vorschau“ oben im Panel führt zurück zur Vorschau.\n"
-	  "- Klassische Dialoge gibt es nur für Dateiauswahl, Bestätigungen (Löschen, Überschreiben), Fehlermeldungen und „Über Nolphin“.\n"
-	  "## Ehrlich statt vorgetäuscht\n"
-	  "Fehlt ein Hilfsprogramm (zum Beispiel für PDF-Vorschau oder ein Archivformat), meldet Nolphin das. Unter Hilfe ▸ Diagnose ▸ Systeminformationen sehen Sie, welche Werkzeuge gefunden wurden." },
-
-	{ "vorschau", N_("Vorschau und Metadaten"),
-	  "# Vorschau und Metadaten\n"
-	  "Wählen Sie eine Datei, zeigt der Arbeitsbereich Vorschau und Eckdaten.\n"
-	  "## Was angezeigt wird\n"
-	  "- Bilder, Text und Ordner mit Typ, Größe, Datum, Zugriffsrechten, Eigentümer und Ort.\n"
-	  "- PDF: Titel, Autor, Seitenzahl, Seitengröße, PDF-Version und ein Bild der ersten Seite (benötigt poppler-utils).\n"
-	  "- Audio und Video: Dauer, Container, Codecs, Auflösung, Bildrate, Kanäle, Abtastrate (benötigt gstreamer1.0-tools).\n"
-	  "- CAD und 3D: STL, STEP, FreeCAD-Dateien u. a.\n"
-	  "## Bewertung, Tags, Kommentar\n"
-	  "Unten im Info-Panel können Sie Sterne vergeben (erneuter Klick auf denselben Stern entfernt die Bewertung), Tags kommagetrennt eintragen und einen Kommentar schreiben. Die Angaben werden als Datei-Metadaten gespeichert.\n"
-	  "Fehlt ein Werkzeug, steht im Panel ein Hinweis statt erfundener Werte." },
-
-	{ "suche", N_("Suche"),
-	  "# Suche\n"
-	  "Strg+F öffnet die Suche im Arbeitsbereich. Tippen Sie den Dateinamen ein und bestätigen Sie mit Eingabe. Der Schalter „Aa“ beachtet die Groß-/Kleinschreibung, „.*“ schaltet auf reguläre Ausdrücke um. Unter „Inhalt“ suchen Sie im Text von Dateien.\n"
-	  "## Operatoren im Dateinamen\n"
-	  "- Leerzeichen bedeutet UND: „jahr bericht“ findet Namen mit beiden Begriffen.\n"
-	  "- ODER (auch OR oder |): „foto ODER bericht“. UND bindet stärker als ODER.\n"
-	  "- NICHT (auch NOT oder ein Minus): „bericht NICHT entwurf“ oder „bericht -entwurf“.\n"
-	  "- Anführungszeichen suchen den ganzen Namen exakt: „\"mein bericht.txt\"“.\n"
-	  "- * und ? sind Platzhalter: „*.txt“.\n"
-	  "Die Schlüsselwörter gelten unabhängig von der Schreibweise. Wollen Sie nach einem Namen suchen, der selbst „nicht“ oder „oder“ lautet, setzen Sie ihn in Anführungszeichen.\n"
-	  "## Auswahl merken\n"
-	  "Bearbeiten ▸ „Auswahl speichern …“ merkt die aktuelle Auswahl eines Ordners unter einem Namen; „Gespeicherte Auswahl wiederherstellen …“ holt sie zurück." },
-
-	{ "archive", N_("Archive"),
-	  "# Archive\n"
-	  "## Erstellen und Entpacken\n"
-	  "Dateien markieren, Rechtsklick ▸ „Komprimieren …“. Im Panel wählen Sie Name, Format und Zielort; Passwort und Teilarchive stehen unter „Erweiterte Optionen“. Erstellt werden ZIP, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, TAR.LZ4 und 7Z. Entpacken geht über „Hier entpacken“ oder „Entpacken nach …“; CAB, ARJ, LZH, ISO, CPIO, RPM und DEB lassen sich nur entpacken und auslesen.\n"
-	  "## Archiv-Manager\n"
-	  "Rechtsklick auf ein Archiv ▸ „Archiv öffnen …“ zeigt den Inhalt. Dort können Sie Dateien oder Ordner hinzufügen, einen Eintrag ersetzen oder entfernen, das Archiv prüfen und einzelne Einträge entpacken. Bei Formaten, die dafür neu gepackt werden müssen, geschieht das automatisch.\n"
-	  "Ist das nötige Programm (zip, unzip, tar, 7z …) nicht installiert, wird das angezeigt." },
-
-	{ "git", N_("Git"),
-	  "# Git\n"
-	  "## Overlays\n"
-	  "In einem Git-Ordner zeigen kleine Symbole an den Dateien den Stand: hinzugefügt, geändert, unversioniert oder im Konflikt. Der Stand wird im Hintergrund geladen und aktualisiert sich selbst.\n"
-	  "## Panel\n"
-	  "Rechtsklick ▸ „Git“ öffnet das Panel in drei Schritten:\n"
-	  "- 1. Änderungen: Status anzeigen, Dateien hinzufügen.\n"
-	  "- 2. Speichern: Beschreibung eintragen und committen.\n"
-	  "- 3. Mit dem Server: synchronisieren, abgleichen, herunterladen (Pull), hochladen (Push), Server eintragen, Repository klonen.\n"
-	  "Darunter stehen Verlauf und Unterschiede. Liegt der Ort in keinem Repository, bietet Nolphin an, eines anzulegen." },
-
-	{ "werkzeuge", N_("Werkzeuge"),
-	  "# Werkzeuge\n"
-	  "Alle Werkzeuge finden Sie unter Bearbeiten ▸ Werkzeuge. Jedes zeigt zuerst eine Vorschau; verändert wird erst nach „Anwenden“ oder „Synchronisieren“.\n"
-	  "## Ordner vergleichen und synchronisieren\n"
-	  "Wählen Sie Quelle und Zielordner (auch ein eingebundener Netzwerkordner) und „Vergleichen (Vorschau)“. Die Liste zeigt Neu, Geändert und Konflikt (Ziel ist neuer). Abgeglichen wird in eine Richtung, im Ziel wird nie etwas gelöscht. Konflikte sind zunächst nicht angehakt. Dafür wird rsync benötigt.\n"
-	  "## Regeln anwenden\n"
-	  "„Wenn“ Dateityp, Name (mit Platzhaltern), Größe oder Änderungsdatum zutreffen, „dann“ eine Aktion wie Verschieben nach … Die Vorschau nennt die betroffenen Dateien. Regeln wirken nur auf Wunsch auf den gewählten Ordner, nicht automatisch, und werden nicht gespeichert.\n"
-	  "## Duplikate finden\n"
-	  "Sucht in einem Ordner samt Unterordnern nach gleichem Namen, gleicher Größe oder gleichem Inhalt (Prüfsumme). „Alle außer der ersten markieren“ und „Markierte in den Papierkorb“ räumen auf; gelöscht wird nur in den Papierkorb.\n"
-	  "## Versionen\n"
-	  "Bearbeiten ▸ Werkzeuge ▸ Versionen ▸ „Version speichern“ sichert den Stand einer Datei (unter ~/.local/share/nolphin/versions). „Versionen anzeigen …“ listet sie; wiederherstellen, löschen oder bei Textdateien mit der aktuellen Datei vergleichen.\n"
-	  "## Massenumbenennung\n"
-	  "Mehrere Dateien markieren, Bearbeiten ▸ „Massenumbenennung …“: Suchen und Ersetzen, Nummerierung (vor oder nach dem Namen), Groß-/Kleinschreibung. Die Spalte „Neuer Name“ zeigt das Ergebnis vorab." },
-
-	{ "fenster", N_("Fenster, Reiter, Arbeitsbereiche"),
-	  "# Fenster, Reiter, Arbeitsbereiche\n"
-	  "## Reiter\n"
-	  "Strg+T öffnet einen neuen Reiter, Gehe zu ▸ Reiter listet alle Reiter des Fensters.\n"
-	  "## Geteilte Ansicht\n"
-	  "Ansicht ▸ Geteilte Ansicht (F3) fügt einen Bereich hinzu; bis zu vier Bereiche sind möglich. Sie können waagerecht teilen (Umschalt+F3), Bereiche duplizieren, maximieren und schließen. Jeder Bereich hat seinen eigenen Ordner.\n"
-	  "## Arbeitsbereiche\n"
-	  "Datei ▸ Arbeitsbereiche ▸ „Speichern …“ merkt Reiter, Teilung, Fenstergröße und Panels unter einem Namen. Im Panel laden, duplizieren oder löschen Sie sie. Beim Beenden merkt sich Nolphin außerdem die letzte Sitzung.\n"
-	  "## Gehe zu\n"
-	  "Das Menü bietet Verlauf, Häufig verwendet und die Reiter. Bearbeiten ▸ „Zwischenablage als Datei einfügen“ legt den Inhalt der Zwischenablage als Datei ab." },
-
-	{ "deb", N_("DEB-Pakete erstellen"),
-	  "# DEB-Pakete erstellen\n"
-	  "Hilfe ▸ „.deb-Paket erstellen …“ öffnet das Panel. Pflichtfelder sind Name, Version, Beschreibung und Ersteller; Sektion, Priorität, Abhängigkeiten und Homepage stehen unter „Weitere Angaben“. Fügen Sie Dateien und Ordner mit ihrem Zielpfad hinzu und wählen Sie „DEB erstellen“. Nolphin schreibt das Paket selbst, ohne dpkg-deb." },
-
-	{ "terminal", N_("Terminal"),
-	  "# Terminal\n"
-	  "F4 (oder Ansicht ▸ Terminal) öffnet ein Terminal im Arbeitsbereich, im aktuellen Ordner. Es bleibt neben der Dateiansicht stehen. Rechtsklick ▸ „Im Terminal öffnen“ startet es für einen bestimmten Ordner." },
-
-	{ "sicherheit", N_("Prüfsummen, Verschlüsselung, Rechte"),
-	  "# Prüfsummen, Verschlüsselung, Rechte\n"
-	  "- Prüfsummen: Rechtsklick ▸ „Prüfsumme berechnen …“ (MD5, SHA-1, SHA-256, SHA-512, BLAKE2).\n"
-	  "- Verschlüsseln: Rechtsklick ▸ „Verschlüsseln …“ mit GPG.\n"
-	  "- Eigenschaften (Alt+Eingabe): Zugriffsrechte, Besitzer, Gruppe und zusätzliche Benutzer und Gruppen (ACL), bei Ordnern auch „auf Inhalt anwenden“.\n"
-	  "- Papierkorb: Der Papierkorb wird nach einer einstellbaren Dauer bereinigt; bei Überschreiten eines Größenlimits erscheint eine Warnung." },
-
-	{ "einstellungen", N_("Einstellungen"),
-	  "# Einstellungen\n"
-	  "Bearbeiten ▸ Einstellungen öffnet die Einstellungen im Hauptbereich, ebenfalls mit Esc zu schließen. Die Seiten heißen Ansichten, Verhalten, Anzeige, Listenspalten, Vorschau, Werkzeugleiste, Kontextmenü, Dokumentvorlagen und Module.\n"
-	  "## Sichern und zurücksetzen\n"
-	  "Unten stehen „Exportieren …“ (alle Einstellungen in eine Datei), „Importieren …“ und „Zurücksetzen …“.\n"
-	  "## Module und Aktionen\n"
-	  "Auf der Seite „Module“ schalten Sie Aktionen und Erweiterungen ein und aus; „Anordnung bearbeiten“ öffnet den Layout-Editor für Reihenfolge und Aussehen der Aktionen in den Menüs." },
-
-	{ "diagnose", N_("Diagnose und Fehlerbericht"),
-	  "# Diagnose und Fehlerbericht\n"
-	  "Hilfe ▸ Diagnose öffnet ein Panel mit vier Reitern:\n"
-	  "- Protokolle: die letzten Zeilen des lokalen Protokolls (~/.local/share/nolphin/logs/nolphin.log).\n"
-	  "- Systeminformationen: Programm- und Systemversion, verfügbare GVfs-Dienste und gefundene Hilfswerkzeuge.\n"
-	  "- Plugin-Status: welche Erweiterungen geladen wurden.\n"
-	  "- Fehlerbericht: erzeugt eine lokale Datei zum Weitergeben. Nolphin sendet nichts automatisch.\n"
-	  "Beim Melden eines Problems helfen Systeminformationen und die Schritte zur Reproduktion." },
-
-	{ "tasten", N_("Tastenkürzel"),
-	  "# Tastenkürzel\n"
-	  "- F1: diese Hilfe; Strg+F1: Tastenkombinationen\n"
-	  "- F11: Arbeitsbereich ein/aus; F4: Terminal; F3: geteilte Ansicht\n"
-	  "- Strg+F: Suche; Strg+L: Adresse eingeben; Strg+H: versteckte Dateien\n"
-	  "- Strg+T: neuer Reiter; Strg+N: neues Fenster; Umschalt+Strg+N: neuer Ordner\n"
-	  "- Alt+Eingabe: Eigenschaften; F2: umbenennen; Strg+A: alles auswählen; Strg+S: nach Muster auswählen\n"
-	  "- Strg+1 bis Strg+4: Symbol-, Listen-, Kompakt- und Galerieansicht\n"
-	  "- Alt+Hoch, Alt+Links, Alt+Rechts, Alt+Pos1: übergeordneter Ordner, zurück, vorwärts, persönlicher Ordner\n"
-	  "Die vollständige Liste zeigt Hilfe ▸ Tastenkombinationen." },
-};
-
-#define N_TOPICS G_N_ELEMENTS (topics)
+typedef struct {
+	GPtrArray *topics;       /* HelpTopic* */
+	gchar     *root;         /* enthält hilfe/ und bilder/ */
+	GtkWidget *list;
+	GtkWidget *search;
+	GtkWidget *view;
+	GtkWidget *scrolled;
+	GtkWidget *empty_label;
+} HelpPage;
 
 static GtkWidget *help_page = NULL;
 static GtkWidget *help_host = NULL;
 static gulong     help_key_handler = 0;
+
+static void
+topic_free (HelpTopic *t)
+{
+	g_free (t->id);
+	g_free (t->title);
+	g_free (t->text);
+	g_free (t->folded);
+	g_free (t);
+}
+
+static void
+help_page_free (HelpPage *d)
+{
+	g_ptr_array_unref (d->topics);
+	g_free (d->root);
+	g_free (d);
+}
+
+static gboolean
+root_is_valid (const gchar *root)
+{
+	gchar *dir;
+	gboolean ok;
+
+	if (root == NULL) {
+		return FALSE;
+	}
+	dir = g_build_filename (root, "hilfe", NULL);
+	ok = g_file_test (dir, G_FILE_TEST_IS_DIR);
+	g_free (dir);
+	return ok;
+}
+
+static gchar *
+find_help_root (void)
+{
+	const gchar *env = g_getenv ("NOLPHIN_HELPDIR");
+	gchar *candidate, *exe, *dir;
+
+	if (env != NULL && root_is_valid (env)) {
+		return g_strdup (env);
+	}
+
+	candidate = g_build_filename (NOLPHIN_DATADIR, "help", NULL);
+	if (root_is_valid (candidate)) {
+		return candidate;
+	}
+	g_free (candidate);
+
+	/* Lauf aus dem Build-Ordner: <repo>/build/src/nolphin -> <repo>/docs */
+	exe = g_file_read_link ("/proc/self/exe", NULL);
+	if (exe != NULL) {
+		dir = g_path_get_dirname (exe);
+		candidate = g_build_filename (dir, "..", "..", "docs", NULL);
+		g_free (dir);
+		g_free (exe);
+		if (root_is_valid (candidate)) {
+			gchar *clean = g_canonicalize_filename (candidate, NULL);
+
+			g_free (candidate);
+			return clean;
+		}
+		g_free (candidate);
+	}
+	return NULL;
+}
+
+static gchar *
+title_from_text (const gchar *text, const gchar *fallback)
+{
+	const gchar *p = text;
+
+	while (p != NULL && *p != '\0') {
+		const gchar *end = strchr (p, '\n');
+		gsize len = end != NULL ? (gsize) (end - p) : strlen (p);
+
+		if (len > 2 && p[0] == '#' && p[1] == ' ') {
+			return g_strndup (p + 2, len - 2);
+		}
+		if (end == NULL) {
+			break;
+		}
+		p = end + 1;
+	}
+	return g_strdup (fallback);
+}
+
+static gint
+compare_names (gconstpointer a, gconstpointer b)
+{
+	return g_strcmp0 (*(gchar * const *) a, *(gchar * const *) b);
+}
+
+static void
+load_topics (HelpPage *d)
+{
+	gchar *dirpath = g_build_filename (d->root, "hilfe", NULL);
+	GDir *dir = g_dir_open (dirpath, 0, NULL);
+	GPtrArray *names = g_ptr_array_new_with_free_func (g_free);
+	const gchar *name;
+	guint i;
+
+	while (dir != NULL && (name = g_dir_read_name (dir)) != NULL) {
+		if (g_str_has_suffix (name, ".md")) {
+			g_ptr_array_add (names, g_strdup (name));
+		}
+	}
+	if (dir != NULL) {
+		g_dir_close (dir);
+	}
+	g_ptr_array_sort (names, compare_names);
+
+	for (i = 0; i < names->len; i++) {
+		const gchar *file = g_ptr_array_index (names, i);
+		gchar *path = g_build_filename (dirpath, file, NULL);
+		gchar *text = NULL;
+		gsize length = 0;
+
+		if (g_file_get_contents (path, &text, &length, NULL) && length <= HELP_MAX_BYTES &&
+		    g_utf8_validate (text, length, NULL)) {
+			HelpTopic *t = g_new0 (HelpTopic, 1);
+			const gchar *base = file;
+			gchar *stem, *lower_text, *lower_title;
+
+			while (g_ascii_isdigit (*base)) {
+				base++;
+			}
+			if (*base == '-') {
+				base++;
+			}
+			stem = g_strndup (base, strlen (base) - 3);
+			t->id = stem;
+			t->text = text;
+			t->title = title_from_text (text, stem);
+			lower_title = g_utf8_strdown (t->title, -1);
+			lower_text = g_utf8_strdown (text, -1);
+			t->folded = g_strconcat (lower_title, "\n", lower_text, NULL);
+			g_free (lower_title);
+			g_free (lower_text);
+			g_ptr_array_add (d->topics, t);
+		} else {
+			g_free (text);
+		}
+		g_free (path);
+	}
+	g_ptr_array_unref (names);
+	g_free (dirpath);
+}
 
 static void
 close_help (void)
@@ -202,76 +243,99 @@ on_page_destroy (GtkWidget *widget, gpointer user_data)
 }
 
 static void
-render_topic (GtkTextBuffer *buffer, const gchar *text)
+select_topic_by_id (HelpPage *d, const gchar *id)
 {
-	gchar **lines = g_strsplit (text, "\n", -1);
-	GtkTextIter iter;
-	gint i;
+	guint i;
 
-	gtk_text_buffer_set_text (buffer, "", 0);
-	gtk_text_buffer_get_end_iter (buffer, &iter);
+	for (i = 0; i < d->topics->len; i++) {
+		HelpTopic *t = g_ptr_array_index (d->topics, i);
 
-	for (i = 0; lines[i] != NULL; i++) {
-		const gchar *line = lines[i];
-		const gchar *tag = NULL;
+		if (g_strcmp0 (t->id, id) == 0) {
+			GtkListBoxRow *row = gtk_list_box_get_row_at_index (GTK_LIST_BOX (d->list), i);
 
-		if (line[0] == '\0') {
-			continue;
-		}
-		if (g_str_has_prefix (line, "## ")) {
-			tag = "h2";
-			line += 3;
-		} else if (g_str_has_prefix (line, "# ")) {
-			tag = "h1";
-			line += 2;
-		} else if (g_str_has_prefix (line, "- ")) {
-			tag = "bullet";
-		}
-
-		if (tag != NULL) {
-			if (g_strcmp0 (tag, "bullet") == 0) {
-				gchar *bulleted = g_strdup_printf ("•  %s\n", line + 2);
-
-				gtk_text_buffer_insert_with_tags_by_name (buffer, &iter, bulleted, -1, tag, NULL);
-				g_free (bulleted);
-			} else {
-				gchar *with_nl = g_strdup_printf ("%s\n", line);
-
-				gtk_text_buffer_insert_with_tags_by_name (buffer, &iter, with_nl, -1, tag, NULL);
-				g_free (with_nl);
+			if (row != NULL) {
+				gtk_list_box_select_row (GTK_LIST_BOX (d->list), row);
 			}
-		} else {
-			gchar *with_nl = g_strdup_printf ("%s\n", line);
-
-			gtk_text_buffer_insert_with_tags_by_name (buffer, &iter, with_nl, -1, "para", NULL);
-			g_free (with_nl);
+			return;
 		}
 	}
-	g_strfreev (lines);
 }
 
 static void
 on_topic_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
 {
-	GtkTextBuffer *buffer = GTK_TEXT_BUFFER (user_data);
-	GtkWidget *view;
+	HelpPage *d = user_data;
+	HelpTopic *t;
 	gint index;
 
 	if (row == NULL) {
 		return;
 	}
 	index = gtk_list_box_row_get_index (row);
-	if (index < 0 || (guint) index >= N_TOPICS) {
+	if (index < 0 || (guint) index >= d->topics->len) {
 		return;
 	}
-	render_topic (buffer, topics[index].text);
+	t = g_ptr_array_index (d->topics, index);
+	nolphin_markdown_view_set_text_with_base (d->view, t->text, d->root);
+	gtk_adjustment_set_value (gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (d->scrolled)), 0);
+}
 
-	view = g_object_get_data (G_OBJECT (buffer), "nolphin-help-view");
-	if (view != NULL) {
-		GtkWidget *scrolled = gtk_widget_get_parent (view);
+static void
+on_link_clicked (GtkWidget *view, const gchar *href, gpointer user_data)
+{
+	HelpPage *d = user_data;
 
-		if (GTK_IS_SCROLLED_WINDOW (scrolled)) {
-			gtk_adjustment_set_value (gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (scrolled)), 0);
+	if (g_str_has_prefix (href, "hilfe:")) {
+		select_topic_by_id (d, href + 6);
+	} else if (g_str_has_prefix (href, "http://") || g_str_has_prefix (href, "https://")) {
+		gtk_show_uri_on_window (NULL, href, GDK_CURRENT_TIME, NULL);
+	}
+}
+
+static gboolean
+topic_filter (GtkListBoxRow *row, gpointer user_data)
+{
+	HelpPage *d = user_data;
+	const gchar *needle = gtk_entry_get_text (GTK_ENTRY (d->search));
+	gint index = gtk_list_box_row_get_index (row);
+	HelpTopic *t;
+	gchar *folded;
+	gboolean match;
+
+	if (needle == NULL || needle[0] == '\0') {
+		return TRUE;
+	}
+	if (index < 0 || (guint) index >= d->topics->len) {
+		return TRUE;
+	}
+	t = g_ptr_array_index (d->topics, index);
+	folded = g_utf8_strdown (needle, -1);
+	match = strstr (t->folded, folded) != NULL;
+	g_free (folded);
+	return match;
+}
+
+static void
+on_search_changed (GtkSearchEntry *entry, gpointer user_data)
+{
+	HelpPage *d = user_data;
+	GtkListBoxRow *selected;
+
+	gtk_list_box_invalidate_filter (GTK_LIST_BOX (d->list));
+
+	/* Ist das gewählte Thema weggefiltert, das erste sichtbare wählen. */
+	selected = gtk_list_box_get_selected_row (GTK_LIST_BOX (d->list));
+	if (selected == NULL || !gtk_widget_get_child_visible (GTK_WIDGET (selected)) ||
+	    !topic_filter (selected, d)) {
+		guint i;
+
+		for (i = 0; i < d->topics->len; i++) {
+			GtkListBoxRow *row = gtk_list_box_get_row_at_index (GTK_LIST_BOX (d->list), i);
+
+			if (row != NULL && topic_filter (row, d)) {
+				gtk_list_box_select_row (GTK_LIST_BOX (d->list), row);
+				break;
+			}
 		}
 	}
 }
@@ -279,12 +343,15 @@ on_topic_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
 static GtkWidget *
 build_page (const gchar *topic_id)
 {
-	GtkWidget *page, *paned, *list, *list_scroll, *text_scroll, *view, *bar, *close_button, *title;
-	GtkTextBuffer *buffer;
-	GtkListBoxRow *initial = NULL;
+	GtkWidget *page, *paned, *left, *list_scroll, *bar, *close_button, *title;
+	HelpPage *d = g_new0 (HelpPage, 1);
 	guint i;
 
+	d->topics = g_ptr_array_new_with_free_func ((GDestroyNotify) topic_free);
+	d->root = find_help_root ();
+
 	page = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+	g_object_set_data_full (G_OBJECT (page), "nolphin-help-data", d, (GDestroyNotify) help_page_free);
 
 	title = gtk_label_new (NULL);
 	gtk_label_set_markup (GTK_LABEL (title), _("<b>Hilfe zu Nolphin</b>"));
@@ -294,60 +361,71 @@ build_page (const gchar *topic_id)
 	gtk_widget_set_margin_bottom (title, 8);
 	gtk_box_pack_start (GTK_BOX (page), title, FALSE, FALSE, 0);
 
+	if (d->root != NULL) {
+		load_topics (d);
+	}
+
+	if (d->topics->len == 0) {
+		GtkWidget *msg = gtk_label_new (_("Die Hilfetexte wurden nicht gefunden. Sie liegen im Ordner »help« der Nolphin-Daten (oder in NOLPHIN_HELPDIR)."));
+
+		gtk_label_set_line_wrap (GTK_LABEL (msg), TRUE);
+		gtk_widget_set_margin_start (msg, 24);
+		gtk_widget_set_margin_end (msg, 24);
+		gtk_widget_set_vexpand (msg, TRUE);
+		gtk_widget_set_valign (msg, GTK_ALIGN_START);
+		gtk_widget_set_halign (msg, GTK_ALIGN_START);
+		gtk_box_pack_start (GTK_BOX (page), msg, TRUE, TRUE, 0);
+		goto bottom;
+	}
+
 	paned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
 	gtk_widget_set_vexpand (paned, TRUE);
 	gtk_box_pack_start (GTK_BOX (page), paned, TRUE, TRUE, 0);
 
-	list = gtk_list_box_new ();
-	gtk_list_box_set_selection_mode (GTK_LIST_BOX (list), GTK_SELECTION_SINGLE);
+	left = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+	gtk_widget_set_size_request (left, 260, -1);
+	d->search = gtk_search_entry_new ();
+	gtk_entry_set_placeholder_text (GTK_ENTRY (d->search), _("Themen durchsuchen"));
+	gtk_widget_set_margin_start (d->search, 8);
+	gtk_widget_set_margin_end (d->search, 8);
+	gtk_box_pack_start (GTK_BOX (left), d->search, FALSE, FALSE, 0);
+
+	d->list = gtk_list_box_new ();
+	gtk_list_box_set_selection_mode (GTK_LIST_BOX (d->list), GTK_SELECTION_SINGLE);
+	gtk_list_box_set_filter_func (GTK_LIST_BOX (d->list), topic_filter, d, NULL);
 	list_scroll = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (list_scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-	gtk_widget_set_size_request (list_scroll, 240, -1);
-	gtk_container_add (GTK_CONTAINER (list_scroll), list);
-	gtk_paned_pack1 (GTK_PANED (paned), list_scroll, FALSE, FALSE);
+	gtk_container_add (GTK_CONTAINER (list_scroll), d->list);
+	gtk_box_pack_start (GTK_BOX (left), list_scroll, TRUE, TRUE, 0);
+	gtk_paned_pack1 (GTK_PANED (paned), left, FALSE, FALSE);
 
-	view = gtk_text_view_new ();
-	gtk_text_view_set_editable (GTK_TEXT_VIEW (view), FALSE);
-	gtk_text_view_set_cursor_visible (GTK_TEXT_VIEW (view), FALSE);
-	gtk_text_view_set_wrap_mode (GTK_TEXT_VIEW (view), GTK_WRAP_WORD_CHAR);
-	gtk_text_view_set_left_margin (GTK_TEXT_VIEW (view), 24);
-	gtk_text_view_set_right_margin (GTK_TEXT_VIEW (view), 24);
-	gtk_text_view_set_top_margin (GTK_TEXT_VIEW (view), 12);
-	gtk_text_view_set_bottom_margin (GTK_TEXT_VIEW (view), 24);
-	buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (view));
-	g_object_set_data (G_OBJECT (buffer), "nolphin-help-view", view);
+	d->view = nolphin_markdown_view_new ();
+	nolphin_markdown_view_set_link_handler (d->view, on_link_clicked, d);
+	gtk_text_view_set_left_margin (GTK_TEXT_VIEW (d->view), 24);
+	gtk_text_view_set_right_margin (GTK_TEXT_VIEW (d->view), 24);
+	d->scrolled = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (d->scrolled), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_container_add (GTK_CONTAINER (d->scrolled), d->view);
+	gtk_paned_pack2 (GTK_PANED (paned), d->scrolled, TRUE, FALSE);
 
-	gtk_text_buffer_create_tag (buffer, "h1", "scale", 1.5, "weight", 700,
-				    "pixels-below-lines", 8, "pixels-above-lines", 4, NULL);
-	gtk_text_buffer_create_tag (buffer, "h2", "scale", 1.2, "weight", 700,
-				    "pixels-above-lines", 14, "pixels-below-lines", 4, NULL);
-	gtk_text_buffer_create_tag (buffer, "para", "scale", 1.1, "pixels-below-lines", 8, NULL);
-	gtk_text_buffer_create_tag (buffer, "bullet", "scale", 1.1, "left-margin", 40, "indent", -16,
-				    "pixels-below-lines", 4, NULL);
-
-	text_scroll = gtk_scrolled_window_new (NULL, NULL);
-	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (text_scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-	gtk_container_add (GTK_CONTAINER (text_scroll), view);
-	gtk_paned_pack2 (GTK_PANED (paned), text_scroll, TRUE, FALSE);
-
-	for (i = 0; i < N_TOPICS; i++) {
-		GtkWidget *label = gtk_label_new (_(topics[i].title));
+	for (i = 0; i < d->topics->len; i++) {
+		HelpTopic *t = g_ptr_array_index (d->topics, i);
+		GtkWidget *label = gtk_label_new (t->title);
 		GtkWidget *row = gtk_list_box_row_new ();
 
-		gtk_widget_set_halign (label, GTK_ALIGN_START);
+		gtk_label_set_xalign (GTK_LABEL (label), 0.0);
+		gtk_label_set_ellipsize (GTK_LABEL (label), PANGO_ELLIPSIZE_END);
 		gtk_widget_set_margin_start (label, 12);
 		gtk_widget_set_margin_end (label, 12);
 		gtk_widget_set_margin_top (label, 6);
 		gtk_widget_set_margin_bottom (label, 6);
 		gtk_container_add (GTK_CONTAINER (row), label);
-		gtk_list_box_insert (GTK_LIST_BOX (list), row, -1);
-
-		if (topic_id != NULL && g_strcmp0 (topic_id, topics[i].id) == 0) {
-			initial = GTK_LIST_BOX_ROW (row);
-		}
+		gtk_list_box_insert (GTK_LIST_BOX (d->list), row, -1);
 	}
-	g_signal_connect (list, "row-selected", G_CALLBACK (on_topic_selected), buffer);
+	g_signal_connect (d->list, "row-selected", G_CALLBACK (on_topic_selected), d);
+	g_signal_connect (d->search, "search-changed", G_CALLBACK (on_search_changed), d);
 
+bottom:
 	bar = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
 	gtk_widget_set_margin_start (bar, 24);
 	gtk_widget_set_margin_end (bar, 24);
@@ -361,11 +439,12 @@ build_page (const gchar *topic_id)
 
 	gtk_widget_show_all (page);
 
-	if (initial == NULL) {
-		initial = gtk_list_box_get_row_at_index (GTK_LIST_BOX (list), 0);
+	if (d->topics->len > 0) {
+		select_topic_by_id (d, topic_id != NULL ? topic_id : ((HelpTopic *) g_ptr_array_index (d->topics, 0))->id);
+		if (gtk_list_box_get_selected_row (GTK_LIST_BOX (d->list)) == NULL) {
+			gtk_list_box_select_row (GTK_LIST_BOX (d->list), gtk_list_box_get_row_at_index (GTK_LIST_BOX (d->list), 0));
+		}
 	}
-	gtk_list_box_select_row (GTK_LIST_BOX (list), initial);
-	g_object_set_data (G_OBJECT (page), "nolphin-help-list", list);
 	return page;
 }
 
@@ -383,14 +462,10 @@ nolphin_help_show (GtkWindow *window, const gchar *topic_id)
 
 	if (help_page != NULL && help_host == GTK_WIDGET (window)) {
 		if (topic_id != NULL) {
-			GtkWidget *list = g_object_get_data (G_OBJECT (help_page), "nolphin-help-list");
-			guint i;
+			HelpPage *d = g_object_get_data (G_OBJECT (help_page), "nolphin-help-data");
 
-			for (i = 0; list != NULL && i < N_TOPICS; i++) {
-				if (g_strcmp0 (topic_id, topics[i].id) == 0) {
-					gtk_list_box_select_row (GTK_LIST_BOX (list),
-								 gtk_list_box_get_row_at_index (GTK_LIST_BOX (list), i));
-				}
+			if (d != NULL && d->list != NULL) {
+				select_topic_by_id (d, topic_id);
 			}
 		}
 		gtk_stack_set_visible_child_name (GTK_STACK (stack), "help");

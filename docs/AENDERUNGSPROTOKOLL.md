@@ -65,10 +65,10 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 
 ## Eingebaute Hilfe
 - REQUIREMENT: Hilfe zu den Funktionen von Nolphin, geöffnet wie die Einstellungen (im Hauptbereich statt in einem Fenster).
-- DATEI: `src/nolphin-help.{c,h}`, `src/nolphin-window-menus.c`, `src/meson.build`, `po/POTFILES.in`.
-- ÄNDERUNG: Neue Seite „help“ im Inhalts-Stack des Hauptfensters mit Themenliste und Text zu Überblick, Vorschau/Metadaten, Suche, Archive, Git, Werkzeuge, Fenster/Arbeitsbereiche, DEB, Terminal, Sicherheit, Einstellungen, Diagnose und Tastenkürzeln. F1 und Hilfe ▸ Alle Themen öffnen sie; Esc oder „Schließen“ führt zurück. Die Texte stehen im Code.
+- DATEI: `src/nolphin-help.{c,h}`, `src/nolphin-window-menus.c`, `docs/hilfe/*.md`, `docs/meson.build`, `src/meson.build`, `po/POTFILES.in`.
+- ÄNDERUNG: Neue Seite „help“ im Inhalts-Stack des Hauptfensters: Themenliste mit Suchfeld links, rechts das Thema als Markdown (Überschriften, Tabellen, Bilder, Links) in der Markdown-Ansicht der GID-Projekte. 20 Themen unter `docs/hilfe/` mit den Bildern aus `docs/bilder/`; installiert nach `<datadir>/nolphin/help/`. Das Verzeichnis wird über `NOLPHIN_HELPDIR`, die Installation oder `docs/` neben dem Build-Ordner gefunden. Links `hilfe:<thema>` springen zwischen Themen. F1 und Hilfe ▸ Alle Themen öffnen die Seite; Esc oder „Schließen“ führt zurück.
 - WARUM: Bisher öffnete F1 die GNOME-Hilfe, die Nolphin-Funktionen nicht kennt.
-- TEST: GUI: F1, Themenwechsel, Esc. Die Inhalte habe ich nicht Zeile für Zeile gegen alle Menüs geprüft.
+- TEST: GUI: F1, Themenwechsel, Link in der Themenübersicht, Themensuche („rsync“), Esc. Die Texte habe ich gegen den Code geprüft (Menüeinträge, Auswahllisten, Verhalten); nicht jede Aussage wurde in der Oberfläche ausprobiert.
 
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.

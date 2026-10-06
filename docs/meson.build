@@ -17,3 +17,7 @@ extraMans = [
   'nolphin-io.txt',
   'style-guide.html',
 ]
+
+# Eingebaute Hilfe (F1): Themen als Markdown plus die Bilder, die sie zeigen
+install_subdir('hilfe', install_dir: join_paths(nolphinDataPath, 'help'))
+install_subdir('bilder', install_dir: join_paths(nolphinDataPath, 'help'))

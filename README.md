@@ -52,7 +52,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 * **Suche mit Operatoren:** im Dateinamen UND, ODER, NICHT, „exakt“ und Platzhalter, dazu reguläre Ausdrücke.
 * **Mehrere Bereiche:** geteilte Ansicht mit bis zu vier Bereichen und **Arbeitsbereiche**, die Reiter, Teilung und Fenstergröße speichern.
 * **Gehe zu:** Verlauf, häufig verwendete Orte und die Reiter des Fensters im Menü.
-* **Hilfe (F1):** eine eingebaute Hilfe zu allen Funktionen, die sich wie die Einstellungen im Hauptbereich öffnet (Themenliste links, Text rechts).
+* **Hilfe (F1):** eine eingebaute Hilfe mit 20 Themen, Bildern, Tabellen und Themensuche; sie öffnet sich wie die Einstellungen im Hauptbereich. Die Texte liegen als Markdown unter `docs/hilfe/`.
 * **Diagnose:** Protokolle, Systeminformationen, Plugin-Status und Fehlerbericht im Panel.
 * **Einstellungen exportieren, importieren und zurücksetzen.**
 * **DEB-Pakete erstellen:** Nolphin baut ein `.deb` selbst als `ar`-Archiv, ohne `dpkg-deb`.
@@ -422,7 +422,7 @@ libnolphin-private/     interne Bibliothek (Archiv, Prüfsummen, ACL, GPG, Schem
 libnolphin-extension/   Erweiterungs-Schnittstelle
 gresources/             Beschreibungen der Oberfläche
 test/                   Tests
-docs/                   Referenzdokumente, Bilder für diese README (docs/bilder/)
+docs/                   Referenzdokumente, Hilfetexte (docs/hilfe/), Bilder (docs/bilder/)
 debian/                 Debian-Paketierung
 po/                     Übersetzungsdateien
 ```
