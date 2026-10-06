@@ -31,6 +31,7 @@
 #include <gtk/gtk.h>
 #include <gio/gio.h>
 
+#include <libnolphin-private/nolphin-file-chooser-preview.h>
 #include <glib/gi18n.h>
 
 #include <eel/eel-glib-extensions.h>
@@ -1049,6 +1050,7 @@ on_settings_import_clicked (GtkButton *button, gpointer user_data)
 							  _("_Importieren"), GTK_RESPONSE_ACCEPT, NULL);
 	const gchar *load[] = { "dconf", "load", SETTINGS_DCONF_PATH, NULL };
 
+	nolphin_file_chooser_add_preview (GTK_FILE_CHOOSER (chooser));
 	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
 		gchar *path = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
 		gchar *text = NULL;

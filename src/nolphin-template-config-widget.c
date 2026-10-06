@@ -4,6 +4,7 @@
  */
 
 #include <config.h>
+#include <libnolphin-private/nolphin-file-chooser-preview.h>
 #include "nolphin-template-config-widget.h"
 #include "nolphin-application.h"
 #include "nolphin-view.h"
@@ -432,11 +433,12 @@ on_new_template_clicked (GtkWidget *button, gpointer user_data)
                                           NULL);
 
     GtkFileFilter *filter = gtk_file_filter_new();
-    gtk_file_filter_set_name (filter, "Files associated with applications");
+    gtk_file_filter_set_name (filter, _("Dateien mit zugeordneter Anwendung"));
     gtk_file_filter_add_custom (filter, GTK_FILE_FILTER_MIME_TYPE,
                                 file_has_valid_app_association, NULL, NULL);
 
     gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (dialog), filter);
+    nolphin_file_chooser_add_preview (GTK_FILE_CHOOSER (dialog));
     response = gtk_dialog_run (GTK_DIALOG (dialog));
 
     if (response == GTK_RESPONSE_ACCEPT) {

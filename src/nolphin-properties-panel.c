@@ -16,6 +16,7 @@
  */
 
 #include <config.h>
+#include <libnolphin-private/nolphin-file-chooser-preview.h>
 
 #include "nolphin-properties-panel.h"
 
@@ -999,6 +1000,7 @@ on_icon_browse_clicked (GtkButton *button, gpointer user_data)
 	gtk_file_filter_set_name (filter, _("Bilder"));
 	gtk_file_filter_add_pixbuf_formats (filter);
 	gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (dialog), filter);
+	nolphin_file_chooser_add_preview (GTK_FILE_CHOOSER (dialog));
 
 	if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT) {
 		gchar *path = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));

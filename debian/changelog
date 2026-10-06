@@ -1,3 +1,12 @@
+nolphin (6.7.7+nolphin3) unstable; urgency=medium
+
+  * Vorschau rechts in Nolphins Dateiauswahldialogen.
+  * GTK-Modul nolphin-preview-module: gibt Dateiauswahldialogen anderer
+    GTK-Programme (z. B. beim Hochladen) dieselbe Vorschau; Aktivierung über
+    die GTK-Einstellung gtk-modules (siehe Hilfe).
+
+ -- Kay Siebke <kaysiebke@gmail.com>  Tue, 06 Oct 2026 22:38:32 +0200
+
 nolphin (6.7.7+nolphin2) unstable; urgency=medium
 
   * Starter: StartupWMClass ergänzt, damit das Fenster in der Taskleiste dem

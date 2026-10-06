@@ -3,3 +3,4 @@ usr/lib/*/nolphin/nolphin-extensions-list
 usr/share/applications
 usr/share/dbus-1
 usr/share/man
+usr/lib/*/gtk-3.0/modules/libnolphin-preview-module.so

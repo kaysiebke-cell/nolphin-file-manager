@@ -14,6 +14,7 @@
 
 #include "nolphin-workspace-panel.h"
 
+#include <libnolphin-private/nolphin-file-chooser-preview.h>
 #include <glib/gi18n.h>
 #include <glib/gstdio.h>
 
@@ -601,6 +602,7 @@ deb_builder_add_files_clicked (GtkButton *button, gpointer user_data)
 					       _("Hinzufügen"), GTK_RESPONSE_ACCEPT,
 					       NULL);
 	gtk_file_chooser_set_select_multiple (GTK_FILE_CHOOSER (chooser), TRUE);
+	nolphin_file_chooser_add_preview (GTK_FILE_CHOOSER (chooser));
 
 	response = gtk_dialog_run (GTK_DIALOG (chooser));
 
@@ -2247,6 +2249,7 @@ am_choose_files (ArchiveManagerTab *d, const gchar *title, gboolean multiple)
 	GList *result = NULL;
 
 	gtk_file_chooser_set_select_multiple (GTK_FILE_CHOOSER (chooser), multiple);
+	nolphin_file_chooser_add_preview (GTK_FILE_CHOOSER (chooser));
 	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
 		chosen = gtk_file_chooser_get_files (GTK_FILE_CHOOSER (chooser));
 	}
