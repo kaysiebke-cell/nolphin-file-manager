@@ -2032,9 +2032,12 @@ make_image_widget (GtkWidget *view, const gchar *path, const gchar *alt, const g
  * Container meldet stattdessen die vorab richtig gemessene Größe und gibt
  * sie unverändert an sein Kind weiter. */
 typedef struct {
-	GtkBin parent;
-	gint   width;
-	gint   height;
+	GtkBin     parent;
+	gint       width;
+	gint       height;      /* feste Höhe, wenn @measure NULL ist */
+	GtkWidget *measure;     /* Widget, dessen Höhe bei @measure_width live gemessen wird */
+	gint       measure_width;
+	gint       extra;       /* zusätzliche Höhe (Bildlaufleiste) */
 } MdFixedBox;
 
 typedef struct {
@@ -2052,7 +2055,18 @@ md_fixed_box_get_preferred_width (GtkWidget *widget, gint *min, gint *nat)
 static void
 md_fixed_box_get_preferred_height (GtkWidget *widget, gint *min, gint *nat)
 {
-	*min = *nat = ((MdFixedBox *) widget)->height;
+	MdFixedBox *box = (MdFixedBox *) widget;
+
+	if (box->measure != NULL) {
+		/* Live messen: Schrift und Theme können sich nach dem Aufbau noch
+		 * ändern, eine einmal gemessene Höhe wäre dann zu klein oder zu groß. */
+		gint h = 0;
+
+		gtk_widget_get_preferred_height_for_width (box->measure, box->measure_width, &h, NULL);
+		*min = *nat = h + box->extra;
+		return;
+	}
+	*min = *nat = box->height;
 }
 
 static GtkSizeRequestMode
@@ -2227,15 +2241,33 @@ set_table_width (GtkWidget *box, gint avail)
 			gtk_widget_set_size_request (gtk_grid_get_child_at (GTK_GRID (grid), (gint) c, (gint) r),
 						     width[c], -1);
 	}
+	/* Tatsächliche Breite des Gitters: die Summe der Spalten plus der eigene
+	 * Rand (CSS) des Gitters. Wäre der sichtbare Kasten auch nur 1 px
+	 * schmaler, erschiene die Bildlaufleiste und überdeckte die letzte Zeile. */
+	{
+		gint grid_min = 0;
+
+		gtk_widget_get_preferred_width (grid, &grid_min, NULL);
+		total = MAX (total, grid_min);
+	}
 	/* Höhe bei genau dieser Breite, dem Container fest vorgeben. */
 	gtk_widget_get_preferred_height_for_width (grid, total, &height, NULL);
 	/* sichtbar höchstens die Textbreite; darüber hinaus scrollt die Tabelle */
 	((MdFixedBox *) box)->width = MAX (1, MIN (total, avail));
 	((MdFixedBox *) box)->height = height + (total > avail ? 14 : 0);
+	((MdFixedBox *) box)->measure = grid;
+	((MdFixedBox *) box)->measure_width = total;
+	((MdFixedBox *) box)->extra = (total > avail ? 14 : 0);
 	gtk_widget_queue_resize (box);
 	g_free (minw);
 	g_free (natw);
 	g_free (width);
+}
+
+static gboolean
+swallow_event (GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+	return GDK_EVENT_STOP;
 }
 
 /* Hängt für jeden Anker ein Widget ein: das Bild bzw. seinen
@@ -2267,8 +2299,12 @@ attach_children (GtkWidget *view)
 		} else if (check != 0) {
 			child = gtk_check_button_new ();
 			gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (child), check == 1);
-			/* nur Anzeige, wie bei GitHub */
-			gtk_widget_set_sensitive (child, FALSE);
+			/* nur Anzeige: Klicks werden abgefangen, das Kästchen bleibt aber
+			 * in normaler Darstellung (deaktiviert wären leere Kästchen in
+			 * dunklen Themes kaum zu sehen). */
+			gtk_widget_set_can_focus (child, FALSE);
+			g_signal_connect (child, "button-press-event", G_CALLBACK (swallow_event), NULL);
+			g_signal_connect (child, "button-release-event", G_CALLBACK (swallow_event), NULL);
 			gtk_widget_set_valign (child, GTK_ALIGN_CENTER);
 			kind = "check";
 		} else if (img_path != NULL) {
