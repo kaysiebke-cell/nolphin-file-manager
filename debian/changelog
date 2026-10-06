@@ -1,3 +1,12 @@
+nolphin (6.7.7+nolphin2) unstable; urgency=medium
+
+  * Starter: StartupWMClass ergänzt, damit das Fenster in der Taskleiste dem
+    Starter zugeordnet und angeheftet werden kann; deutscher Name „Nolphin“.
+  * Entwicklungsstand erkennbar (Titelzusatz, eigene Anwendungs-ID).
+  * Hilfe: Hinweis bei Suche ohne Treffer.
+
+ -- Kay Siebke <kaysiebke@gmail.com>  Tue, 06 Oct 2026 22:08:07 +0200
+
 nolphin (6.7.7+nolphin1) unstable; urgency=medium
 
   * Nolphin-Erweiterungen: Arbeitsbereich, Vorschau (PDF, Audio, Video),

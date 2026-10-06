@@ -10,7 +10,7 @@ Name[ca@valencia]=Fitxers
 Name[cs]=Soubory
 Name[cy]=Ffeiliau
 Name[da]=Filer
-Name[de]=Dateien
+Name[de]=Nolphin
 Name[el]=Αρχεία
 Name[eo]=Dosieroj
 Name[es]=Archivos
@@ -123,6 +123,7 @@ Comment[zh_HK]=存取與組織檔案
 Comment[zh_TW]=存取並組織檔案
 Exec=nolphin %U
 Icon=nolphin
+StartupWMClass=nolphin
 # Translators: these are keywords of the file manager
 Keywords=folders;filesystem;explorer;
 Terminal=false
