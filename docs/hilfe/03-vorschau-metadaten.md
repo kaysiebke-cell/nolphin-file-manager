@@ -31,19 +31,17 @@ Auch in Nolphins eigenen Auswahldialogen (z. B. beim Hinzufügen von Dateien zu 
 
 ### In anderen Programmen (zum Beispiel beim Hochladen)
 
-Dieselbe Vorschau lässt sich auch den Auswahldialogen **anderer GTK-Programme** hinzufügen, etwa Chrome beim Hochladen. Dazu gehört das Zusatzmodul `nolphin-preview-module`, das mit dem Paket kommt. Es ist zunächst **aus**. Auf **Cinnamon (Linux Mint)** schalten Sie es für Ihren Benutzer mit dieser Einstellung ein:
+Dieselbe Vorschau lässt sich auch den Auswahldialogen **anderer GTK-Programme** hinzufügen, etwa Chrome beim Hochladen. Dazu gehört das Zusatzmodul `nolphin-preview-module`, das mit dem Paket kommt. Es ist zunächst **aus**. Unter **Linux Mint** (und anderen Systemen mit X11-Sitzung) schalten Sie es für Ihren Benutzer ein, indem Sie die Umgebungsvariable `GTK3_MODULES` in der Datei `~/.xsessionrc` setzen. Das ist derselbe Mechanismus, über den Mint das xapp-Modul in alle GTK-Programme lädt:
 
 ```
-gsettings set org.cinnamon.settings-daemon.plugins.xsettings enabled-gtk-modules "['nolphin-preview-module']"
+echo 'export GTK3_MODULES="nolphin-preview-module${GTK3_MODULES:+:$GTK3_MODULES}"' >> ~/.xsessionrc
 ```
 
-Die Einstellung gilt für Programme, die **danach neu gestartet** werden (Chrome, Editoren …). Der Dateiauswahl-Dienst des Systems (`xdg-desktop-portal-gtk`) wird beim Abmelden und Anmelden neu gestartet, dann zeigen auch Dialoge, die er für andere Programme öffnet, die Vorschau. Enthält die Liste schon andere Module, tragen Sie `nolphin-preview-module` zusätzlich ein, statt sie zu ersetzen. Zum Ausschalten setzen Sie sie auf den vorherigen Wert zurück (meist `[]`):
+Danach **einmal abmelden und wieder anmelden**. Erst dann starten alle Programme, auch der Dateiauswahl-Dienst des Systems, mit dem Modul. Hat die Datei schon eine Zeile mit `GTK3_MODULES`, ergänzen Sie `nolphin-preview-module` dort (Module werden mit Doppelpunkt getrennt), statt eine zweite anzuhängen.
 
-```
-gsettings reset org.cinnamon.settings-daemon.plugins.xsettings enabled-gtk-modules
-```
+Zum Ausschalten löschen Sie die Zeile aus `~/.xsessionrc` und melden sich neu an.
 
-Auf anderen Desktops mit GTK 3 genügt die Zeile `gtk-modules=nolphin-preview-module` im Abschnitt `[Settings]` von `~/.config/gtk-3.0/settings.ini`; unter Cinnamon überstimmt die Desktop-Einstellung sie.
+> **Hinweis zu Cinnamon:** Die Einstellungen `gtk-modules` in `~/.config/gtk-3.0/settings.ini` und `enabled-gtk-modules` in den Cinnamon-Einstellungen wirken hier **nicht**; die Umgebungsvariable ist der Weg, der funktioniert.
 
 > **Hinweis:** Nur Dialoge zum **Öffnen von Dateien** bekommen die Vorschau; Ordner- und Speichern-Dialoge bleiben unverändert, ebenso Dialoge, die schon eine eigene Vorschau haben. Programme, die nicht den GTK-3-Dialog nutzen (zum Beispiel solche mit eigener Oberfläche), sind nicht betroffen.
 
