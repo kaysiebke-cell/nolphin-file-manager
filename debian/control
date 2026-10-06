@@ -1,7 +1,7 @@
 Source: nolphin
 Section: misc
 Priority: optional
-Maintainer: Linux Mint <root@linuxmint.com>
+Maintainer: Kay Siebke <kaysiebke@gmail.com>
 Build-Depends:
  cinnamon-l10n,
  debhelper-compat (= 12),
@@ -25,6 +25,7 @@ Build-Depends:
  libjson-glib-dev (>= 1.6),
  libpango1.0-dev (>= 1.44.0),
  libx11-dev,
+ libvte-2.91-dev,
  libxapp-dev (>= 2.0.0),
  libxext-dev,
  libxrender-dev,
@@ -33,7 +34,7 @@ Build-Depends:
  python3,
  python3-gi,
  x11proto-core-dev,
-Homepage: http://www.github.com/linuxmint/nolphin/
+Homepage: https://github.com/kaysiebke-cell/nolphin-file-manager
 Standards-Version: 3.9.5
 
 Package: gir1.2-nolphin-3.0
@@ -43,8 +44,8 @@ Depends: ${gir:Depends}, ${misc:Depends}
 Conflicts: gir1.0-nolphin-3.0
 Replaces: gir1.0-nolphin-3.0
 Description: libraries for nolphin components - gir bindings
- Nolphin is the official file manager and graphical shell for the
- Cinnamon desktop.
+ Nolphin is a file manager and graphical shell for the Cinnamon desktop,
+ based on Nemo.
  .
  This package can be used by other packages using the GIRepository format to
  generate dynamic bindings.
@@ -59,8 +60,8 @@ Depends:
  libnolphin-extension1 (= ${binary:Version}),
  ${misc:Depends},
 Description: libraries for nolphin components - development version
- Nolphin is the official file manager and graphical shell for the
- Cinnamon desktop.
+ Nolphin is a file manager and graphical shell for the Cinnamon desktop,
+ based on Nemo.
  .
  This package provides the necessary development libraries and include
  files to develop and compile Nolphin extensions.
@@ -75,8 +76,8 @@ Provides: libnolphin-extension1a
 Replaces: libnolphin-extension1a
 breaks: libnolphin-extension1a
 Description: libraries for nolphin components - runtime version
- Nolphin is the official file manager and graphical shell for the
- Cinnamon desktop.
+ Nolphin is a file manager and graphical shell for the Cinnamon desktop,
+ based on Nemo.
  .
  This package contains a few runtime libraries needed by nolphin' extensions.
 
@@ -104,6 +105,14 @@ Depends:
  ${misc:Depends},
  ${shlibs:Depends},
 Recommends:
+ acl,
+ git,
+ gnupg,
+ gstreamer1.0-tools,
+ p7zip-full,
+ rsync,
+ unzip,
+ zip,
  gvfs-backends,
  gvfs-fuse,
  librsvg2-common,
@@ -111,7 +120,7 @@ Recommends:
  gnome-disk-utility
 Suggests: eog, evince | pdf-viewer, totem | mp3-decoder, xdg-user-dirs
 Description: file manager and graphical shell for Cinnamon
- Nolphin is the official file manager for the Cinnamon desktop. It allows
+ Nolphin is a file manager for the Cinnamon desktop, based on Nemo. It allows
  to browse directories, preview files and launch applications associated
  with them. It is also responsible for handling the icons on the Cinnamon
  desktop. It works on local and remote filesystems.
@@ -124,8 +133,8 @@ Architecture: all
 Depends: python3, gir1.2-xmlb-2.0, ${misc:Depends}, ${python3:Depends}
 Suggests: nolphin
 Description: data files for nolphin
- Nolphin is the official file manager and graphical shell for the
- Cinnamon desktop.
+ Nolphin is a file manager and graphical shell for the Cinnamon desktop,
+ based on Nemo.
  .
  This package contains pictures, localization files and other data
  needed by nolphin.
@@ -137,7 +146,7 @@ Priority: optional
 Depends: nolphin (= ${binary:Version}), ${misc:Depends}
 Replaces: libnolphin-extension1-dbg
 Description: file manager and graphical shell for Cinnamon - debugging version
- Nolphin is the official file manager for the Cinnamon desktop. It allows
+ Nolphin is a file manager for the Cinnamon desktop, based on Nemo. It allows
  to browse directories, preview files and launch applications associated
  with them. It is also responsible for handling the icons on the Cinnamon
  desktop. It works on local and remote filesystems.

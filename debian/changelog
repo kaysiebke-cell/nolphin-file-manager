@@ -1,3 +1,14 @@
+nolphin (6.7.7+nolphin1) unstable; urgency=medium
+
+  * Nolphin-Erweiterungen: Arbeitsbereich, Vorschau (PDF, Audio, Video),
+    Metadaten, Git-Overlays, Archiv-Manager, Werkzeuge (Synchronisation,
+    Regeln, Duplikate, Versionen), Arbeitsbereiche, Diagnose,
+    Suchoperatoren, eingebaute Hilfe (F1).
+  * Übersetzung der Einstellungsseiten ergänzt.
+  * Maintainer, Homepage und Abhängigkeiten (VTE, Laufzeitwerkzeuge) angepasst.
+
+ -- Kay Siebke <kaysiebke@gmail.com>  Tue, 06 Oct 2026 21:14:23 +0200
+
 nolphin (6.7.7) adrien; urgency=medium
 
   [ Dmitry Rantovov ]
