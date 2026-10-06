@@ -79,6 +79,7 @@
 
 #define DEBUG_FLAG NOLPHIN_DEBUG_WINDOW
 #include <libnolphin-private/nolphin-debug.h>
+#include "nolphin-diagnostics.h"
 
 #include <math.h>
 #include <sys/time.h>
@@ -1845,6 +1846,12 @@ nolphin_window_sync_title (NolphinWindow *window,
 			window_title = eel_str_middle_truncate (slot->title, MAX_TITLE_LENGTH);
 		}
 
+		if (nolphin_is_development_build (NULL)) {
+			gchar *dev_title = g_strdup_printf (_("%s  [Entwicklung]"), window_title);
+
+			g_free (window_title);
+			window_title = dev_title;
+		}
 		gtk_window_set_title (GTK_WINDOW (window), window_title);
 		g_free (window_title);
 	}

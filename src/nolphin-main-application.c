@@ -61,6 +61,7 @@
 
 #define DEBUG_FLAG NOLPHIN_DEBUG_APPLICATION
 #include <libnolphin-private/nolphin-debug.h>
+#include "nolphin-diagnostics.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1215,8 +1216,10 @@ nolphin_main_application_class_init (NolphinMainApplicationClass *class)
 NolphinApplication *
 nolphin_main_application_get_singleton (void)
 {
+    /* Ein Start aus dem Build-Ordner bekommt eine eigene ID, damit er neben der
+     * installierten Version läuft und nicht in deren Instanz landet. */
     return nolphin_application_initialize_singleton (NOLPHIN_TYPE_MAIN_APPLICATION,
-                                                  "application-id", "org.Nolphin",
+                                                  "application-id", nolphin_is_development_build (NULL) ? "org.Nolphin.Dev" : "org.Nolphin",
                                                   "flags", G_APPLICATION_HANDLES_OPEN,
                                                   "register-session", TRUE,
                                                   NULL);

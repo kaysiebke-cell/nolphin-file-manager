@@ -158,6 +158,25 @@ os_pretty_name (void)
 	return name != NULL ? name : g_strdup (_("unbekannt"));
 }
 
+gboolean
+nolphin_is_development_build (gchar **path)
+{
+	static gchar *exe = NULL;
+	static gboolean dev = FALSE;
+	static gboolean known = FALSE;
+
+	if (!known) {
+		exe = g_file_read_link ("/proc/self/exe", NULL);
+		/* Das installierte Paket liegt unter /usr/ (Pakete) – alles andere gilt als Entwicklung. */
+		dev = exe != NULL && !g_str_has_prefix (exe, "/usr/");
+		known = TRUE;
+	}
+	if (path != NULL) {
+		*path = g_strdup (exe);
+	}
+	return dev;
+}
+
 gchar *
 nolphin_diagnostics_system_info (void)
 {
@@ -174,7 +193,16 @@ nolphin_diagnostics_system_info (void)
 	guint i;
 
 	g_string_append_printf (s, "%s\n", _("== Programm =="));
-	g_string_append_printf (s, "Nolphin %s\n", VERSION);
+	{
+		gchar *exe = NULL;
+		gboolean dev = nolphin_is_development_build (&exe);
+
+		g_string_append_printf (s, "Nolphin %s%s\n", VERSION, dev ? _(" (Entwicklungsstand)") : "");
+		if (exe != NULL) {
+			g_string_append_printf (s, _("Gestartet aus: %s\n"), exe);
+		}
+		g_free (exe);
+	}
 	g_string_append_printf (s, "GTK %u.%u.%u, GLib %u.%u.%u\n",
 				gtk_get_major_version (), gtk_get_minor_version (), gtk_get_micro_version (),
 				glib_major_version, glib_minor_version, glib_micro_version);

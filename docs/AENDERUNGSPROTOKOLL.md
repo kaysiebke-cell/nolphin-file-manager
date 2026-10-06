@@ -70,6 +70,17 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Bisher öffnete F1 die GNOME-Hilfe, die Nolphin-Funktionen nicht kennt.
 - TEST: GUI: F1, Themenwechsel, Link in der Themenübersicht, Themensuche („rsync“), Esc. Die Texte habe ich gegen den Code geprüft (Menüeinträge, Auswahllisten, Verhalten); nicht jede Aussage wurde in der Oberfläche ausprobiert.
 
+## Entwicklungsstand erkennbar machen
+- REQUIREMENT: Installierte Version und Build-Ordner-Stand sollen sich unterscheiden lassen und nebeneinander laufen.
+- DATEI: `src/nolphin-diagnostics.{c,h}`, `src/nolphin-main-application.c`, `src/nolphin-window.c`, `src/nolphin-window-menus.c`, `docs/hilfe/20-grenzen.md`.
+- ÄNDERUNG: `nolphin_is_development_build()` prüft, ob das Programm nicht unter `/usr/` liegt. Dann gilt die Anwendungs-ID `org.Nolphin.Dev`, der Fenstertitel trägt „[Entwicklung]“, Über-Dialog und Systeminformationen nennen den Entwicklungsstand und den Startpfad.
+- WARUM: Beide Stände teilten sich den D-Bus-Namen; ein Start aus dem Build-Ordner konnte in der installierten Instanz landen und war nicht zu unterscheiden.
+- TEST: GUI: Build-Ordner-Stand zeigt „[Entwicklung]“ und meldet `org.Nolphin.Dev` am Session-Bus. Das installierte Paket enthält diese Änderung erst nach einem Neubau.
+
+## Installation als Paket
+- Das Paket kollidierte mit `nemo-data` bei zehn Menü-Symbolen (`menu-*.png`); sie werden nicht mehr ins System-Icon-Verzeichnis installiert (sie stecken in der Programm-Ressource).
+- Eine ältere Installation unter `/usr/local` (Schema, Programm) überdeckte das Paket und musste entfernt werden.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

@@ -38,6 +38,7 @@
 #include "nolphin-connect-server-dialog.h"
 #include "nolphin-file-management-properties.h"
 #include "nolphin-help.h"
+#include "nolphin-diagnostics.h"
 #include "nolphin-navigation-action.h"
 #include "nolphin-notebook.h"
 #include "nolphin-window-manage-views.h"
@@ -661,7 +662,7 @@ action_about_nolphin_callback (GtkAction *action,
 
 	gtk_show_about_dialog (GTK_WINDOW (user_data),
 			       "program-name", _("Nolphin"),
-			       "version", VERSION,
+			       "version", nolphin_is_development_build (NULL) ? VERSION " (Entwicklungsstand)" : VERSION,
 			       "comments", _("Mit Nolphin können Ordner und Dateien verwaltet werden, sowohl auf Ihrem Rechner als auch im Internet."),
 			       "license", license_trans,
 			       "wrap-license", TRUE,

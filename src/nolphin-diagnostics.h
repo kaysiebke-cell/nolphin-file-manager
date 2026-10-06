@@ -24,6 +24,11 @@ typedef enum {
 /* Leitet alle GLib-Meldungen zusätzlich in ~/.local/share/nolphin/logs/nolphin.log. */
 void   nolphin_diagnostics_init_logging (void);
 
+/* TRUE, wenn Nolphin nicht aus dem installierten Paket (/usr/…), sondern
+ * z. B. aus dem Build-Ordner läuft. Liefert den Programmpfad über @path
+ * (mit g_free() freigeben, darf NULL sein). */
+gboolean nolphin_is_development_build (gchar **path);
+
 gchar *nolphin_diagnostics_get_log_path    (void);
 gchar *nolphin_diagnostics_read_log_tail   (guint max_lines);
 gchar *nolphin_diagnostics_system_info     (void);

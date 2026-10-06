@@ -42,3 +42,13 @@ Dateien, die Sie in den **Papierkorb** verschieben, liegen dort und lassen sich 
 ### Wie melde ich einen Fehler?
 
 Nennen Sie Nolphin-Version, Linux-Mint-Version, das Problem, die Schritte zur Reproduktion, das erwartete und das tatsächliche Verhalten sowie Fehlermeldungen. Den Fehlerbericht aus der Diagnose können Sie beilegen.
+
+### Wie erkenne ich, ob ich die installierte Version oder einen Entwicklungsstand nutze?
+
+Ein Start aus dem Build-Ordner (also nicht aus `/usr/…`) kennzeichnet sich selbst:
+
+- Im **Fenstertitel** steht der Zusatz **[Entwicklung]**.
+- Unter **Hilfe ▸ Über** und unter **Hilfe ▸ Diagnose ▸ Systeminformationen** steht „Entwicklungsstand“; die Diagnose nennt außerdem den Pfad, aus dem Nolphin gestartet wurde.
+- Der Entwicklungsstand läuft unter einer eigenen Kennung und kann **neben** der installierten Version geöffnet sein, ohne in ihr zu landen.
+
+Die installierte Version hat keinen Zusatz im Titel.
