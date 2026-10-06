@@ -1,3 +1,5 @@
+# Die Menü-Symbole menu-*.png (Sortierpfeile usw.) stecken in der Programm-Ressource und
+# werden nicht ins System-Icon-Verzeichnis installiert: Sie kollidieren dort mit nemo-data.
 publicIcons = [
   'hicolor/apps/16x16/nolphin.png',
   'hicolor/apps/22x22/nolphin.png',
@@ -5,16 +7,6 @@ publicIcons = [
   'hicolor/apps/32x32/nolphin.png',
   'hicolor/apps/scalable/nolphin.svg',
   'hicolor/actions/16x16/nolphin-eject.png',
-  'hicolor/actions/16x16/menu-bullet.png',
-  'hicolor/actions/16x16/menu-sort-up.png',
-  'hicolor/actions/16x16/menu-sort-up-free.png',
-  'hicolor/actions/16x16/menu-sort-down.png',
-  'hicolor/actions/16x16/menu-sort-down-free.png',
-  'hicolor/actions/16x16/menu-sort-right.png',
-  'hicolor/actions/16x16/menu-sort-right-free.png',
-  'hicolor/actions/16x16/menu-sort-left.png',
-  'hicolor/actions/16x16/menu-sort-left-free.png',
-  'hicolor/actions/16x16/menu-none.png',
   'hicolor/actions/32x32/nolphin-eject.png',
   'hicolor/actions/scalable/nolphin-location-symbolic.svg',
   'hicolor/actions/scalable/nolphin-location-symbolic-rtl.svg',
