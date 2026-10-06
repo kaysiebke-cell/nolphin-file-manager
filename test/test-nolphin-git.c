@@ -289,6 +289,67 @@ main (int argc, char **argv)
 	}
 	g_object_unref (pending_result);
 
+	/* --- remote list: der eben eingetragene Remote muss auftauchen --- */
+	pending_result = NULL;
+	nolphin_git_remote_list_async (repo_dir, NULL, on_ready, NULL);
+	gtk_main ();
+	{
+		GHashTable *remotes = nolphin_git_remote_list_finish (pending_result, &error);
+		g_object_unref (pending_result);
+		if (remotes == NULL) {
+			fail (error ? error->message : "remote_list returned NULL with no error");
+			g_clear_error (&error);
+		} else if (g_strcmp0 (g_hash_table_lookup (remotes, "origin"),
+				      "https://example.invalid/test/repo.git") != 0 ||
+			   g_hash_table_size (remotes) != 1) {
+			fail ("remote_list does not show exactly origin -> the URL that was added");
+		} else {
+			g_print ("PASS: remote_list shows the existing remote with its URL\n");
+		}
+		if (remotes != NULL) {
+			g_hash_table_unref (remotes);
+		}
+	}
+
+	/* --- remote set-url: ändert die Adresse, unabhängig gegengeprüft --- */
+	pending_result = NULL;
+	nolphin_git_remote_set_url_async (repo_dir, "origin", "https://example.invalid/neu/repo.git", NULL, on_ready, NULL);
+	gtk_main ();
+	if (!nolphin_git_remote_set_url_finish (pending_result, &error)) {
+		fail (error ? error->message : "remote set-url failed with no error set");
+		g_clear_error (&error);
+	}
+	g_object_unref (pending_result);
+
+	pending_result = NULL;
+	nolphin_git_remote_list_async (repo_dir, NULL, on_ready, NULL);
+	gtk_main ();
+	{
+		GHashTable *remotes = nolphin_git_remote_list_finish (pending_result, &error);
+		g_object_unref (pending_result);
+		if (remotes == NULL ||
+		    g_strcmp0 (g_hash_table_lookup (remotes, "origin"), "https://example.invalid/neu/repo.git") != 0) {
+			fail ("remote set-url did not change the URL of origin");
+		} else {
+			g_print ("PASS: remote set-url really changed the address of an existing remote\n");
+		}
+		if (remotes != NULL) {
+			g_hash_table_unref (remotes);
+		}
+	}
+
+	/* --- set-url auf einen nicht vorhandenen Remote: echter Fehler --- */
+	pending_result = NULL;
+	nolphin_git_remote_set_url_async (repo_dir, "gibt-es-nicht", "https://example.invalid/x.git", NULL, on_ready, NULL);
+	gtk_main ();
+	if (nolphin_git_remote_set_url_finish (pending_result, &error)) {
+		fail ("set-url on a missing remote must fail");
+	} else {
+		g_print ("PASS: set-url on a missing remote fails with git's own error\n");
+		g_clear_error (&error);
+	}
+	g_object_unref (pending_result);
+
 	g_free (committed_path);
 	g_free (untracked_path);
 	g_free (tmpl);

@@ -121,6 +121,22 @@ void     nolphin_git_remote_add_async   (GFile *repo_root, const gchar *name, co
                                          GAsyncReadyCallback callback, gpointer user_data);
 gboolean nolphin_git_remote_add_finish  (GAsyncResult *result, GError **error);
 
+/* Liest die eingetragenen Remotes (`git remote -v`, jeweils die Fetch-
+ * Adresse). Ergebnis: GHashTable Name -> URL (beides gchar*, von der
+ * Tabelle besessen, mit g_hash_table_unref() freigeben). Leere Tabelle,
+ * wenn noch kein Remote eingetragen ist. */
+void        nolphin_git_remote_list_async  (GFile *repo_root,
+                                            GCancellable *cancellable,
+                                            GAsyncReadyCallback callback, gpointer user_data);
+GHashTable *nolphin_git_remote_list_finish (GAsyncResult *result, GError **error);
+
+/* `git remote set-url <name> <url>` - ändert die Adresse eines bereits
+ * vorhandenen Remotes (schlägt mit git's Meldung fehl, wenn es ihn nicht gibt). */
+void     nolphin_git_remote_set_url_async   (GFile *repo_root, const gchar *name, const gchar *url,
+                                             GCancellable *cancellable,
+                                             GAsyncReadyCallback callback, gpointer user_data);
+gboolean nolphin_git_remote_set_url_finish  (GAsyncResult *result, GError **error);
+
 /* Abgleichen (@apply = FALSE): `git fetch`, danach Vergleich mit dem
  * Server ("x lokal neu, y auf dem Server neu"), ohne etwas zu verändern.
  * Synchronisieren (@apply = TRUE): fetch, Pull und anschließend Push.

@@ -9005,29 +9005,67 @@ git_remote_add_ready_cb (GObject *source, GAsyncResult *result, gpointer user_da
     g_clear_error (&error);
 }
 
-typedef struct {
-    gchar *name;
-    gchar *url;
-} GitRemoteAddContext;
-
 static void
-git_remote_add_root_found_cb (GFile *repo_root, GFile *selected_file, gpointer user_data)
+git_remote_set_url_ready_cb (GObject *source, GAsyncResult *result, gpointer user_data)
 {
-    GitRemoteAddContext *ctx = user_data;
-    nolphin_git_remote_add_async (repo_root, ctx->name, ctx->url, NULL, git_remote_add_ready_cb, NULL);
-    g_free (ctx->name);
-    g_free (ctx->url);
-    g_free (ctx);
+    GError *error = NULL;
+    gboolean success = nolphin_git_remote_set_url_finish (result, &error);
+
+    send_archive_notification (_("Git: Remote-Adresse ändern"), success, error ? error->message : NULL);
+    g_clear_error (&error);
+}
+
+typedef struct {
+    NolphinView *view;
+    GFile       *repo_root;
+} GitRemoteDialogContext;
+
+/* Ändert die Adresse im URL-Feld, sobald der eingegebene Name ein schon
+ * eingetragener Remote ist, und zeigt dazu einen Hinweis an. */
+static void
+git_remote_name_changed_cb (GtkEditable *editable, gpointer user_data)
+{
+    GtkWidget *dialog = GTK_WIDGET (user_data);
+    GHashTable *remotes = g_object_get_data (G_OBJECT (dialog), "remotes");
+    GtkWidget *url_entry = g_object_get_data (G_OBJECT (dialog), "url-entry");
+    GtkWidget *hint = g_object_get_data (G_OBJECT (dialog), "hint");
+    const gchar *known_url = g_hash_table_lookup (remotes, gtk_entry_get_text (GTK_ENTRY (editable)));
+
+    if (known_url != NULL) {
+        gtk_entry_set_text (GTK_ENTRY (url_entry), known_url);
+        gtk_label_set_text (GTK_LABEL (hint),
+                            _("Dieser Remote ist schon eingetragen - beim Bestätigen wird seine Adresse geändert."));
+    } else {
+        gtk_label_set_text (GTK_LABEL (hint), _("Neuer Remote - er wird hinzugefügt."));
+    }
 }
 
 static void
-action_git_remote_add_callback (GtkAction *action, gpointer callback_data)
+git_remote_list_ready_cb (GObject *source, GAsyncResult *result, gpointer user_data)
 {
-    NolphinView *view = NOLPHIN_VIEW (callback_data);
-    GtkWidget *dialog, *grid, *name_label, *name_entry, *url_label, *url_entry;
+    GitRemoteDialogContext *ctx = user_data;
+    NolphinView *view = ctx->view;
+    GError *error = NULL;
+    GHashTable *remotes = nolphin_git_remote_list_finish (result, &error);
+    GtkWidget *dialog, *grid, *label, *name_entry, *url_entry, *hint, *existing;
+    GString *existing_text;
+    GHashTableIter iter;
+    gpointer key, value;
+    const gchar *first_name = "origin";
     int response;
 
-    dialog = gtk_dialog_new_with_buttons (_("Remote hinzufügen"),
+    if (remotes == NULL) {
+        GtkWidget *err = gtk_message_dialog_new (nolphin_view_get_containing_window (view),
+                                                 GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                 GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+                                                 "%s", error ? error->message : _("Unbekannter Fehler"));
+        gtk_dialog_run (GTK_DIALOG (err));
+        gtk_widget_destroy (err);
+        g_clear_error (&error);
+        goto out;
+    }
+
+    dialog = gtk_dialog_new_with_buttons (_("Remote hinzufügen oder ändern"),
                                           nolphin_view_get_containing_window (view),
                                           GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
                                           GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
@@ -9038,25 +9076,58 @@ action_git_remote_add_callback (GtkAction *action, gpointer callback_data)
     grid = gtk_grid_new ();
     g_object_set (grid, "border-width", 12, "row-spacing", 8, "column-spacing", 12, NULL);
 
-    name_label = gtk_label_new (_("Name:"));
-    gtk_widget_set_halign (name_label, GTK_ALIGN_START);
-    gtk_grid_attach (GTK_GRID (grid), name_label, 0, 0, 1, 1);
+    existing_text = g_string_new (NULL);
+    g_hash_table_iter_init (&iter, remotes);
+    while (g_hash_table_iter_next (&iter, &key, &value)) {
+        g_string_append_printf (existing_text, "%s  →  %s\n", (const gchar *) key, (const gchar *) value);
+        if (g_hash_table_contains (remotes, "origin") == FALSE) {
+            first_name = key;
+        }
+    }
+    if (existing_text->len == 0) {
+        g_string_assign (existing_text, _("Noch kein Remote eingetragen."));
+    } else {
+        g_string_truncate (existing_text, existing_text->len - 1);
+    }
+
+    label = gtk_label_new (_("Eingetragen:"));
+    gtk_widget_set_halign (label, GTK_ALIGN_START);
+    gtk_widget_set_valign (label, GTK_ALIGN_START);
+    gtk_grid_attach (GTK_GRID (grid), label, 0, 0, 1, 1);
+    existing = gtk_label_new (existing_text->str);
+    gtk_label_set_selectable (GTK_LABEL (existing), TRUE);
+    gtk_widget_set_halign (existing, GTK_ALIGN_START);
+    gtk_grid_attach (GTK_GRID (grid), existing, 1, 0, 1, 1);
+    g_string_free (existing_text, TRUE);
+
+    label = gtk_label_new (_("Name:"));
+    gtk_widget_set_halign (label, GTK_ALIGN_START);
+    gtk_grid_attach (GTK_GRID (grid), label, 0, 1, 1, 1);
     name_entry = gtk_entry_new ();
-    gtk_entry_set_text (GTK_ENTRY (name_entry), "origin");
     gtk_entry_set_activates_default (GTK_ENTRY (name_entry), TRUE);
     gtk_widget_set_hexpand (name_entry, TRUE);
-    gtk_widget_set_size_request (name_entry, 360, -1);
-    gtk_grid_attach (GTK_GRID (grid), name_entry, 1, 0, 1, 1);
+    gtk_widget_set_size_request (name_entry, 420, -1);
+    gtk_grid_attach (GTK_GRID (grid), name_entry, 1, 1, 1, 1);
 
-    url_label = gtk_label_new (_("URL:"));
-    gtk_widget_set_halign (url_label, GTK_ALIGN_START);
-    gtk_grid_attach (GTK_GRID (grid), url_label, 0, 1, 1, 1);
+    label = gtk_label_new (_("URL:"));
+    gtk_widget_set_halign (label, GTK_ALIGN_START);
+    gtk_grid_attach (GTK_GRID (grid), label, 0, 2, 1, 1);
     url_entry = gtk_entry_new ();
-    gtk_entry_set_placeholder_text (GTK_ENTRY (url_entry),
-                                    "https://github.com/user/repo.git");
+    gtk_entry_set_placeholder_text (GTK_ENTRY (url_entry), "https://github.com/user/repo.git");
     gtk_entry_set_activates_default (GTK_ENTRY (url_entry), TRUE);
     gtk_widget_set_hexpand (url_entry, TRUE);
-    gtk_grid_attach (GTK_GRID (grid), url_entry, 1, 1, 1, 1);
+    gtk_grid_attach (GTK_GRID (grid), url_entry, 1, 2, 1, 1);
+
+    hint = gtk_label_new ("");
+    gtk_widget_set_halign (hint, GTK_ALIGN_START);
+    gtk_grid_attach (GTK_GRID (grid), hint, 1, 3, 1, 1);
+
+    g_object_set_data (G_OBJECT (dialog), "remotes", remotes);
+    g_object_set_data (G_OBJECT (dialog), "url-entry", url_entry);
+    g_object_set_data (G_OBJECT (dialog), "hint", hint);
+    g_signal_connect (name_entry, "changed", G_CALLBACK (git_remote_name_changed_cb), dialog);
+    /* löst das erste Befüllen von URL-Feld und Hinweis über den Handler aus */
+    gtk_entry_set_text (GTK_ENTRY (name_entry), first_name);
 
     gtk_widget_show_all (grid);
     gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), grid);
@@ -9066,16 +9137,43 @@ action_git_remote_add_callback (GtkAction *action, gpointer callback_data)
     if (response == GTK_RESPONSE_OK) {
         const gchar *name = gtk_entry_get_text (GTK_ENTRY (name_entry));
         const gchar *url = gtk_entry_get_text (GTK_ENTRY (url_entry));
+
         if (name[0] != '\0' && url[0] != '\0') {
-            GitRemoteAddContext *ctx = g_new0 (GitRemoteAddContext, 1);
-            ctx->name = g_strdup (name);
-            ctx->url = g_strdup (url);
-            gtk_widget_destroy (dialog);
-            git_resolve_repo_root (view, git_remote_add_root_found_cb, ctx);
-            return;
+            if (g_hash_table_contains (remotes, name)) {
+                nolphin_git_remote_set_url_async (ctx->repo_root, name, url, NULL,
+                                                  git_remote_set_url_ready_cb, NULL);
+            } else {
+                nolphin_git_remote_add_async (ctx->repo_root, name, url, NULL,
+                                              git_remote_add_ready_cb, NULL);
+            }
         }
     }
     gtk_widget_destroy (dialog);
+    g_hash_table_unref (remotes);
+
+out:
+    g_object_unref (ctx->repo_root);
+    g_object_unref (ctx->view);
+    g_free (ctx);
+}
+
+static void
+git_remote_root_found_cb (GFile *repo_root, GFile *selected_file, gpointer user_data)
+{
+    GitRemoteDialogContext *ctx = user_data;
+
+    ctx->repo_root = g_object_ref (repo_root);
+    nolphin_git_remote_list_async (repo_root, NULL, git_remote_list_ready_cb, ctx);
+}
+
+static void
+action_git_remote_add_callback (GtkAction *action, gpointer callback_data)
+{
+    NolphinView *view = NOLPHIN_VIEW (callback_data);
+    GitRemoteDialogContext *ctx = g_new0 (GitRemoteDialogContext, 1);
+
+    ctx->view = g_object_ref (view);
+    git_resolve_repo_root (view, git_remote_root_found_cb, ctx);
 }
 
 /* §35 METADATEN UND TAGS: Benutzerdefinierte Tags/Emblems teilen sich den
@@ -10534,7 +10632,7 @@ static const GtkActionEntry directory_view_entries[] = {
   /* tooltip */                  N_("Ein Repository (z. B. von GitHub) in den aktuellen Ordner herunterladen"),
                  G_CALLBACK (action_git_clone_callback) },
   /* name, stock id */         { NOLPHIN_ACTION_GIT_REMOTE_ADD, NULL,
-  /* label, accelerator */       N_("_Remote hinzufügen …"), NULL,
+  /* label, accelerator */       N_("_Remote hinzufügen/ändern …"), NULL,
   /* tooltip */                  N_("Ein entferntes Repository (z. B. auf GitHub) für Pull/Push eintragen"),
                  G_CALLBACK (action_git_remote_add_callback) },
   /* name, stock id, label */  { NOLPHIN_ACTION_METADATA_MENU, NULL, N_("Me_tadaten") },

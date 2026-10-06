@@ -783,6 +783,137 @@ nolphin_git_remote_add_finish (GAsyncResult *result, GError **error)
     return g_task_propagate_boolean (G_TASK (result), error);
 }
 
+static void
+remote_list_communicate_cb (GObject *source, GAsyncResult *result, gpointer user_data)
+{
+    GTask *task = user_data;
+    GError *error = NULL;
+    gchar *stdout_buf = NULL, *stderr_buf = NULL;
+    GHashTable *table;
+    gchar **lines;
+    guint i;
+
+    if (!g_subprocess_communicate_utf8_finish (G_SUBPROCESS (source), result, &stdout_buf, &stderr_buf, &error)) {
+        g_task_return_error (task, error);
+        g_object_unref (task);
+        return;
+    }
+
+    if (!g_subprocess_get_successful (G_SUBPROCESS (source))) {
+        gchar *detail = stderr_buf != NULL ? g_strstrip (g_strdup (stderr_buf)) : NULL;
+        g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED,
+                                 "%s%s%s", _("git wurde mit einem Fehler beendet."),
+                                 (detail && detail[0]) ? "\n" : "", detail ? detail : "");
+        g_free (detail);
+        g_free (stdout_buf);
+        g_free (stderr_buf);
+        g_object_unref (task);
+        return;
+    }
+
+    table = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+    lines = g_strsplit (stdout_buf != NULL ? stdout_buf : "", "\n", -1);
+    for (i = 0; lines[i] != NULL; i++) {
+        /* "name<TAB>url (fetch)" - nur die Fetch-Zeile zählt */
+        gchar *tab = strchr (lines[i], '\t');
+        gchar *end;
+        if (tab == NULL || !g_str_has_suffix (lines[i], " (fetch)")) {
+            continue;
+        }
+        end = lines[i] + strlen (lines[i]) - strlen (" (fetch)");
+        *end = '\0';
+        *tab = '\0';
+        g_hash_table_replace (table, g_strdup (lines[i]), g_strdup (tab + 1));
+    }
+    g_strfreev (lines);
+
+    g_task_return_pointer (task, table, (GDestroyNotify) g_hash_table_unref);
+    g_object_unref (task);
+    g_free (stdout_buf);
+    g_free (stderr_buf);
+}
+
+void
+nolphin_git_remote_list_async (GFile *repo_root, GCancellable *cancellable,
+                               GAsyncReadyCallback callback, gpointer user_data)
+{
+    GTask *task;
+    gchar *repo_path;
+    GSubprocess *subprocess;
+    GError *error = NULL;
+
+    g_return_if_fail (G_IS_FILE (repo_root));
+
+    task = g_task_new (NULL, cancellable, callback, user_data);
+    g_task_set_source_tag (task, nolphin_git_remote_list_async);
+
+    repo_path = require_repo_path (repo_root, task);
+    if (repo_path == NULL) {
+        return;
+    }
+
+    subprocess = spawn_git (repo_path, G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
+                            &error, "remote", "-v", NULL);
+    g_free (repo_path);
+
+    if (subprocess == NULL) {
+        g_task_return_error (task, error);
+        g_object_unref (task);
+        return;
+    }
+
+    g_subprocess_communicate_utf8_async (subprocess, NULL, cancellable, remote_list_communicate_cb, task);
+    g_object_unref (subprocess);
+}
+
+GHashTable *
+nolphin_git_remote_list_finish (GAsyncResult *result, GError **error)
+{
+    return g_task_propagate_pointer (G_TASK (result), error);
+}
+
+void
+nolphin_git_remote_set_url_async (GFile *repo_root, const gchar *name, const gchar *url,
+                                  GCancellable *cancellable,
+                                  GAsyncReadyCallback callback, gpointer user_data)
+{
+    GTask *task;
+    gchar *repo_path;
+    GSubprocess *subprocess;
+    GError *error = NULL;
+
+    g_return_if_fail (G_IS_FILE (repo_root));
+    g_return_if_fail (name != NULL && name[0] != '\0');
+    g_return_if_fail (url != NULL && url[0] != '\0');
+
+    task = g_task_new (NULL, cancellable, callback, user_data);
+    g_task_set_source_tag (task, nolphin_git_remote_set_url_async);
+
+    repo_path = require_repo_path (repo_root, task);
+    if (repo_path == NULL) {
+        return;
+    }
+
+    subprocess = spawn_git (repo_path, G_SUBPROCESS_FLAGS_STDERR_PIPE | G_SUBPROCESS_FLAGS_STDOUT_SILENCE,
+                            &error, "remote", "set-url", name, url, NULL);
+    g_free (repo_path);
+
+    if (subprocess == NULL) {
+        g_task_return_error (task, error);
+        g_object_unref (task);
+        return;
+    }
+
+    g_subprocess_communicate_utf8_async (subprocess, NULL, cancellable, simple_bool_communicate_cb, task);
+    g_object_unref (subprocess);
+}
+
+gboolean
+nolphin_git_remote_set_url_finish (GAsyncResult *result, GError **error)
+{
+    return g_task_propagate_boolean (G_TASK (result), error);
+}
+
 /* Führt git synchron aus (nur aus einem Worker-Thread aufrufen). */
 static gboolean
 git_run_blocking (const gchar *repo_path, gchar **out, gchar **err_text, ...)
