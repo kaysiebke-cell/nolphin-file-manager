@@ -329,14 +329,24 @@ on_search_changed (GtkSearchEntry *entry, gpointer user_data)
 	if (selected == NULL || !gtk_widget_get_child_visible (GTK_WIDGET (selected)) ||
 	    !topic_filter (selected, d)) {
 		guint i;
+		gboolean found = FALSE;
 
 		for (i = 0; i < d->topics->len; i++) {
 			GtkListBoxRow *row = gtk_list_box_get_row_at_index (GTK_LIST_BOX (d->list), i);
 
 			if (row != NULL && topic_filter (row, d)) {
 				gtk_list_box_select_row (GTK_LIST_BOX (d->list), row);
+				found = TRUE;
 				break;
 			}
+		}
+		if (!found) {
+			gchar *msg = g_strdup_printf (_("# Keine Treffer\n\nZu „%s“ gibt es kein Hilfethema. Versuchen Sie ein anderes Stichwort oder leeren Sie das Suchfeld."),
+						      gtk_entry_get_text (GTK_ENTRY (d->search)));
+
+			gtk_list_box_unselect_all (GTK_LIST_BOX (d->list));
+			nolphin_markdown_view_set_text (d->view, msg);
+			g_free (msg);
 		}
 	}
 }
