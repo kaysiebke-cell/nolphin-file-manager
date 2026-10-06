@@ -43,6 +43,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 ## Highlights
 
 * **Rechter Arbeitsbereich (F11):** ein fester Bereich für Vorschau, Eigenschaften, Archive, Terminal, Git, DEB-Ersteller, Massenumbenennung und die Werkzeuge unten – ohne zusätzliche Fenster.
+* **GID-Projekte:** lokale Projektordner in der Seitenleiste; ein Klick zeigt die `README.md` des Projekts rechts im Arbeitsbereich – im Aussehen von GitHub, mit Tabellen, Aufgabenlisten, Bildern und aufklappbaren Abschnitten. Alles bleibt lokal.
 * **Vorschau mit Medieninfos:** Bilder, **PDF** (Titel, Autor, Seiten, Seitengröße), **Video** und **Audio** (Dauer, Codec, Auflösung, Bildrate, Kanäle).
 * **Metadaten:** **Bewertung (Sterne), Tags und Kommentar** direkt im Info-Panel.
 * **Git direkt im Dateimanager:** Overlay-Symbole an den Dateien (hinzugefügt, geändert, unversioniert), Panel für Status, Speichern, Server-Abgleich, Verlauf und Unterschiede.
@@ -72,7 +73,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 │ Orte         │ Dateien und Ordner       │   Vorschau (Ruhelage)  │
 │              │                          │   Eigenschaften        │
 │              │                          │   Archiv               │
-│              │                          │   Terminal             │
+│ GID-Projekte │                          │   Terminal             │
 │              │                          │   Suche                │
 │              │                          │   Git                  │
 │              │                          │   DEB-Ersteller        │
@@ -83,6 +84,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 │              │                          │   Duplikate, Versionen │
 │              │                          │   Synchronisation      │
 │              │                          │   Regeln               │
+│              │                          │   GID-Projekt (README) │
 ├──────────────┴──────────────────────────┴────────────────────────┤
 │ Statusleiste                                                     │
 └──────────────────────────────────────────────────────────────────┘
@@ -105,6 +107,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 | Versionen | Bearbeiten ▸ Werkzeuge ▸ Versionen | Versionen einer Datei speichern, vergleichen, wiederherstellen |
 | Synchronisation | Bearbeiten ▸ Werkzeuge | Zwei Ordner vergleichen und abgleichen |
 | Regeln | Bearbeiten ▸ Werkzeuge | Bedingung und Aktion mit Vorschau auf einen Ordner anwenden |
+| GID-Projekt | Seitenleiste „GID-Projekte“, Gehe zu ▸ GID-Projekte | `README.md` des gewählten Projekts im Aussehen von GitHub |
 
 Ein Panel wird im Arbeitsbereich wiederverwendet und öffnet kein zusätzliches Fenster. Klassische Dialoge gibt es weiterhin für Dateiauswahl, Lösch- und Überschreibbestätigungen, Fehlermeldungen, Mount-Zugangsdaten und „Über Nolphin“.
 
@@ -185,6 +188,14 @@ Im Ordner selbst zeigen **Overlay-Symbole** den Git-Status jeder Datei (Häkchen
 
 ![Diagnose-Panel mit Systeminformationen und gefundenen Werkzeugen](docs/bilder/panel-diagnose.png)
 
+**GID-Projekte** – lokale Projektordner unten in der Seitenleiste (mit Git-Branch), rechts die `README.md` des gewählten Projekts im Aussehen von GitHub: Überschriften mit Linie, Tabellen, Aufgabenlisten, Zitate, Bilder, Codeblöcke und aufklappbare Abschnitte:
+
+![Seitenleiste mit drei GID-Projekten und rechts die README des Projekts „webseite“ mit Tabelle, Aufgabenliste, Bild und Codeblock](docs/bilder/gid-projekte.png)
+
+| Gehe zu ▸ GID-Projekte | Kontextmenü eines Projekts |
+| --- | --- |
+| ![Menü Gehe zu mit dem Untermenü GID-Projekte und der Projektliste](docs/bilder/menue-gid-projekte.png) | ![Kontextmenü eines GID-Projekts: README anzeigen, Im Dateimanager öffnen, Aus GID-Projekten entfernen, Projekt hinzufügen](docs/bilder/gid-kontextmenue.png) |
+
 ---
 
 ## Funktionen im Detail
@@ -239,6 +250,15 @@ Die Schlüsselwörter gelten unabhängig von der Groß-/Kleinschreibung; ein Beg
 * **Geteilte Ansicht:** bis zu vier Bereiche, Aufteilung waagerecht oder senkrecht, Bereiche duplizieren, maximieren und schließen.
 * **Arbeitsbereiche:** speichern Reiter, Teilung, Fenstergröße und Panels unter einem Namen; Laden, Duplizieren und Löschen im Panel. Beim Beenden merkt sich Nolphin die letzte Sitzung.
 * **Gehe zu:** Verlauf, häufig verwendete Orte und Reiter; „Zwischenablage als Datei einfügen“ im Bearbeiten-Menü.
+
+### GID-Projekte
+
+* **Projektliste:** Der Bereich „GID-Projekte“ sitzt unter Orte bzw. Ordnerbaum und lässt sich über Ansicht ▸ Seitenleiste ▸ „GID-Projekte anzeigen“ ein- und ausblenden. Jedes Projekt ist ein lokaler Ordner, bei einem Git-Repository steht der aktuelle Branch daneben (aus `.git/HEAD` gelesen, ohne `git`).
+* **Hinzufügen und Entfernen:** „Projekt hinzufügen …“ in der Seitenleiste, Gehe zu ▸ GID-Projekte oder im Kontextmenü eines Ordners „Als GID-Projekt hinzufügen“. Entfernen nimmt nur den Eintrag aus der Liste und löscht nie Dateien. Ein nicht mehr vorhandener Ordner wird markiert, nicht gelöscht.
+* **README im Arbeitsbereich:** Ein Klick auf ein Projekt zeigt dessen `README.md` (auch `README.markdown`) als gerenderten, markier- und kopierbaren Text. Fehlt die README, steht dort ein klarer Hinweis. Links ins Projekt öffnen den Ordner in der Hauptansicht, Web-Links den Browser.
+* **Darstellung wie bei GitHub:** Überschriften mit Linie, Tabellen (Ausrichtung, Streifen, bei Bedarf waagerecht scrollbar), Aufgabenlisten mit Kästchen, Zitate, Code, Trennlinien, Fett, Kursiv, Durchgestrichen. Die Farben kommen aus dem aktiven GTK-Theme, hell wie dunkel.
+* **HTML wie auf GitHub:** `<p>`, `<div>` und `<center>` mit Ausrichtung, `<h1>` bis `<h6>`, `<details>` mit `<summary>` (zugeklappt, per Klick aufklappbar), `<kbd>`, `<sub>`, `<sup>`, `<br>` und `<img>` mit Breite.
+* **Bilder nur lokal:** Bilder aus dem Projektordner werden angezeigt und an die Panelbreite angepasst. Bilder von Webseiten lädt Nolphin bewusst nie, sie erscheinen als Alternativtext. Es gibt keinen Netzwerkzugriff.
 
 ### Diagnose
 
@@ -311,6 +331,7 @@ Nolphin ist Entwicklungssoftware: Funktionen können sich ändern.
 * [x] Synchronisation (`rsync`), Regeln, Duplikaterkennung, Versionierung
 * [x] Diagnose mit Protokoll, Systeminformationen, Plugin-Status und Fehlerbericht
 * [x] Einstellungen exportieren, importieren, zurücksetzen
+* [x] GID-Projekte: lokale Projektliste in der Seitenleiste, README im Arbeitsbereich im Aussehen von GitHub (Tabellen, Aufgabenlisten, lokale Bilder, HTML-Teilmenge)
 
 ### Geplant und bekannte Grenzen
 
@@ -319,23 +340,19 @@ Nolphin ist Entwicklungssoftware: Funktionen können sich ändern.
 * [ ] PDF und Medien direkt über Poppler-GLib und GStreamer-Bibliotheken statt über Kommandozeilenwerkzeuge (braucht Entwicklungspakete)
 * [ ] Vollständige Übersetzung aller Einstellungstexte prüfen
 * [ ] Tests und Dokumentation für die Werkzeuge (Sync, Regeln, Duplikate, Versionen) und die Fensterfunktionen
+* [ ] GID-Projekte: HTML-`<table>` und `<picture>` mit mehreren Quellen werden nicht gerendert, `<details>` lässt sich noch nicht mit der Tastatur bedienen; Bilder aus dem Netz werden bewusst nie geladen
 
 Regeln werden laut Vertrag nur manuell auf einen gewählten Ordner angewendet; ein automatisches Auslösen ist deshalb nicht vorgesehen. Überlagerungen für SVN und Mercurial stehen nicht im Vertrag und sind nicht geplant.
 
 ### Teststand
 
-`meson test -C build` (Stand: 5. Oktober 2026): **alle 20 Tests bestehen.**
+`meson test -C build` (Stand: 6. Oktober 2026): **alle 22 Tests bestehen.**
 
-Die drei bisher offenen Tests (Copy, Search Engine, Directory Async) waren Demo-Programme aus dem Nemo-Ursprung, die Argumente erwarteten oder endlos liefen. Sie sind jetzt echte Tests: Kopieren in einen Temp-Ordner, Namensuche mit den Operatoren und Laden eines Ordners samt neuer Datei.
+Neu sind der Test des Markdown-Renderers (Tabellen, Aufgabenlisten, Listenebenen, Überschriften, HTML-Teilmenge, Entities, lokale Bilder) und der Test der Projektliste der GID-Projekte (Hinzufügen, Entfernen, Branch-Erkennung).
 
-Die Tests brauchen eine laufende grafische Sitzung (GTK). Für die Werkzeuge Sync, Regeln, Duplikate und Versionen sowie die Fensterfunktionen gibt es noch keine automatischen Tests.
+Die drei Tests Copy, Search Engine und Directory Async waren Demo-Programme aus dem Nemo-Ursprung, die Argumente erwarteten oder endlos liefen. Sie sind jetzt echte Tests: Kopieren in einen Temp-Ordner, Namensuche mit den Operatoren und Laden eines Ordners samt neuer Datei.
 
----- | -------- |
-| Copy test | Fehler |
-| Search Engine test | Timeout nach 30 s |
-| Directory Async test | Timeout nach 30 s |
-
-Diese drei Punkte sind offen und nicht als erledigt zu betrachten.
+Die Tests brauchen eine laufende grafische Sitzung (GTK). Ohne Barrierefreiheits-Bus, etwa in einer reinen Shell-Sitzung, bricht der Eel-Test wegen einer Warnung ab; mit `NO_AT_BRIDGE=1 meson test -C build` läuft er durch. Für die Werkzeuge Sync, Regeln, Duplikate und Versionen sowie die Fensterfunktionen gibt es noch keine automatischen Tests.
 
 ---
 
@@ -363,6 +380,7 @@ Diese drei Punkte sind offen und nicht als erledigt zu betrachten.
 | Diagnose-Panel mit Fehlerbericht | – | ✓ |
 | Einstellungen exportieren und importieren | – | ✓ |
 | Suche mit UND, ODER, NICHT, exakt | – | ✓ |
+| GID-Projekte: README im Arbeitsbereich | – | ✓ |
 
 ---
 
