@@ -31,14 +31,19 @@ Auch in Nolphins eigenen Auswahldialogen (z. B. beim Hinzufügen von Dateien zu 
 
 ### In anderen Programmen (zum Beispiel beim Hochladen)
 
-Dieselbe Vorschau lässt sich auch den Auswahldialogen **anderer GTK-Programme** hinzufügen, etwa Chrome beim Hochladen. Dazu gehört das Zusatzmodul `nolphin-preview-module`, das mit dem Paket kommt. Es ist zunächst **aus** und wird für Ihren Benutzer so eingeschaltet:
+Dieselbe Vorschau lässt sich auch den Auswahldialogen **anderer GTK-Programme** hinzufügen, etwa Chrome beim Hochladen. Dazu gehört das Zusatzmodul `nolphin-preview-module`, das mit dem Paket kommt. Es ist zunächst **aus**. Auf **Cinnamon (Linux Mint)** schalten Sie es für Ihren Benutzer mit dieser Einstellung ein:
 
 ```
-mkdir -p ~/.config/gtk-3.0
-printf '[Settings]\ngtk-modules=nolphin-preview-module\n' >> ~/.config/gtk-3.0/settings.ini
+gsettings set org.cinnamon.settings-daemon.plugins.xsettings enabled-gtk-modules "['nolphin-preview-module']"
 ```
 
-Gilt erst nach einem **Neustart der Programme**. Hat die Datei `settings.ini` schon einen Abschnitt `[Settings]` oder eine Zeile `gtk-modules=`, tragen Sie `nolphin-preview-module` dort hinzu (mehrere Module werden mit Doppelpunkt getrennt). Zum Ausschalten entfernen Sie den Eintrag wieder.
+Die Einstellung gilt für Programme, die **danach neu gestartet** werden (Chrome, Editoren …). Der Dateiauswahl-Dienst des Systems (`xdg-desktop-portal-gtk`) wird beim Abmelden und Anmelden neu gestartet, dann zeigen auch Dialoge, die er für andere Programme öffnet, die Vorschau. Enthält die Liste schon andere Module, tragen Sie `nolphin-preview-module` zusätzlich ein, statt sie zu ersetzen. Zum Ausschalten setzen Sie sie auf den vorherigen Wert zurück (meist `[]`):
+
+```
+gsettings reset org.cinnamon.settings-daemon.plugins.xsettings enabled-gtk-modules
+```
+
+Auf anderen Desktops mit GTK 3 genügt die Zeile `gtk-modules=nolphin-preview-module` im Abschnitt `[Settings]` von `~/.config/gtk-3.0/settings.ini`; unter Cinnamon überstimmt die Desktop-Einstellung sie.
 
 > **Hinweis:** Nur Dialoge zum **Öffnen von Dateien** bekommen die Vorschau; Ordner- und Speichern-Dialoge bleiben unverändert, ebenso Dialoge, die schon eine eigene Vorschau haben. Programme, die nicht den GTK-3-Dialog nutzen (zum Beispiel solche mit eigener Oberfläche), sind nicht betroffen.
 
