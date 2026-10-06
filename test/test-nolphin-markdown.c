@@ -80,6 +80,89 @@ expect_text (GtkTextBuffer *buffer, const gchar *markdown, const gchar *expected
 	g_free (text);
 }
 
+static gchar *
+anchor_at (GtkTextBuffer *buffer, gint offset)
+{
+	GtkTextIter it;
+	GtkTextChildAnchor *anchor;
+
+	gtk_text_buffer_get_iter_at_offset (buffer, &it, offset);
+	anchor = gtk_text_iter_get_child_anchor (&it);
+	return anchor != NULL ? nolphin_markdown_anchor_describe (anchor) : NULL;
+}
+
+static void
+expect_anchor (GtkTextBuffer *buffer, const gchar *markdown, gint offset, const gchar *expected, const gchar *label)
+{
+	gchar *d;
+
+	nolphin_markdown_render_to_buffer (buffer, markdown);
+	d = anchor_at (buffer, offset);
+	if (g_strcmp0 (d, expected) != 0) {
+		gchar *msg = g_strdup_printf ("%s: erwartet \"%s\", erhalten \"%s\"", label,
+					      expected != NULL ? expected : "(kein Anker)",
+					      d != NULL ? d : "(kein Anker)");
+		fail (msg);
+		g_free (msg);
+	}
+	g_free (d);
+}
+
+/* Tabellen, Aufgabenlisten, Listenebenen, Überschriften (GitHub-Darstellung). */
+static void
+test_github_layout (GtkTextBuffer *buffer)
+{
+	gchar *text;
+
+	/* Tabelle mit Ausrichtung und Inline-Markdown in den Zellen */
+	expect_anchor (buffer, "| A | B | C |\n|:--|:-:|--:|\n| 1 | **2** | `3` |\n| x | y | z |",
+		       0, "table:3x3:l,c,r:A|B|C/1|<b>2</b>|<tt>3</tt>/x|y|z", "Tabelle mit Ausrichtung");
+	expect_anchor (buffer, "A | B\n--|--\n1 | 2", 0, "table:2x2:l,l:A|B/1|2", "Tabelle ohne äußere Striche");
+	expect_anchor (buffer, "| A | B |\n|---|---|\n| nur eine |", 0, "table:2x2:l,l:A|B/nur eine|", "kurze Zeile wird aufgefüllt");
+	expect_anchor (buffer, "| A | B |\n|---|---|\n| 1 | 2 | 3 |", 0, "table:2x2:l,l:A|B/1|2", "überzählige Zelle entfällt");
+	expect_anchor (buffer, "| a \\| b | c |\n|---|---|\n| 1 | 2 |", 0, "table:2x2:l,l:a | b|c/1|2", "maskierter Strich");
+	expect_anchor (buffer, "| [x](https://e.org) |\n|---|\n| 1 |", 0,
+		       "table:2x1:l:<a href=\"https://e.org\">x</a>/1", "Link in Zelle");
+	expect_anchor (buffer, "| A | B |\n|---|\n| 1 | 2 |", 0, NULL, "ungleiche Spaltenzahl ist keine Tabelle");
+	expect_text (buffer, "Text\n\n| A |\n|---|\n| 1 |\n\nDanach", "Text\n\xEF\xBF\xBC\nDanach\n", "Tabelle zwischen Absätzen");
+
+	/* Aufgabenliste */
+	expect_anchor (buffer, "- [x] fertig", 0, "check:1", "angehaktes Kästchen");
+	expect_anchor (buffer, "- [ ] offen", 0, "check:0", "leeres Kästchen");
+	expect_text (buffer, "- [x] mit **Text**", "\xEF\xBF\xBC mit Text\n", "Kästchen mit Hervorhebung");
+
+	/* Listenebenen unabhängig von der Einrückungstiefe */
+	expect_text (buffer, "- a\n    - b\n        - c\n- d", "• a\n◦ b\n▪ c\n• d\n", "Ebenen bei 4 Leerzeichen");
+	expect_text (buffer, "- a\n  - b\n- c", "• a\n◦ b\n• c\n", "Ebenen bei 2 Leerzeichen");
+	expect_text (buffer, "- a\n\nAbsatz\n\n- b", "• a\nAbsatz\n• b\n", "Absatz beendet die Liste");
+
+	/* Überschriften H1..H6 */
+	nolphin_markdown_render_to_buffer (buffer, "# a\n## b\n### c\n#### d\n##### e\n###### f");
+	text = buffer_text (buffer);
+	{
+		const gchar *names[] = { "h1", "h2", "h3", "h4", "h5", "h6" };
+		const gchar *needles[] = { "a\n", "b\n", "c\n", "d\n", "e\n", "f\n" };
+		guint k;
+
+		for (k = 0; k < 6; k++)
+			if (!has_tag_at (buffer, text, needles[k], names[k])) {
+				gchar *msg = g_strdup_printf ("Überschrift %s ohne Tag", names[k]);
+				fail (msg);
+				g_free (msg);
+			}
+	}
+	g_free (text);
+
+	/* Code: Zeilen tragen codeblock, erste/letzte die Abstands-Tags */
+	nolphin_markdown_render_to_buffer (buffer, "```\neins\nzwei\ndrei\n```");
+	text = buffer_text (buffer);
+	if (!has_tag_at (buffer, text, "eins", "code-first") || has_tag_at (buffer, text, "zwei", "code-first") ||
+	    has_tag_at (buffer, text, "zwei", "code-last") || !has_tag_at (buffer, text, "drei", "code-last") ||
+	    !has_tag_at (buffer, text, "zwei", "codeblock"))
+		fail ("Codeblock: erste/letzte Zeile falsch getaggt");
+	g_free (text);
+}
+
 /* Bilder (§60.3): lokale Bilder innerhalb des Basisordners werden zu
  * Ankern, alles andere bleibt Alternativtext. */
 static void
@@ -217,8 +300,12 @@ main (int argc, char **argv)
 		fail ("Code-Zaun im Text übrig");
 	if (strstr (text, "Zitat\n") == NULL || !has_tag_at (buffer, text, "Zitat", "quote"))
 		fail ("Zitat fehlt oder ohne quote-Tag");
-	if (strstr (text, "\xEF\xBF\xBC\n") == NULL)
-		fail ("horizontale Linie (Anker) fehlt");
+	{
+		const gchar *hr_pos = strstr (text, "Zitat\n\n");
+
+		if (hr_pos == NULL || !has_tag_at (buffer, text, hr_pos + strlen ("Zitat\n"), "hr"))
+			fail ("horizontale Linie: Leerzeile mit hr-Tag fehlt");
+	}
 	if (g_strcmp0 (href_at (buffer, text, "https://example.org/auto"), "https://example.org/auto") != 0)
 		fail ("automatische URL nicht verlinkt (oder Satzpunkt im Ziel)");
 	g_free (text);
@@ -237,14 +324,15 @@ main (int argc, char **argv)
 	expect_text (buffer, "<!-- weg -->\nsichtbar", "sichtbar\n", "HTML-Kommentar");
 	expect_text (buffer, "<p align=\"center\">Mitte</p>", "Mitte\n", "HTML-Tags entfallen");
 	expect_text (buffer, "![Logo](x.png)", "Logo\n", "Bild als Alternativtext");
-	expect_text (buffer, "- [ ] offen\n- [x] fertig", "☐ offen\n☑ fertig\n", "Aufgabenliste");
+	expect_text (buffer, "- [ ] offen\n- [x] fertig", "\xEF\xBF\xBC offen\n\xEF\xBF\xBC fertig\n", "Aufgabenliste");
 	expect_text (buffer, "ungeschlossen **fett", "ungeschlossen **fett\n", "ungeschlossene Hervorhebung");
 	expect_text (buffer, "```\nnie geschlossen", "nie geschlossen\n", "ungeschlossener Codeblock");
-	expect_text (buffer, "| a | b |\n|---|---|\n| 1 | 2 |", "| a | b |\n|---|---|\n| 1 | 2 |\n", "Tabelle als Text");
+	expect_text (buffer, "| a | b |\n|---|---|\n| 1 | 2 |", "\xEF\xBF\xBC\n", "Tabelle ist ein Anker");
 	expect_text (buffer, "[![Badge](b.svg)](https://example.org)", "Badge\n", "Bild-Link");
 	expect_text (buffer, "ä **ö** ü", "ä ö ü\n", "UTF-8");
 
 	test_images (buffer);
+	test_github_layout (buffer);
 
 	g_object_unref (buffer);
 	if (exit_code == 0)

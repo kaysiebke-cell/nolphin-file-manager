@@ -1583,7 +1583,8 @@ Lokale Projektordner werden im Aufbau von GitHub dargestellt: links die Projektl
 ### 60.3 Arbeitsbereich
 
 - Neues Panel `NOLPHIN_PANEL_GID` in der Panel-Engine (58.1.4), als `GtkWidget`, nicht als Dialog oder Fenster.
-- Bei Auswahl eines Projekts zeigt es dessen `README.md` als gerenderten Markdown-Text in einem GtkTextView (eigene Umsetzung mit GtkTextTags, keine neue Bibliothek); Text ist markier- und kopierbar. Der Renderer unterstützt mindestens Überschriften, Absätze, Listen, Code, Zitate, Hervorhebungen, Links und lokale Bilder; nicht unterstützte Elemente werden als Klartext angezeigt.
+- Bei Auswahl eines Projekts zeigt es dessen `README.md` als gerenderten Markdown-Text in einem GtkTextView (eigene Umsetzung mit GtkTextTags, keine neue Bibliothek); Text ist markier- und kopierbar. Der Renderer unterstützt Überschriften, Absätze, Listen, Aufgabenlisten, Tabellen, Code, Zitate, Hervorhebungen, Links, Trennlinien und lokale Bilder; nicht unterstützte Elemente werden als Klartext angezeigt.
+- Darstellung nach GitHub-Vorbild (Maße gemessen an github.com und abgeglichen mit github-markdown-css, Farben aus dem aktiven GTK-Theme, hell wie dunkel): Überschriften H1 bis H6 im Größenverhältnis 2,0 / 1,5 / 1,25 / 1,0 / 0,875 / 0,85 mit Linie unter H1 und H2; Absatzabstand 16 px; Code-Blöcke als abgerundeter Kasten mit 16 px Innenabstand; Inline-Code mit Hintergrund; Zitate mit Balken links; Listen mit 32 px Einzug je Ebene (Ebene nach Einrückung, unabhängig von 2 oder 4 Leerzeichen); Aufgabenlisten mit echten Kästchen (nur Anzeige); horizontale Linie; Tabellen (GFM) als echte Tabelle mit Rahmen, fetter Kopfzeile, gestreiften Zeilen, Spaltenausrichtung (`:--`, `:-:`, `--:`) und Inline-Markdown in den Zellen; Zellen brechen nur an Wortgrenzen um.
 - Bilder: Lokale Bilder (relative Pfade innerhalb des Projektordners, Dateien bis 16 MiB, Formate nach GdkPixbuf) werden in der README angezeigt und an die Panelbreite angepasst; Bilder in Links sind klickbar. Entfernte Bilder (`http`/`https`) werden nicht geladen (kein Netzwerk) und erscheinen als Alternativtext. Bilder außerhalb des Projektordners, nicht vorhandene oder nicht lesbare Bilder erscheinen ebenfalls als Alternativtext.
 - Fehlt die `README.md`, wird dies klar angezeigt. Es wird keine Vorschau vorgetäuscht.
 - Schmale Kopfzeile mit Projektname und Pfad. Relative Links auf Dateien im Projekt öffnen die Datei bzw. den Ordner in der Hauptansicht.
@@ -1615,6 +1616,16 @@ Meson-Build; Projekt hinzufügen und entfernen; README rendern; fehlende README;
 - WARUM: §60.2 bis §60.4. Der Renderer musste neu gebaut werden, weil kein Markdown-Renderer vorhanden war. Der Branch wird aus `.git/HEAD` gelesen statt über einen `git`-Subprozess (§60.2 entsprechend angepasst). Lokale Bilder wurden auf Wunsch des Benutzers ergänzt (§60.3).
 - TEST: `test-nolphin-markdown` und `test-nolphin-gid-projects` (Meson), Build ohne Warnungen. Manuell in einer isolierten Instanz (eigener D-Bus, eigene dconf-Datei, Xephyr): Projektliste mit Branch, README mit Bildern, Badges und Trennlinie, fehlende README, nicht vorhandener Ordner, Klick auf einen README-Link (Hauptansicht wechselt in den Projektordner), Gehe zu ▸ GID-Projekte, Kontextmenü „Als GID-Projekt hinzufügen“, Entfernen über das Seitenleisten-Kontextmenü, „README anzeigen“, Schalter „GID-Projekte anzeigen“.
 - NICHT GETESTET: Ordnerauswahl-Dialog („Projekt hinzufügen …“), Hintergrund-Kontextmenü (leerer Bereich der Dateiansicht), Tastenkürzel (laut §60.4 bewusst keines vergeben), Dunkles Theme.
+
+#### 60.7.1 Änderungsprotokoll: GitHub-Darstellung der README
+
+- REQUIREMENT: §60.3 (Darstellung nach GitHub-Vorbild), auf Wunsch des Benutzers.
+- DATEI: src/nolphin-markdown-view.c/.h, test/test-nolphin-markdown.c.
+- ÄNDERUNG: Tabellen als echte Tabellen (Zellen als Labels in einem Gitter, Rahmen und Streifen per CSS aus dem Theme, Spaltenbreiten wie bei einer Browser-Tabelle verteilt); Aufgabenlisten mit Kästchen; Überschriften, Abstände, Listen und Codeblöcke nach GitHub-Maßen; Code-Kasten, Zitat-Balken, Überschrift-Linie und horizontale Linie werden über dem Text gezeichnet (halbtransparent, daher in hellen und dunklen Themes lesbar); einheitlicher linker Rand.
+- WARUM: Die bisherige Darstellung wich sichtbar von GitHub ab (Tabellen nur als Text, keine Kästchen, andere Abstände). Das Ziel der GID-Projekte ist das gewohnte GitHub-Bild.
+- TECHNISCHE BESONDERHEITEN: GtkTextView misst eingebettete Widgets ohne Breitenbezug und speichert Zeilenhöhen zwischen. Tabellen liegen deshalb in einem Container mit fest vorgegebener, vorab richtig gemessener Größe, und nach Größenänderungen wird das Layout im Leerlauf neu validiert.
+- TEST: `test-nolphin-markdown` (Tabellen inkl. Ausrichtung, Inline-Markdown, maskierter Strich, ungleiche Spaltenzahl, Aufgabenlisten, Listenebenen, Überschriften H1 bis H6, Codeblock-Zeilen) und manuell in einer isolierten Instanz (Xephyr, eigener D-Bus): README dieses Projekts im hellen und im dunklen Theme (Tabellen, Bilder, Codeblock, Zitat, Trennlinien), Beispiel mit Tabellenausrichtung, Kästchen und verschachtelten Listen.
+- NICHT GETESTET: horizontales Scrollen sehr breiter Tabellen (zu breite Tabellen werden abgeschnitten), HTML-Teilmenge (`<p align>`, `<details>` u. a.; deine README nutzt sie nicht), sehr schmale Panelbreiten.
 
 ---
 

@@ -12,8 +12,10 @@
  *
  * Bilder: lokale Bilder innerhalb des Basisordners werden angezeigt.
  *
- * Nicht unterstützt und deshalb als Text dargestellt: Tabellen (als
- * Festbreitentext), entfernte Bilder (als Alternativtext), HTML (Tags
+ * Tabellen (GFM) erscheinen als echte Tabellen mit Rahmen, Kopfzeile,
+ * Zeilenstreifen und Spaltenausrichtung; Aufgabenlisten mit Kästchen.
+ *
+ * Nicht unterstützt und deshalb als Text dargestellt: entfernte Bilder (als Alternativtext), HTML (Tags
  * entfallen, der enthaltene Text bleibt erhalten; <br> wird zum
  * Zeilenumbruch).
  */
@@ -63,6 +65,10 @@ void       nolphin_markdown_render_to_buffer_with_base (GtkTextBuffer *buffer,
 
 /* Liefert das Link-Ziel, falls @tag ein Link-Tag ist, sonst NULL. */
 const gchar *nolphin_markdown_tag_get_href    (GtkTextTag *tag);
+
+/* Beschreibt den Inhalt eines Ankers als Text ("table:RxC:Ausrichtung:Zellen",
+ * "check:0|1", "image:Pfad"), sonst NULL. Für Tests. Mit g_free() freigeben. */
+gchar       *nolphin_markdown_anchor_describe (GtkTextChildAnchor *anchor);
 
 G_END_DECLS
 

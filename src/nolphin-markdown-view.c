@@ -12,10 +12,17 @@
 
 #define HREF_KEY "nolphin-md-href"
 #define HANDLER_KEY "nolphin-md-handler"
-#define HR_KEY "nolphin-md-hr"
+#define TABLE_KEY "nolphin-md-table"
+#define CHECK_KEY "nolphin-md-check"
+#define DECOR_KEY "nolphin-md-decor"
+#define KIND_KEY "nolphin-md-kind"
 #define IMG_PATH_KEY "nolphin-md-image-path"
 #define IMG_ALT_KEY "nolphin-md-image-alt"
 #define KIDS_KEY "nolphin-md-children"
+/* Linker Rand der Ansicht (gtk_text_view_set_left_margin): Ein Tag-Rand
+ * ersetzt ihn, statt ihn zu ergänzen, deshalb rechnen alle Tags ihn mit. */
+#define VIEW_MARGIN 8
+
 /* Größere Bilddateien werden nicht geladen (Alternativtext statt Bild). */
 #define IMAGE_MAX_BYTES (16 * 1024 * 1024)
 
@@ -29,6 +36,27 @@ typedef struct {
 	gpointer                data;
 } LinkHandler;
 
+/* Zeichen-Dekorationen hinter/über dem Text (GtkTextView kann weder Rahmen
+ * noch Hintergründe über mehrere Zeilen): Code-Kasten, Zitat-Balken,
+ * Linie unter H1/H2 und horizontale Linie. Offsets sind Zeichenpositionen
+ * im (danach unveränderten) Puffer; @end ist das letzte Zeichen des Blocks. */
+typedef enum { DECOR_BOX, DECOR_BAR, DECOR_RULE, DECOR_HR } DecorType;
+
+typedef struct {
+	DecorType type;
+	gint      start;
+	gint      end;
+	gint      level;
+} Decor;
+
+/* Tabelle (Spalten, Ausrichtung 0 links / 1 Mitte / 2 rechts, Zeilen als
+ * NULL-terminierte Listen von Pango-Markup, Zeile 0 ist die Kopfzeile). */
+typedef struct {
+	guint      ncols;
+	gint      *aligns;
+	GPtrArray *rows;
+} TableData;
+
 /* ------------------------------------------------------------------ */
 /* Tags                                                                */
 /* ------------------------------------------------------------------ */
@@ -36,9 +64,12 @@ typedef struct {
 static void
 setup_tags (GtkTextBuffer *buffer)
 {
+	/* Größenverhältnisse und Abstände wie bei GitHub (16px Basis): H1 2.0,
+	 * H2 1.5, H3 1.25, H4 1.0, H5 0.875, H6 0.85; oben 24px, unten 16px;
+	 * bei H1/H2 kommt die Linie dazu (siehe DECOR_RULE). */
 	static const struct { const gchar *name; gdouble scale; gint above; gint below; } headings[] = {
-		{ "h1", 1.8,  12, 6 }, { "h2", 1.5,  12, 6 }, { "h3", 1.25, 10, 4 },
-		{ "h4", 1.1,  8,  4 }, { "h5", 1.0,  8,  4 }, { "h6", 0.9,  8,  4 },
+		{ "h1", 2.0,   24, 27 }, { "h2", 1.5,   24, 24 }, { "h3", 1.25,  24, 16 },
+		{ "h4", 1.0,   24, 16 }, { "h5", 0.875, 24, 16 }, { "h6", 0.85,  24, 16 },
 	};
 	GtkTextTagTable *table = gtk_text_buffer_get_tag_table (buffer);
 	guint i;
@@ -49,26 +80,34 @@ setup_tags (GtkTextBuffer *buffer)
 	for (i = 0; i < G_N_ELEMENTS (headings); i++) {
 		gtk_text_buffer_create_tag (buffer, headings[i].name,
 					    "scale", headings[i].scale,
-					    "weight", PANGO_WEIGHT_BOLD,
+					    "weight", PANGO_WEIGHT_SEMIBOLD,
 					    "pixels-above-lines", headings[i].above,
 					    "pixels-below-lines", headings[i].below,
+					    "wrap-mode", GTK_WRAP_WORD_CHAR,
 					    NULL);
 	}
 	gtk_text_buffer_create_tag (buffer, "bold", "weight", PANGO_WEIGHT_BOLD, NULL);
 	gtk_text_buffer_create_tag (buffer, "italic", "style", PANGO_STYLE_ITALIC, NULL);
 	gtk_text_buffer_create_tag (buffer, "strike", "strikethrough", TRUE, NULL);
-	gtk_text_buffer_create_tag (buffer, "code", "family", "monospace", NULL);
+	gtk_text_buffer_create_tag (buffer, "code", "family", "monospace", "scale", 0.85, NULL);
+	/* Code-Kasten: Innenabstand 16px; der Kasten selbst wird gezeichnet. */
 	gtk_text_buffer_create_tag (buffer, "codeblock",
 				    "family", "monospace",
-				    "left-margin", 12,
-				    "right-margin", 12,
-				    "pixels-above-lines", 2,
-				    "pixels-below-lines", 8,
+				    "scale", 0.85,
+				    "left-margin", VIEW_MARGIN + 16,
+				    "right-margin", VIEW_MARGIN + 16,
 				    "wrap-mode", GTK_WRAP_CHAR,
 				    NULL);
+	gtk_text_buffer_create_tag (buffer, "code-first", "pixels-above-lines", 16, NULL);
+	gtk_text_buffer_create_tag (buffer, "code-last", "pixels-below-lines", 32, NULL);
 	gtk_text_buffer_create_tag (buffer, "link", "underline", PANGO_UNDERLINE_SINGLE, NULL);
 	gtk_text_buffer_create_tag (buffer, "quote", NULL);
-	gtk_text_buffer_create_tag (buffer, "hr", "pixels-below-lines", 8, NULL);
+	/* Zeile der horizontalen Linie: winzige Schrift, Rand 24px; die Linie wird gezeichnet. */
+	gtk_text_buffer_create_tag (buffer, "hr",
+				    "size", 1 * PANGO_SCALE,
+				    "pixels-above-lines", 23,
+				    "pixels-below-lines", 23,
+				    NULL);
 	gtk_text_buffer_create_tag (buffer, "dim", NULL);
 }
 
@@ -78,8 +117,8 @@ T (Ctx *c, const gchar *name)
 	return gtk_text_tag_table_lookup (gtk_text_buffer_get_tag_table (c->buffer), name);
 }
 
-/* Absatz-Tag mit linkem Rand, Erstzeileneinzug und Abstand nach unten;
- * wird einmal angelegt und danach wiederverwendet. */
+/* Absatz-Tag mit linkem Rand (ab Textrand), Erstzeileneinzug und Abstand
+ * nach unten; wird einmal angelegt und danach wiederverwendet. */
 static GtkTextTag *
 para_tag (Ctx *c, gint left, gint indent, gint below)
 {
@@ -88,7 +127,7 @@ para_tag (Ctx *c, gint left, gint indent, gint below)
 
 	if (tag == NULL) {
 		tag = gtk_text_buffer_create_tag (c->buffer, name,
-						  "left-margin", left,
+						  "left-margin", VIEW_MARGIN + left,
 						  "indent", indent,
 						  "pixels-below-lines", below,
 						  "wrap-mode", GTK_WRAP_WORD_CHAR,
@@ -638,6 +677,57 @@ is_table_sep (const gchar *line)
 	return dash && strchr (line, '|') != NULL;
 }
 
+/* Zerlegt eine Tabellenzeile in Zellen ("\|" bleibt ein Zeichen "|"). */
+static gchar **
+split_cells (const gchar *line)
+{
+	gchar *trimmed = g_strstrip (g_strdup (line));
+	GPtrArray *cells = g_ptr_array_new ();
+	GString *cur = g_string_new (NULL);
+	const gchar *p = trimmed;
+	gboolean ended_with_pipe = FALSE;
+
+	if (*p == '|')
+		p++;
+	for (; *p != '\0'; p++) {
+		ended_with_pipe = FALSE;
+		if (*p == '\\' && p[1] == '|') {
+			g_string_append_c (cur, '|');
+			p++;
+		} else if (*p == '|') {
+			g_ptr_array_add (cells, g_strstrip (g_string_free (cur, FALSE)));
+			cur = g_string_new (NULL);
+			ended_with_pipe = TRUE;
+		} else {
+			g_string_append_c (cur, *p);
+		}
+	}
+	if (!ended_with_pipe)
+		g_ptr_array_add (cells, g_strstrip (g_string_free (cur, FALSE)));
+	else
+		g_string_free (cur, TRUE);
+	g_ptr_array_add (cells, NULL);
+	g_free (trimmed);
+	return (gchar **) g_ptr_array_free (cells, FALSE);
+}
+
+/* Kopfzeile plus Trennzeile mit gleich vielen Spalten (GFM). */
+static gboolean
+is_table_start (gchar **lines, gint i, gint n)
+{
+	gchar **head, **sep;
+	gboolean ok;
+
+	if (strchr (lines[i], '|') == NULL || i + 1 >= n || !is_table_sep (lines[i + 1]))
+		return FALSE;
+	head = split_cells (lines[i]);
+	sep = split_cells (lines[i + 1]);
+	ok = g_strv_length (head) == g_strv_length (sep) && g_strv_length (head) > 0;
+	g_strfreev (head);
+	g_strfreev (sep);
+	return ok;
+}
+
 static gboolean
 starts_block (gchar **lines, gint i, gint n)
 {
@@ -652,11 +742,182 @@ starts_block (gchar **lines, gint i, gint n)
 		return TRUE;
 	if (is_list_item (line, &ind, &ch, &num, &nl, &content))
 		return TRUE;
-	if (strchr (line, '|') != NULL && i + 1 < n && is_table_sep (lines[i + 1]))
+	if (is_table_start (lines, i, n))
 		return TRUE;
 	if (g_str_has_prefix (skip_spaces (line), "<!--"))
 		return TRUE;
 	return FALSE;
+}
+
+static void
+decor_array_free (gpointer array)
+{
+	g_array_unref (array);
+}
+
+static void
+decor_add (Ctx *c, DecorType type, gint start, gint end, gint level)
+{
+	GArray *list = g_object_get_data (G_OBJECT (c->buffer), DECOR_KEY);
+	Decor d = { type, start, end, level };
+
+	if (list != NULL && end >= start)
+		g_array_append_val (list, d);
+}
+
+static void
+table_free (gpointer data)
+{
+	TableData *t = data;
+
+	g_free (t->aligns);
+	g_ptr_array_unref (t->rows);
+	g_free (t);
+}
+
+static gboolean
+tag_is (GtkTextTag *tag, const gchar *name)
+{
+	gchar *tag_name = NULL;
+	gboolean same;
+
+	g_object_get (tag, "name", &tag_name, NULL);
+	same = g_strcmp0 (tag_name, name) == 0;
+	g_free (tag_name);
+	return same;
+}
+
+/* Inline-Markdown einer Tabellenzelle als Pango-Markup: der Text wird mit
+ * dem normalen Inline-Renderer in einen Hilfspuffer gesetzt und danach nach
+ * Tag-Abschnitten in Markup übersetzt (fett, kursiv, durchgestrichen,
+ * Code, Links). */
+static gchar *
+cell_to_markup (const gchar *text)
+{
+	GtkTextBuffer *tmp = gtk_text_buffer_new (NULL);
+	Ctx tc = { tmp, NULL };
+	GPtrArray *tags = g_ptr_array_new ();
+	GString *out = g_string_new (NULL);
+	GtkTextIter it, end;
+
+	setup_tags (tmp);
+	render_inline (&tc, text, text + strlen (text), tags);
+	gtk_text_buffer_get_start_iter (tmp, &it);
+	gtk_text_buffer_get_end_iter (tmp, &end);
+	while (!gtk_text_iter_is_end (&it)) {
+		GtkTextIter next = it;
+		GSList *tl, *l;
+		gboolean b = FALSE, i = FALSE, st = FALSE, code = FALSE;
+		const gchar *href = NULL;
+		gchar *seg, *esc;
+
+		if (!gtk_text_iter_forward_to_tag_toggle (&next, NULL))
+			next = end;
+		seg = gtk_text_iter_get_text (&it, &next);
+		tl = gtk_text_iter_get_tags (&it);
+		for (l = tl; l != NULL; l = l->next) {
+			GtkTextTag *tag = l->data;
+
+			if (nolphin_markdown_tag_get_href (tag) != NULL)
+				href = nolphin_markdown_tag_get_href (tag);
+			else if (tag_is (tag, "bold"))
+				b = TRUE;
+			else if (tag_is (tag, "italic"))
+				i = TRUE;
+			else if (tag_is (tag, "strike"))
+				st = TRUE;
+			else if (tag_is (tag, "code"))
+				code = TRUE;
+		}
+		g_slist_free (tl);
+		esc = g_markup_escape_text (seg, -1);
+		if (href != NULL) {
+			gchar *href_esc = g_markup_escape_text (href, -1);
+
+			g_string_append_printf (out, "<a href=\"%s\">", href_esc);
+			g_free (href_esc);
+		}
+		g_string_append (out, b ? "<b>" : "");
+		g_string_append (out, i ? "<i>" : "");
+		g_string_append (out, st ? "<s>" : "");
+		g_string_append (out, code ? "<tt>" : "");
+		g_string_append (out, esc);
+		g_string_append (out, code ? "</tt>" : "");
+		g_string_append (out, st ? "</s>" : "");
+		g_string_append (out, i ? "</i>" : "");
+		g_string_append (out, b ? "</b>" : "");
+		g_string_append (out, href != NULL ? "</a>" : "");
+		g_free (esc);
+		g_free (seg);
+		it = next;
+	}
+	g_ptr_array_free (tags, TRUE);
+	g_object_unref (tmp);
+	return g_string_free (out, FALSE);
+}
+
+/* Setzt einen Anker mit den Tags @tags an das Pufferende und liefert ihn. */
+static GtkTextChildAnchor *
+insert_anchor (Ctx *c, GPtrArray *tags)
+{
+	GtkTextIter it, a;
+	GtkTextChildAnchor *anchor;
+	gint start;
+	guint k;
+
+	gtk_text_buffer_get_end_iter (c->buffer, &it);
+	start = gtk_text_iter_get_offset (&it);
+	anchor = gtk_text_buffer_create_child_anchor (c->buffer, &it);
+	gtk_text_buffer_get_iter_at_offset (c->buffer, &a, start);
+	gtk_text_buffer_get_end_iter (c->buffer, &it);
+	for (k = 0; k < tags->len; k++)
+		gtk_text_buffer_apply_tag (c->buffer, g_ptr_array_index (tags, k), &a, &it);
+	return anchor;
+}
+
+static void
+emit_table (Ctx *c, gchar **header, gchar **sep, gchar ***body, guint nbody, gint quote)
+{
+	TableData *t = g_new0 (TableData, 1);
+	GPtrArray *tags = g_ptr_array_new ();
+	GtkTextChildAnchor *anchor;
+	guint r, k;
+	gint start = buffer_length (c);
+
+	t->ncols = g_strv_length (sep);
+	t->aligns = g_new0 (gint, t->ncols);
+	t->rows = g_ptr_array_new_with_free_func ((GDestroyNotify) g_strfreev);
+	for (k = 0; k < t->ncols; k++) {
+		const gchar *cell = sep[k];
+		gsize len = strlen (cell);
+		gboolean left = len > 0 && cell[0] == ':';
+		gboolean right = len > 0 && cell[len - 1] == ':';
+
+		t->aligns[k] = (left && right) ? 1 : right ? 2 : 0;
+	}
+	for (r = 0; r <= nbody; r++) {
+		gchar **src = (r == 0) ? header : body[r - 1];
+		gchar **row = g_new0 (gchar *, t->ncols + 1);
+
+		for (k = 0; k < t->ncols; k++)
+			row[k] = cell_to_markup (k < g_strv_length (src) ? src[k] : "");
+		g_ptr_array_add (t->rows, row);
+	}
+	g_ptr_array_add (tags, para_tag (c, quote * 16, 0, 16));
+	anchor = insert_anchor (c, tags);
+	g_object_set_data_full (G_OBJECT (anchor), TABLE_KEY, t, table_free);
+	insert_literal (c, "\n", tags);
+	g_ptr_array_free (tags, TRUE);
+	(void) start;
+}
+
+/* Kästchen einer Aufgabenliste (nur Anzeige): 1 = angehakt, 2 = leer. */
+static void
+insert_check_anchor (Ctx *c, gboolean checked, GPtrArray *tags)
+{
+	GtkTextChildAnchor *anchor = insert_anchor (c, tags);
+
+	g_object_set_data (G_OBJECT (anchor), CHECK_KEY, GINT_TO_POINTER (checked ? 1 : 2));
 }
 
 static void
@@ -688,7 +949,7 @@ flush_paragraph (Ctx *c, GString *para, gint quote)
 	if (para->len == 0)
 		return;
 	text = g_strchomp (g_strdup (para->str));
-	emit_text_block (c, text, para_tag (c, quote * 16, 0, 8), quote);
+	emit_text_block (c, text, para_tag (c, quote * 16, 0, 16), quote);
 	g_free (text);
 	g_string_truncate (para, 0);
 }
@@ -696,15 +957,39 @@ flush_paragraph (Ctx *c, GString *para, gint quote)
 static void
 emit_verbatim (Ctx *c, const gchar *text, gint quote)
 {
-	GPtrArray *tags = g_ptr_array_new ();
+	gchar **lines = g_strsplit (text, "\n", -1);
+	guint n = g_strv_length (lines), k;
 	gint start = buffer_length (c);
 
-	g_ptr_array_add (tags, T (c, "codeblock"));
-	if (quote > 0)
-		g_ptr_array_add (tags, para_tag (c, 12 + quote * 16, 0, 8));
-	insert_literal (c, text, tags);
-	end_paragraph (c, tags, start);
-	g_ptr_array_free (tags, TRUE);
+	for (k = 0; k < n; k++) {
+		GPtrArray *tags = g_ptr_array_new ();
+
+		g_ptr_array_add (tags, T (c, "codeblock"));
+		if (k == 0)
+			g_ptr_array_add (tags, T (c, "code-first"));
+		if (k == n - 1)
+			g_ptr_array_add (tags, T (c, "code-last"));
+		if (quote > 0)
+			g_ptr_array_add (tags, para_tag (c, 16 + quote * 16, 0, 0));
+		insert_literal (c, lines[k], tags);
+		insert_literal (c, "\n", tags);
+		g_ptr_array_free (tags, TRUE);
+	}
+	decor_add (c, DECOR_BOX, start, buffer_length (c) - 1, quote);
+	g_strfreev (lines);
+}
+
+/* Überschrift; H1/H2 bekommen zusätzlich die Linie darunter. */
+static void
+emit_heading (Ctx *c, const gchar *text, gint level)
+{
+	gchar *hname = g_strdup_printf ("h%d", level);
+	gint start = buffer_length (c);
+
+	emit_text_block (c, text, T (c, hname), 0);
+	if (level <= 2)
+		decor_add (c, DECOR_RULE, start, buffer_length (c) - 1, level);
+	g_free (hname);
 }
 
 static void render_blocks (Ctx *c, gchar **lines, gint n, gint quote);
@@ -714,6 +999,8 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 {
 	GString *para = g_string_new (NULL);
 	gint i = 0;
+	gint list_ind[16];
+	gint list_depth = 0;
 
 	while (i < n) {
 		const gchar *line = lines[i], *htext;
@@ -726,6 +1013,9 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 			i++;
 			continue;
 		}
+		/* Jede andere Zeile als ein Listenpunkt beendet die Liste. */
+		if (!is_list_item (line, &ind, &ch, &num, &nl, &content))
+			list_depth = 0;
 
 		/* HTML-Kommentar */
 		if (g_str_has_prefix (skip_spaces (line), "<!--")) {
@@ -763,10 +1053,8 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 		/* Setext-Überschrift: Absatz plus === bzw. --- */
 		if (para->len > 0 && (level = setext_level (line)) > 0) {
 			gchar *text = g_strstrip (g_strdup (para->str));
-			gchar *hname = g_strdup_printf ("h%d", level);
 
-			emit_text_block (c, text, T (c, hname), 0);
-			g_free (hname);
+			emit_heading (c, text, level);
 			g_free (text);
 			g_string_truncate (para, 0);
 			i++;
@@ -775,7 +1063,6 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 
 		if ((level = heading_level (line, &htext)) > 0) {
 			gchar *text = g_strdup (htext);
-			gchar *hname = g_strdup_printf ("h%d", level);
 			gsize len = strlen (text);
 
 			flush_paragraph (c, para, quote);
@@ -792,8 +1079,7 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 					g_strchomp (text);
 				}
 			}
-			emit_text_block (c, text, T (c, hname), 0);
-			g_free (hname);
+			emit_heading (c, text, level);
 			g_free (text);
 			i++;
 			continue;
@@ -801,18 +1087,14 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 
 		if (is_hr (line)) {
 			GPtrArray *tags = g_ptr_array_new ();
-			GtkTextIter end_iter;
-			GtkTextChildAnchor *anchor;
+			gint at;
 
 			flush_paragraph (c, para, quote);
-			/* Die Linie selbst ist ein Widget, das die Ansicht an den Anker
-			 * hängt (nolphin_markdown_view_set_text); im Puffer steht nur der
-			 * Anker. */
-			gtk_text_buffer_get_end_iter (c->buffer, &end_iter);
-			anchor = gtk_text_buffer_create_child_anchor (c->buffer, &end_iter);
-			g_object_set_data (G_OBJECT (anchor), HR_KEY, GINT_TO_POINTER (1));
+			/* Eine winzige Leerzeile; die Linie wird darüber gezeichnet. */
+			at = buffer_length (c);
 			g_ptr_array_add (tags, T (c, "hr"));
 			insert_literal (c, "\n", tags);
+			decor_add (c, DECOR_HR, at, at, 0);
 			g_ptr_array_free (tags, TRUE);
 			i++;
 			continue;
@@ -836,7 +1118,12 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 			iv = g_new0 (gchar *, inner->len + 1);
 			for (k = 0; k < inner->len; k++)
 				iv[k] = g_ptr_array_index (inner, k);
-			render_blocks (c, iv, (gint) inner->len, quote + 1);
+			{
+				gint qstart = buffer_length (c);
+
+				render_blocks (c, iv, (gint) inner->len, quote + 1);
+				decor_add (c, DECOR_BAR, qstart, buffer_length (c) - 1, quote + 1);
+			}
 			g_free (iv);
 			g_ptr_array_free (inner, TRUE);
 			continue;
@@ -846,27 +1133,53 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 		if (is_list_item (line, &ind, &ch, &num, &nl, &content)) {
 			gint item_indent = ind;
 			GString *item = g_string_new (content);
-			gchar *prefix;
-			gint lvl = item_indent / 2;
-			gint left = quote * 16 + 16 * (MIN (lvl, 6) + 1) + 16;
+			gchar *prefix = NULL;
+			gint lvl, left, below, hang = -16, j;
+			gboolean task = FALSE, checked = FALSE, blank_between = FALSE;
 			GPtrArray *tags;
 			gint start;
 			gchar *text;
 
 			flush_paragraph (c, para, quote);
+			/* Ebene aus der Einrückung: tiefer eingerückt = eine Ebene tiefer,
+			 * gleichgültig ob 2 oder 4 Leerzeichen. */
+			while (list_depth > 0 && item_indent < list_ind[list_depth - 1])
+				list_depth--;
+			if (list_depth == 0 || item_indent > list_ind[list_depth - 1]) {
+				if (list_depth < 16)
+					list_ind[list_depth++] = item_indent;
+			}
+			lvl = list_depth - 1;
+			left = quote * 16 + 32 * (MIN (lvl, 6) + 1);
+
 			i++;
-			/* Fortsetzungszeilen: nicht leer, kein neuer Block, nicht
-			 * weniger eingerückt als der Inhalt. */
-			while (i < n && !is_blank (lines[i]) && !starts_block (lines, i, n))
-				{
+			/* Fortsetzungszeilen: nicht leer, kein neuer Block. */
+			while (i < n && !is_blank (lines[i]) && !starts_block (lines, i, n)) {
 				g_string_append_c (item, '\n');
 				g_string_append (item, skip_spaces (lines[i]));
 				i++;
 			}
+			/* Abstand nach dem Punkt: 4px zum nächsten Punkt der Liste,
+			 * sonst 16px (Listenende oder lockere Liste). */
+			j = i;
+			while (j < n && is_blank (lines[j])) {
+				blank_between = TRUE;
+				j++;
+			}
+			{
+				gint ind2, nl2;
+				gchar ch2;
+				const gchar *num2, *content2;
+				gboolean next_item = j < n && is_list_item (lines[j], &ind2, &ch2, &num2, &nl2, &content2);
+
+				below = (next_item && !blank_between) ? 4 : 16;
+			}
 			if (g_str_has_prefix (item->str, "[ ] ") || g_str_has_prefix (item->str, "[x] ") ||
 			    g_str_has_prefix (item->str, "[X] ")) {
-				prefix = g_strdup (item->str[1] == ' ' ? "☐ " : "☑ ");
+				task = TRUE;
+				checked = item->str[1] != ' ';
 				g_string_erase (item, 0, 4);
+				hang = -24;
 			} else if (num != NULL) {
 				gchar *digits = g_strndup (num, nl);
 
@@ -878,11 +1191,16 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 				prefix = g_strdup (bullets[MIN (lvl, 2)]);
 			}
 			tags = g_ptr_array_new ();
-			g_ptr_array_add (tags, para_tag (c, left, -16, 2));
+			g_ptr_array_add (tags, para_tag (c, left, hang, below));
 			if (quote > 0)
 				g_ptr_array_add (tags, T (c, "quote"));
 			start = buffer_length (c);
-			insert_literal (c, prefix, tags);
+			if (task) {
+				insert_check_anchor (c, checked, tags);
+				insert_literal (c, " ", tags);
+			} else {
+				insert_literal (c, prefix, tags);
+			}
 			text = g_strchomp (g_string_free (item, FALSE));
 			render_inline (c, text, text + strlen (text), tags);
 			end_paragraph (c, tags, start);
@@ -892,19 +1210,26 @@ render_blocks (Ctx *c, gchar **lines, gint n, gint quote)
 			continue;
 		}
 
-		/* Tabelle: als Festbreitentext, da nicht gerendert */
-		if (strchr (line, '|') != NULL && i + 1 < n && is_table_sep (lines[i + 1])) {
-			GString *tbl = g_string_new (NULL);
+		/* Tabelle (GFM): echte Tabelle als Widget */
+		if (is_table_start (lines, i, n)) {
+			gchar **header = split_cells (lines[i]);
+			gchar **sep = split_cells (lines[i + 1]);
+			GPtrArray *body = g_ptr_array_new ();
+			guint k;
 
 			flush_paragraph (c, para, quote);
-			while (i < n && !is_blank (lines[i]) && strchr (lines[i], '|') != NULL) {
-				if (tbl->len > 0)
-					g_string_append_c (tbl, '\n');
-				g_string_append (tbl, lines[i]);
+			i += 2;
+			while (i < n && !is_blank (lines[i]) && !starts_block (lines, i, n)) {
+				g_ptr_array_add (body, split_cells (lines[i]));
 				i++;
 			}
-			emit_verbatim (c, tbl->str, quote);
-			g_string_free (tbl, TRUE);
+			g_ptr_array_add (body, NULL);
+			emit_table (c, header, sep, (gchar ***) body->pdata, body->len - 1, quote);
+			for (k = 0; k + 1 < body->len; k++)
+				g_strfreev (g_ptr_array_index (body, k));
+			g_ptr_array_free (body, TRUE);
+			g_strfreev (header);
+			g_strfreev (sep);
 			continue;
 		}
 
@@ -935,6 +1260,8 @@ nolphin_markdown_render_to_buffer_with_base (GtkTextBuffer *buffer, const gchar 
 
 	gtk_text_buffer_set_text (buffer, "", -1);
 	setup_tags (buffer);
+	g_object_set_data_full (G_OBJECT (buffer), DECOR_KEY, g_array_new (FALSE, TRUE, sizeof (Decor)),
+				decor_array_free);
 	if (markdown == NULL || *markdown == '\0')
 		return;
 
@@ -976,11 +1303,9 @@ apply_theme (GtkWidget *view)
 	dim = fg;
 	dim.alpha = fg.alpha * 0.65;
 	shade = fg;
-	shade.alpha = fg.alpha * 0.10;
+	shade.alpha = fg.alpha * 0.15;
 
 	if ((tag = gtk_text_tag_table_lookup (table, "code")) != NULL)
-		g_object_set (tag, "background-rgba", &shade, NULL);
-	if ((tag = gtk_text_tag_table_lookup (table, "codeblock")) != NULL)
 		g_object_set (tag, "background-rgba", &shade, NULL);
 	if ((tag = gtk_text_tag_table_lookup (table, "quote")) != NULL)
 		g_object_set (tag, "foreground-rgba", &dim, NULL);
@@ -1083,8 +1408,209 @@ make_image_widget (GtkWidget *view, const gchar *path, const gchar *alt, const g
 	return box;
 }
 
-/* Hängt für jeden Anker eine Widget ein: GtkSeparator für horizontale Linien,
- * das Bild bzw. sein Alternativtext für lokale Bilder. */
+/* Einbettungs-Container mit fest vorgegebener Größe. GtkTextView fragt die
+ * Größe eines eingebetteten Widgets ohne Breitenbezug ab; bei umbrechenden
+ * Zellen wäre die Höhe dann die bei kleinster Breite (viel zu hoch). Dieser
+ * Container meldet stattdessen die vorab richtig gemessene Größe und gibt
+ * sie unverändert an sein Kind weiter. */
+typedef struct {
+	GtkBin parent;
+	gint   width;
+	gint   height;
+} MdFixedBox;
+
+typedef struct {
+	GtkBinClass parent_class;
+} MdFixedBoxClass;
+
+G_DEFINE_TYPE (MdFixedBox, md_fixed_box, GTK_TYPE_BIN)
+
+static void
+md_fixed_box_get_preferred_width (GtkWidget *widget, gint *min, gint *nat)
+{
+	*min = *nat = ((MdFixedBox *) widget)->width;
+}
+
+static void
+md_fixed_box_get_preferred_height (GtkWidget *widget, gint *min, gint *nat)
+{
+	*min = *nat = ((MdFixedBox *) widget)->height;
+}
+
+static GtkSizeRequestMode
+md_fixed_box_get_request_mode (GtkWidget *widget)
+{
+	return GTK_SIZE_REQUEST_CONSTANT_SIZE;
+}
+
+static void
+md_fixed_box_size_allocate (GtkWidget *widget, GtkAllocation *allocation)
+{
+	GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
+
+	gtk_widget_set_allocation (widget, allocation);
+	if (child != NULL && gtk_widget_get_visible (child))
+		gtk_widget_size_allocate (child, allocation);
+}
+
+static void
+md_fixed_box_class_init (MdFixedBoxClass *klass)
+{
+	GtkWidgetClass *wc = GTK_WIDGET_CLASS (klass);
+
+	wc->get_preferred_width = md_fixed_box_get_preferred_width;
+	wc->get_preferred_height = md_fixed_box_get_preferred_height;
+	wc->get_request_mode = md_fixed_box_get_request_mode;
+	wc->size_allocate = md_fixed_box_size_allocate;
+}
+
+static void
+md_fixed_box_init (MdFixedBox *self)
+{
+	gtk_widget_set_has_window (GTK_WIDGET (self), FALSE);
+}
+
+/* Stile der Tabellen (Rahmen, Kopfzeile, Streifen); Farben aus dem
+ * Theme, damit helle und dunkle Themes passen. Einmal je Prozess. */
+static void
+ensure_table_css (void)
+{
+	static gboolean done = FALSE;
+	GtkCssProvider *provider;
+
+	if (done || gdk_screen_get_default () == NULL)
+		return;
+	done = TRUE;
+	provider = gtk_css_provider_new ();
+	gtk_css_provider_load_from_data (provider,
+		".nolphin-md-table { border-top: 1px solid alpha(@theme_fg_color, 0.25);"
+		"                    border-left: 1px solid alpha(@theme_fg_color, 0.25); }"
+		".nolphin-md-cell { padding: 6px 13px;"
+		"                   border-right: 1px solid alpha(@theme_fg_color, 0.25);"
+		"                   border-bottom: 1px solid alpha(@theme_fg_color, 0.25); }"
+		".nolphin-md-cell-odd { background-color: alpha(@theme_fg_color, 0.06); }"
+		".nolphin-md-cell-head { font-weight: 600; }",
+		-1, NULL);
+	gtk_style_context_add_provider_for_screen (gdk_screen_get_default (), GTK_STYLE_PROVIDER (provider),
+						   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+	g_object_unref (provider);
+}
+
+static gboolean
+on_cell_link (GtkLabel *label, const gchar *uri, gpointer view)
+{
+	LinkHandler *handler = g_object_get_data (G_OBJECT (view), HANDLER_KEY);
+
+	if (handler != NULL && handler->func != NULL)
+		handler->func (view, uri, handler->data);
+	return TRUE;
+}
+
+static GtkWidget *
+make_table_widget (GtkWidget *view, const TableData *t)
+{
+	GtkWidget *grid = gtk_grid_new ();
+	GtkWidget *box;
+	guint r, c;
+
+	ensure_table_css ();
+	gtk_style_context_add_class (gtk_widget_get_style_context (grid), "nolphin-md-table");
+	gtk_widget_set_halign (grid, GTK_ALIGN_START);
+	for (r = 0; r < t->rows->len; r++) {
+		gchar **row = g_ptr_array_index (t->rows, r);
+
+		for (c = 0; c < t->ncols; c++) {
+			GtkWidget *label = gtk_label_new (NULL);
+			GtkStyleContext *ctx = gtk_widget_get_style_context (label);
+			gint align = t->aligns[c];
+
+			gtk_label_set_markup (GTK_LABEL (label), row[c]);
+			gtk_label_set_selectable (GTK_LABEL (label), TRUE);
+			gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
+			gtk_label_set_line_wrap_mode (GTK_LABEL (label), PANGO_WRAP_WORD);
+			gtk_label_set_xalign (GTK_LABEL (label), align == 1 ? 0.5f : align == 2 ? 1.0f : 0.0f);
+			gtk_label_set_justify (GTK_LABEL (label),
+					       align == 1 ? GTK_JUSTIFY_CENTER : align == 2 ? GTK_JUSTIFY_RIGHT : GTK_JUSTIFY_LEFT);
+			gtk_widget_set_halign (label, GTK_ALIGN_FILL);
+			gtk_widget_set_valign (label, GTK_ALIGN_FILL);
+			gtk_widget_set_hexpand (label, TRUE);
+			gtk_widget_set_vexpand (label, TRUE);
+			gtk_style_context_add_class (ctx, "nolphin-md-cell");
+			if (r == 0)
+				gtk_style_context_add_class (ctx, "nolphin-md-cell-head");
+			else if (r % 2 == 0)
+				gtk_style_context_add_class (ctx, "nolphin-md-cell-odd");
+			g_signal_connect (label, "activate-link", G_CALLBACK (on_cell_link), view);
+			gtk_grid_attach (GTK_GRID (grid), label, (gint) c, (gint) r, 1, 1);
+		}
+	}
+	g_object_set_data (G_OBJECT (grid), "nolphin-md-cols", GUINT_TO_POINTER (t->ncols));
+	g_object_set_data (G_OBJECT (grid), "nolphin-md-rows", GUINT_TO_POINTER (t->rows->len));
+	gtk_widget_show_all (grid);
+	box = g_object_new (md_fixed_box_get_type (), NULL);
+	((MdFixedBox *) box)->width = 1;
+	((MdFixedBox *) box)->height = 1;
+	gtk_container_add (GTK_CONTAINER (box), grid);
+	gtk_widget_show (box);
+	return box;
+}
+
+/* Spaltenbreiten einer Tabelle: so breit wie der Inhalt, höchstens die
+ * Textbreite; ist der Platz knapp, werden die Spalten zwischen ihrer
+ * kleinsten und ihrer natürlichen Breite verteilt. Die Breite wird jeder
+ * Zelle direkt vorgegeben, damit GtkTextView die Höhe der Tabelle (die
+ * er ohne Breitenbezug misst) bei genau diesen Breiten erhält. */
+static void
+set_table_width (GtkWidget *box, gint avail)
+{
+	GtkWidget *grid = gtk_bin_get_child (GTK_BIN (box));
+	gint total = 0, height = 0;
+	guint ncols = GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (grid), "nolphin-md-cols"));
+	guint nrows = GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (grid), "nolphin-md-rows"));
+	gint *minw = g_new0 (gint, ncols), *natw = g_new0 (gint, ncols), *width = g_new0 (gint, ncols);
+	gint64 sum_min = 0, sum_nat = 0, sum_extra = 0;
+	guint r, c;
+
+	for (c = 0; c < ncols; c++) {
+		for (r = 0; r < nrows; r++) {
+			GtkWidget *cell = gtk_grid_get_child_at (GTK_GRID (grid), (gint) c, (gint) r);
+			gint mn = 0, nt = 0;
+
+			gtk_widget_set_size_request (cell, -1, -1);
+			gtk_widget_get_preferred_width (cell, &mn, &nt);
+			minw[c] = MAX (minw[c], mn);
+			natw[c] = MAX (natw[c], nt);
+		}
+		sum_min += minw[c];
+		sum_nat += natw[c];
+		sum_extra += natw[c] - minw[c];
+	}
+	for (c = 0; c < ncols; c++) {
+		if (sum_nat <= avail)
+			width[c] = natw[c];
+		else if (sum_min >= avail || sum_extra == 0)
+			width[c] = minw[c];
+		else
+			width[c] = minw[c] + (gint) ((avail - sum_min) * (natw[c] - minw[c]) / sum_extra);
+	}
+	for (c = 0; c < ncols; c++) {
+		total += width[c];
+		for (r = 0; r < nrows; r++)
+			gtk_widget_set_size_request (gtk_grid_get_child_at (GTK_GRID (grid), (gint) c, (gint) r),
+						     width[c], -1);
+	}
+	/* Höhe bei genau dieser Breite, dem Container fest vorgeben. */
+	gtk_widget_get_preferred_height_for_width (grid, total, &height, NULL);
+	((MdFixedBox *) box)->width = total;
+	((MdFixedBox *) box)->height = height;
+	gtk_widget_queue_resize (box);
+	g_free (minw);
+	g_free (natw);
+	g_free (width);
+}
+
+/* Hängt für jeden Anker ein Widget ein: das Bild bzw. seinen
+ * Alternativtext, eine Tabelle oder ein Aufgaben-Kästchen. */
 static void
 attach_children (GtkWidget *view)
 {
@@ -1096,19 +1622,33 @@ attach_children (GtkWidget *view)
 	do {
 		GtkTextChildAnchor *anchor = gtk_text_iter_get_child_anchor (&it);
 		GtkWidget *child = NULL;
+		const gchar *kind = NULL;
 		const gchar *img_path;
+		const TableData *table;
+		gint check;
 
 		if (anchor == NULL)
 			continue;
 		img_path = g_object_get_data (G_OBJECT (anchor), IMG_PATH_KEY);
-		if (g_object_get_data (G_OBJECT (anchor), HR_KEY) != NULL) {
-			child = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
-			g_object_set_data (G_OBJECT (child), "nolphin-md-hr", GINT_TO_POINTER (1));
+		table = g_object_get_data (G_OBJECT (anchor), TABLE_KEY);
+		check = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (anchor), CHECK_KEY));
+		if (table != NULL) {
+			child = make_table_widget (view, table);
+			kind = "table";
+		} else if (check != 0) {
+			child = gtk_check_button_new ();
+			gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (child), check == 1);
+			/* nur Anzeige, wie bei GitHub */
+			gtk_widget_set_sensitive (child, FALSE);
+			gtk_widget_set_valign (child, GTK_ALIGN_CENTER);
+			kind = "check";
 		} else if (img_path != NULL) {
 			child = make_image_widget (view, img_path, g_object_get_data (G_OBJECT (anchor), IMG_ALT_KEY),
 						   href_at_iter (&it));
+			kind = "image";
 		}
 		if (child != NULL) {
+			g_object_set_data (G_OBJECT (child), KIND_KEY, (gpointer) kind);
 			gtk_text_view_add_child_at_anchor (GTK_TEXT_VIEW (view), child, anchor);
 			gtk_widget_show (child);
 			g_ptr_array_add (kids, child);
@@ -1118,7 +1658,37 @@ attach_children (GtkWidget *view)
 	g_object_set_data (G_OBJECT (view), "nolphin-md-sep-width", GINT_TO_POINTER (0));
 }
 
-/* Linien und Bilder passen sich der Textbreite der Ansicht an. */
+/* GtkTextView misst ein eingebettetes Widget nur beim Layouten der Zeile.
+ * Ändert sich seine Größe danach, stimmen die zwischengespeicherten
+ * Zeilenhöhen nicht mehr: Zeilen, Widgets und Dekorationen verrutschen
+ * gegeneinander. Deshalb wird nach dem eigenen Layout der Ansicht (im
+ * Leerlauf) das gesamte Layout ungültig gemacht, indem ein Anzeigewert
+ * kurz umgeschaltet wird; die Zeilen werden dann mit den neuen
+ * Widget-Größen neu vermessen. */
+static gboolean
+revalidate_idle (gpointer data)
+{
+	GtkWidget *view = GTK_WIDGET (data);
+	GtkTextView *tv = GTK_TEXT_VIEW (view);
+	gint v = gtk_text_view_get_pixels_inside_wrap (tv);
+
+	g_object_set_data (G_OBJECT (view), "nolphin-md-revalidate", NULL);
+	gtk_text_view_set_pixels_inside_wrap (tv, v + 1);
+	gtk_text_view_set_pixels_inside_wrap (tv, v);
+	gtk_widget_queue_resize (view);
+	return G_SOURCE_REMOVE;
+}
+
+static void
+schedule_revalidate (GtkWidget *view)
+{
+	if (g_object_get_data (G_OBJECT (view), "nolphin-md-revalidate") != NULL)
+		return;
+	g_object_set_data (G_OBJECT (view), "nolphin-md-revalidate", GINT_TO_POINTER (1));
+	g_idle_add_full (G_PRIORITY_DEFAULT_IDLE, revalidate_idle, g_object_ref (view), g_object_unref);
+}
+
+/* Tabellen und Bilder passen sich der Textbreite der Ansicht an. */
 static void
 on_size_allocate (GtkWidget *view, GdkRectangle *allocation, gpointer user_data)
 {
@@ -1134,12 +1704,93 @@ on_size_allocate (GtkWidget *view, GdkRectangle *allocation, gpointer user_data)
 	g_object_set_data (G_OBJECT (view), "nolphin-md-sep-width", GINT_TO_POINTER (width));
 	for (i = 0; i < kids->len; i++) {
 		GtkWidget *kid = g_ptr_array_index (kids, i);
+		const gchar *kind = g_object_get_data (G_OBJECT (kid), KIND_KEY);
 
-		if (g_object_get_data (G_OBJECT (kid), "nolphin-md-hr") != NULL)
-			gtk_widget_set_size_request (kid, width, -1);
-		else
+
+		if (g_strcmp0 (kind, "table") == 0)
+			set_table_width (kid, width);
+		else if (g_strcmp0 (kind, "image") == 0)
 			set_image_width (kid, width);
 	}
+	/* Größen haben sich geändert: Zeilen im Leerlauf neu vermessen lassen. */
+	schedule_revalidate (view);
+}
+
+/* Zeichnet die Dekorationen (Code-Kasten, Zitat-Balken, Linien) über den
+ * Text; alle Flächen sind halbtransparent, der Text bleibt lesbar. */
+static gboolean
+on_draw_after (GtkWidget *view, cairo_t *cr, gpointer user_data)
+{
+	GtkTextView *tv = GTK_TEXT_VIEW (view);
+	GtkTextBuffer *buf = gtk_text_view_get_buffer (tv);
+	GArray *list = g_object_get_data (G_OBJECT (buf), DECOR_KEY);
+	GdkWindow *win = gtk_text_view_get_window (tv, GTK_TEXT_WINDOW_TEXT);
+	GtkStyleContext *style = gtk_widget_get_style_context (view);
+	GdkRGBA fg;
+	gdouble cx1, cy1, cx2, cy2;
+	gint left, right;
+	guint i;
+
+	if (list == NULL || list->len == 0 || win == NULL || !gtk_cairo_should_draw_window (cr, win))
+		return GDK_EVENT_PROPAGATE;
+
+	gtk_style_context_get_color (style, gtk_style_context_get_state (style), &fg);
+	cairo_save (cr);
+	gtk_cairo_transform_to_window (cr, view, win);
+	cairo_clip_extents (cr, &cx1, &cy1, &cx2, &cy2);
+	left = gtk_text_view_get_left_margin (tv);
+	right = gdk_window_get_width (win) - gtk_text_view_get_right_margin (tv);
+
+	for (i = 0; i < list->len; i++) {
+		const Decor *d = &g_array_index (list, Decor, i);
+		GtkTextIter a, b;
+		gint y1, h1, y2, h2, wy1, wy2;
+		gdouble top, bottom;
+
+		gtk_text_buffer_get_iter_at_offset (buf, &a, d->start);
+		gtk_text_buffer_get_iter_at_offset (buf, &b, d->end);
+		gtk_text_view_get_line_yrange (tv, &a, &y1, &h1);
+		gtk_text_view_get_line_yrange (tv, &b, &y2, &h2);
+		gtk_text_view_buffer_to_window_coords (tv, GTK_TEXT_WINDOW_TEXT, 0, y1, NULL, &wy1);
+		gtk_text_view_buffer_to_window_coords (tv, GTK_TEXT_WINDOW_TEXT, 0, y2, NULL, &wy2);
+		top = wy1;
+		bottom = wy2 + h2;
+		if (bottom < cy1 || top > cy2)
+			continue;
+
+		switch (d->type) {
+		case DECOR_BOX: {
+			gdouble x = left + d->level * 16, w = right - x, r = 6, y = top, h = bottom - 16 - top;
+
+			cairo_new_sub_path (cr);
+			cairo_arc (cr, x + w - r, y + r, r, -G_PI / 2, 0);
+			cairo_arc (cr, x + w - r, y + h - r, r, 0, G_PI / 2);
+			cairo_arc (cr, x + r, y + h - r, r, G_PI / 2, G_PI);
+			cairo_arc (cr, x + r, y + r, r, G_PI, 3 * G_PI / 2);
+			cairo_close_path (cr);
+			cairo_set_source_rgba (cr, fg.red, fg.green, fg.blue, fg.alpha * 0.07);
+			cairo_fill (cr);
+			break;
+		}
+		case DECOR_BAR:
+			cairo_set_source_rgba (cr, fg.red, fg.green, fg.blue, fg.alpha * 0.30);
+			cairo_rectangle (cr, left + (d->level - 1) * 16, top, 3.3, bottom - 16 - top);
+			cairo_fill (cr);
+			break;
+		case DECOR_RULE:
+			cairo_set_source_rgba (cr, fg.red, fg.green, fg.blue, fg.alpha * 0.25);
+			cairo_rectangle (cr, left, bottom - 16 - 1, right - left, 1);
+			cairo_fill (cr);
+			break;
+		case DECOR_HR:
+			cairo_set_source_rgba (cr, fg.red, fg.green, fg.blue, fg.alpha * 0.25);
+			cairo_rectangle (cr, left, top + 23, right - left, 2);
+			cairo_fill (cr);
+			break;
+		}
+	}
+	cairo_restore (cr);
+	return GDK_EVENT_PROPAGATE;
 }
 
 static gboolean
@@ -1199,13 +1850,14 @@ nolphin_markdown_view_new (void)
 	gtk_text_view_set_editable (GTK_TEXT_VIEW (view), FALSE);
 	gtk_text_view_set_cursor_visible (GTK_TEXT_VIEW (view), FALSE);
 	gtk_text_view_set_wrap_mode (GTK_TEXT_VIEW (view), GTK_WRAP_WORD_CHAR);
-	gtk_text_view_set_left_margin (GTK_TEXT_VIEW (view), 8);
-	gtk_text_view_set_right_margin (GTK_TEXT_VIEW (view), 8);
+	gtk_text_view_set_left_margin (GTK_TEXT_VIEW (view), VIEW_MARGIN);
+	gtk_text_view_set_right_margin (GTK_TEXT_VIEW (view), VIEW_MARGIN);
 
 	g_signal_connect (view, "button-release-event", G_CALLBACK (on_button_release), NULL);
 	g_signal_connect (view, "motion-notify-event", G_CALLBACK (on_motion), NULL);
 	g_signal_connect (view, "style-updated", G_CALLBACK (apply_theme), NULL);
 	g_signal_connect (view, "size-allocate", G_CALLBACK (on_size_allocate), NULL);
+	g_signal_connect_after (view, "draw", G_CALLBACK (on_draw_after), NULL);
 
 	nolphin_markdown_view_set_text (view, NULL);
 	return view;
@@ -1244,4 +1896,39 @@ nolphin_markdown_view_set_link_handler (GtkWidget *view, NolphinMarkdownLinkFunc
 	handler->func = func;
 	handler->data = user_data;
 	g_object_set_data_full (G_OBJECT (view), HANDLER_KEY, handler, g_free);
+}
+
+gchar *
+nolphin_markdown_anchor_describe (GtkTextChildAnchor *anchor)
+{
+	const TableData *t;
+	const gchar *img;
+	gint check;
+
+	g_return_val_if_fail (GTK_IS_TEXT_CHILD_ANCHOR (anchor), NULL);
+
+	t = g_object_get_data (G_OBJECT (anchor), TABLE_KEY);
+	img = g_object_get_data (G_OBJECT (anchor), IMG_PATH_KEY);
+	check = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (anchor), CHECK_KEY));
+	if (t != NULL) {
+		GString *out = g_string_new (NULL);
+		guint r, c;
+
+		g_string_append_printf (out, "table:%ux%u:", t->rows->len, t->ncols);
+		for (c = 0; c < t->ncols; c++)
+			g_string_append_printf (out, "%s%c", c ? "," : "", t->aligns[c] == 1 ? 'c' : t->aligns[c] == 2 ? 'r' : 'l');
+		for (r = 0; r < t->rows->len; r++) {
+			gchar **row = g_ptr_array_index (t->rows, r);
+
+			g_string_append (out, r ? "/" : ":");
+			for (c = 0; c < t->ncols; c++)
+				g_string_append_printf (out, "%s%s", c ? "|" : "", row[c]);
+		}
+		return g_string_free (out, FALSE);
+	}
+	if (check != 0)
+		return g_strdup_printf ("check:%d", check == 1 ? 1 : 0);
+	if (img != NULL)
+		return g_strdup_printf ("image:%s", img);
+	return NULL;
 }
