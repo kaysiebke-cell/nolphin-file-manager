@@ -21,6 +21,7 @@
 #include "nolphin-markdown-view.h"
 
 #define HELP_MAX_BYTES (512 * 1024)
+#define HELP_IMAGE_MAX_WIDTH 720 /* Screenshots nicht auf die ganze Breite ziehen */
 
 typedef struct {
 	gchar *id;       /* Dateiname ohne Nummer und Endung, z. B. "git" */
@@ -401,6 +402,7 @@ build_page (const gchar *topic_id)
 
 	d->view = nolphin_markdown_view_new ();
 	nolphin_markdown_view_set_link_handler (d->view, on_link_clicked, d);
+	nolphin_markdown_view_set_max_image_width (d->view, HELP_IMAGE_MAX_WIDTH);
 	gtk_text_view_set_left_margin (GTK_TEXT_VIEW (d->view), 24);
 	gtk_text_view_set_right_margin (GTK_TEXT_VIEW (d->view), 24);
 	d->scrolled = gtk_scrolled_window_new (NULL, NULL);

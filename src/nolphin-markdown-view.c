@@ -2415,8 +2415,11 @@ on_size_allocate (GtkWidget *view, GdkRectangle *allocation, gpointer user_data)
 
 		if (g_strcmp0 (kind, "table") == 0)
 			set_table_width (kid, width);
-		else if (g_strcmp0 (kind, "image") == 0)
-			set_image_width (kid, width);
+		else if (g_strcmp0 (kind, "image") == 0) {
+			gint cap = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (view), "nolphin-md-max-image-width"));
+
+			set_image_width (kid, cap > 0 ? MIN (width, cap) : width);
+		}
 	}
 	/* Größen haben sich geändert: Zeilen im Leerlauf neu vermessen lassen. */
 	schedule_revalidate (view);
@@ -2672,4 +2675,15 @@ nolphin_markdown_anchor_describe (GtkTextChildAnchor *anchor)
 		return g_strdup_printf ("image:%s", img);
 	}
 	return NULL;
+}
+
+void
+nolphin_markdown_view_set_max_image_width (GtkWidget *view, gint max_width)
+{
+	g_return_if_fail (GTK_IS_TEXT_VIEW (view));
+
+	g_object_set_data (G_OBJECT (view), "nolphin-md-max-image-width", GINT_TO_POINTER (MAX (max_width, 0)));
+	/* Breiten neu berechnen lassen */
+	g_object_set_data (G_OBJECT (view), "nolphin-md-sep-width", GINT_TO_POINTER (0));
+	gtk_widget_queue_resize (view);
 }

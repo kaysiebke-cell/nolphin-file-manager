@@ -47,6 +47,9 @@ void       nolphin_markdown_view_set_text_with_base (GtkWidget   *view,
 						     const gchar *markdown,
 						     const gchar *base_dir);
 
+/* Begrenzt die Anzeigebreite von Bildern (Pixel, 0 = nur die Textbreite). */
+void       nolphin_markdown_view_set_max_image_width (GtkWidget *view, gint max_width);
+
 /* Wird beim Klick auf einen Link (ohne aktive Textauswahl) aufgerufen. */
 void       nolphin_markdown_view_set_link_handler (GtkWidget               *view,
 						   NolphinMarkdownLinkFunc  func,
