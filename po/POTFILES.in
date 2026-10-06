@@ -134,6 +134,7 @@ src/nolphin-file-management-properties.c
 src/nolphin-filter-bar.c
 src/nolphin-floating-bar.c
 src/nolphin-freedesktop-dbus.c
+src/nolphin-help.c
 src/nolphin-icon-view.c
 src/nolphin-icon-view-container.c
 src/nolphin-icon-view-grid-container.c

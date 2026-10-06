@@ -52,6 +52,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-u
 * **Suche mit Operatoren:** im Dateinamen UND, ODER, NICHT, „exakt“ und Platzhalter, dazu reguläre Ausdrücke.
 * **Mehrere Bereiche:** geteilte Ansicht mit bis zu vier Bereichen und **Arbeitsbereiche**, die Reiter, Teilung und Fenstergröße speichern.
 * **Gehe zu:** Verlauf, häufig verwendete Orte und die Reiter des Fensters im Menü.
+* **Hilfe (F1):** eine eingebaute Hilfe zu allen Funktionen, die sich wie die Einstellungen im Hauptbereich öffnet (Themenliste links, Text rechts).
 * **Diagnose:** Protokolle, Systeminformationen, Plugin-Status und Fehlerbericht im Panel.
 * **Einstellungen exportieren, importieren und zurücksetzen.**
 * **DEB-Pakete erstellen:** Nolphin baut ein `.deb` selbst als `ar`-Archiv, ohne `dpkg-deb`.

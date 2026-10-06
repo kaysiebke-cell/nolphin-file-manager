@@ -63,6 +63,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - Regeln werden laut Vertrag nur manuell auf einen gewählten Ordner angewendet; automatisches Auslösen ist nicht vorgesehen und wird nicht gebaut.
 - SVN/Mercurial-Overlays stehen nicht im Vertrag, die Programme sind nicht installiert; nicht gebaut.
 
+## Eingebaute Hilfe
+- REQUIREMENT: Hilfe zu den Funktionen von Nolphin, geöffnet wie die Einstellungen (im Hauptbereich statt in einem Fenster).
+- DATEI: `src/nolphin-help.{c,h}`, `src/nolphin-window-menus.c`, `src/meson.build`, `po/POTFILES.in`.
+- ÄNDERUNG: Neue Seite „help“ im Inhalts-Stack des Hauptfensters mit Themenliste und Text zu Überblick, Vorschau/Metadaten, Suche, Archive, Git, Werkzeuge, Fenster/Arbeitsbereiche, DEB, Terminal, Sicherheit, Einstellungen, Diagnose und Tastenkürzeln. F1 und Hilfe ▸ Alle Themen öffnen sie; Esc oder „Schließen“ führt zurück. Die Texte stehen im Code.
+- WARUM: Bisher öffnete F1 die GNOME-Hilfe, die Nolphin-Funktionen nicht kennt.
+- TEST: GUI: F1, Themenwechsel, Esc. Die Inhalte habe ich nicht Zeile für Zeile gegen alle Menüs geprüft.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

@@ -37,6 +37,7 @@
 #include "nolphin-workspace-panel.h"
 #include "nolphin-connect-server-dialog.h"
 #include "nolphin-file-management-properties.h"
+#include "nolphin-help.h"
 #include "nolphin-navigation-action.h"
 #include "nolphin-notebook.h"
 #include "nolphin-window-manage-views.h"
@@ -705,6 +706,12 @@ action_nolphin_manual_callback (GtkAction *action,
 		helpuri = "help:gnome-help/files-share";
 	} else {
 		helpuri = "help:gnome-help/files";
+	}
+
+	if (g_str_equal (name, "NolphinHelp") && !NOLPHIN_IS_DESKTOP_WINDOW (window)) {
+		/* Eigene Hilfe zu den Nolphin-Funktionen, wie die Einstellungen im Hauptbereich */
+		nolphin_help_show (GTK_WINDOW (window), NULL);
+		return;
 	}
 
 	if (NOLPHIN_IS_DESKTOP_WINDOW (window)) {
