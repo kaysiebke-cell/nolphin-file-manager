@@ -81,6 +81,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - Das Paket kollidierte mit `nemo-data` bei zehn Menü-Symbolen (`menu-*.png`); sie werden nicht mehr ins System-Icon-Verzeichnis installiert (sie stecken in der Programm-Ressource).
 - Eine ältere Installation unter `/usr/local` (Schema, Programm) überdeckte das Paket und musste entfernt werden.
 
+## Vorschau in der Dateiauswahl
+- REQUIREMENT: Auswahldialoge zeigen rechts die Vorschau der markierten Datei, auch beim Hochladen in anderen Programmen.
+- DATEI: `libnolphin-private/nolphin-file-chooser-preview.{c,h}`, `gtk-module/`, `src/nolphin-workspace-panel.c`, `src/nolphin-file-management-properties.c`, `src/nolphin-template-config-widget.c`, `src/nolphin-properties-panel.c`, `debian/nolphin.install`.
+- ÄNDERUNG: Gemeinsamer Baustein hängt an einen GtkFileChooser ein Vorschau-Widget (Bild, Vorschaubild, Textanfang oder Symbol; Name, Typ, Größe, Datum). Er ist in Nolphins Dialoge zum Dateiauswählen eingebaut. Zusätzlich lädt das GTK-Modul `libnolphin-preview-module.so` (installiert nach `<libdir>/gtk-3.0/modules`) den Baustein in „Datei öffnen“-Dialoge anderer GTK-3-Programme, sofern dort keine eigene Vorschau gesetzt ist. Aktiviert wird es pro Benutzer über `gtk-modules=nolphin-preview-module` in `~/.config/gtk-3.0/settings.ini`.
+- WARUM: Der Hochladen-Dialog gehört dem aufrufenden Programm; ein GTK-Modul ist der Weg, ihn von außen zu ergänzen, ohne einen eigenen Portal-Dienst zu bauen.
+- TEST: In einem getrennten Display (Xephyr): Dialog mit Modul über `GTK_MODULES` und über `settings.ini`, Vorschau von Bild und Textdatei. Nicht getestet: Chrome selbst (nutzt je nach Einstellung den GTK-Dialog oder den Portal-Dialog) und Nolphins eigene Dialoge in der Oberfläche.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.
