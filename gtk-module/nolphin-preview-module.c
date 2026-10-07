@@ -25,15 +25,39 @@ on_widget_map (GSignalInvocationHint *hint, guint n_params, const GValue *params
 		return TRUE;
 	}
 	widget = g_value_get_object (&params[0]);
+	if (g_getenv ("NOLPHIN_PREVIEW_DEBUG") != NULL && GTK_IS_DIALOG (widget)) {
+		g_printerr ("nolphin-preview: map %s (Dateiauswahl: %d)\n", G_OBJECT_TYPE_NAME (widget),
+			    GTK_IS_FILE_CHOOSER_DIALOG (widget));
+	}
 	if (!GTK_IS_FILE_CHOOSER_DIALOG (widget) || g_object_get_data (G_OBJECT (widget), DONE_KEY) != NULL) {
 		return TRUE;
 	}
 	g_object_set_data (G_OBJECT (widget), DONE_KEY, GINT_TO_POINTER (1));
 
 	chooser = GTK_FILE_CHOOSER (widget);
+	if (g_getenv ("NOLPHIN_PREVIEW_DEBUG") != NULL) {
+		g_printerr ("nolphin-preview: Dateiauswahl, Aktion %d, Vorschau-Widget %p (%s)\n",
+			    gtk_file_chooser_get_action (chooser), (void *) gtk_file_chooser_get_preview_widget (chooser),
+			    gtk_file_chooser_get_preview_widget (chooser) != NULL ? G_OBJECT_TYPE_NAME (gtk_file_chooser_get_preview_widget (chooser)) : "-");
+	}
+	/* Eine einfache Bildvorschau (GtkImage, so setzt sie z. B. der Dateiauswahl-Dienst
+	 * xdg-desktop-portal-gtk) wird ersetzt; eigene Vorschau-Widgets anderer
+	 * Programme (GIMP, Bildbetrachter …) bleiben unberührt. */
 	if (gtk_file_chooser_get_action (chooser) != GTK_FILE_CHOOSER_ACTION_OPEN ||
-	    gtk_file_chooser_get_preview_widget (chooser) != NULL) {
+	    (gtk_file_chooser_get_preview_widget (chooser) != NULL &&
+	     !GTK_IS_IMAGE (gtk_file_chooser_get_preview_widget (chooser)))) {
 		return TRUE;
+	}
+	/* Das ersetzte Widget am Leben halten: Der Besitzer des Dialogs (z. B. der
+	 * Portal-Dienst) hat dafür einen eigenen "update-preview"-Handler, der es
+	 * weiter anspricht – ein freigegebenes Widget würde dort abstürzen. */
+	{
+		GtkWidget *old = gtk_file_chooser_get_preview_widget (chooser);
+
+		if (old != NULL) {
+			g_object_set_data_full (G_OBJECT (chooser), "nolphin-replaced-preview",
+						g_object_ref (old), g_object_unref);
+		}
 	}
 	nolphin_file_chooser_add_preview (chooser);
 	return TRUE;

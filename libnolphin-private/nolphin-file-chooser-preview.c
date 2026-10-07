@@ -185,10 +185,11 @@ on_update_preview (GtkFileChooser *chooser, gpointer user_data)
 	{
 		gchar *type_desc = ctype != NULL ? g_content_type_get_description (ctype) : NULL;
 
-		size_text = is_dir ? g_strdup (_("Ordner")) : g_format_size (size);
+		size_text = is_dir ? g_strdup ("") : g_format_size (size);
 		mtime = g_file_info_get_modification_date_time (info);
 		date_text = mtime != NULL ? g_date_time_format (mtime, "%d.%m.%Y %H:%M") : g_strdup ("");
-		details = g_strdup_printf ("%s\n%s\n%s", type_desc != NULL ? type_desc : "", size_text, date_text);
+		details = is_dir ? g_strdup_printf ("%s\n%s", type_desc != NULL ? type_desc : _("Ordner"), date_text)
+				 : g_strdup_printf ("%s\n%s\n%s", type_desc != NULL ? type_desc : "", size_text, date_text);
 		gtk_label_set_text (GTK_LABEL (w->details), details);
 		g_free (type_desc);
 	}
