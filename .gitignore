@@ -47,3 +47,7 @@ debian/files
 
 obj-x86_64-linux-gnu
 dist/
+
+# Python-Cache
+__pycache__/
+*.pyc
