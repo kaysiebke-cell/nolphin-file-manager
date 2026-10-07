@@ -59,12 +59,9 @@
     <file alias="icons/scalable/actions/nolphin-vertical-layout-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-vertical-layout-symbolic.svg</file>
     <file alias="icons/scalable/actions/nolphin-vertical-layout-wide-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-vertical-layout-wide-symbolic.svg</file>
     <file alias="icons/16x16/apps/nolphin.png">../data/icons/hicolor/apps/16x16/nolphin.png</file>
-    <file alias="icons/16x16/apps/nolphin.svg">../data/icons/hicolor/apps/16x16/nolphin.svg</file>
     <file alias="icons/22x22/apps/nolphin.png">../data/icons/hicolor/apps/22x22/nolphin.png</file>
-    <file alias="icons/22x22/apps/nolphin.svg">../data/icons/hicolor/apps/22x22/nolphin.svg</file>
     <file alias="icons/24x24/apps/nolphin.png">../data/icons/hicolor/apps/24x24/nolphin.png</file>
     <file alias="icons/32x32/apps/nolphin.png">../data/icons/hicolor/apps/32x32/nolphin.png</file>
-    <file alias="icons/32x32/apps/nolphin.svg">../data/icons/hicolor/apps/32x32/nolphin.svg</file>
     <file alias="icons/scalable/apps/nolphin.svg">../data/icons/hicolor/apps/scalable/nolphin.svg</file>
     <file alias="icons/scalable/categories/nolphin-prefs-behavior-symbolic.svg">../data/icons/hicolor/categories/scalable/nolphin-prefs-behavior-symbolic.svg</file>
     <file alias="icons/scalable/categories/nolphin-prefs-display-symbolic.svg">../data/icons/hicolor/categories/scalable/nolphin-prefs-display-symbolic.svg</file>
