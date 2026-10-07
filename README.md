@@ -1,4 +1,4 @@
-![Nolphin Dateimanager – zwei Fenster, links mit Dateivorschau, rechts mit den GID-Projekten, in der Mitte das Nolphin-Symbol. Darunter der Spruch: Die Funktion kommt zu dir – nicht umgekehrt.](docs/bilder/titelbild.png)
+![Nolphin File Manager – two windows, on the left with a file preview, on the right with the GID projects, the Nolphin icon in the middle. Below the slogan: The function comes to you – not the other way round.](docs/bilder/titelbild-en.png)
 
 # Nolphin
 
