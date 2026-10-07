@@ -5,6 +5,8 @@ publicIcons = [
   'hicolor/apps/22x22/nolphin.png',
   'hicolor/apps/24x24/nolphin.png',
   'hicolor/apps/32x32/nolphin.png',
+  'hicolor/apps/48x48/nolphin.png',
+  'hicolor/apps/256x256/nolphin.png',
   'hicolor/apps/scalable/nolphin.svg',
   'hicolor/actions/16x16/nolphin-eject.png',
   'hicolor/actions/32x32/nolphin-eject.png',
@@ -41,11 +43,6 @@ privateIcons = [
   'hicolor/emblems/16x16/emblem-note.png',
   'hicolor/emblems/24x24/emblem-note.png',
   'hicolor/emblems/48x48/emblem-note.png',
-]
-noInstallIcons = [
-  'hicolor/apps/16x16/nolphin.svg',
-  'hicolor/apps/22x22/nolphin.svg',
-  'hicolor/apps/32x32/nolphin.svg',
 ]
 
 foreach icon : publicIcons
