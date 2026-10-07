@@ -4,7 +4,7 @@ Name[de]=Nolphin
 Comment=Access and organize files
 Comment[de]=Dateien aufrufen und organisieren
 Exec=nolphin %U
-Icon=org.nolphin.FileManager
+Icon=nolphin
 # Translators: these are keywords of the file manager
 Keywords=folders;filesystem;explorer;files;
 Keywords[de]=Ordner;Dateisystem;Explorer;Dateien;Dateimanager;
