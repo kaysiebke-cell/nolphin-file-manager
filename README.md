@@ -1,3 +1,5 @@
+![Nolphin Dateimanager – zwei Fenster, links mit Dateivorschau, rechts mit den GID-Projekten, in der Mitte das Nolphin-Symbol. Darunter der Spruch: Die Funktion kommt zu dir – nicht umgekehrt.](docs/bilder/titelbild.png)
+
 # Nolphin
 
 **Ein nativer Linux-Dateimanager für Linux Mint Cinnamon – mit einem festen rechten Arbeitsbereich für Vorschau, Eigenschaften, Archive, Terminal, Git und Paketbau.**
