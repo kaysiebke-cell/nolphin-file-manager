@@ -1,3 +1,12 @@
+nolphin (6.7.7+nolphin4) unstable; urgency=medium
+
+  * GTK-Modul nolphin-preview-module: Signal "map" wurde beim Laden aus
+    gtk_init() nicht gefunden, der Haken war dadurch in C-Programmen
+    (Chrome, Portal-Dienst, Claude Desktop) wirkungslos. Widget-Klasse wird
+    jetzt vor dem Nachschlagen referenziert.
+
+ -- Kay Siebke <kaysiebke@gmail.com>  Wed, 07 Oct 2026 04:20:32 +0200
+
 nolphin (6.7.7+nolphin3) unstable; urgency=medium
 
   * Vorschau rechts in Nolphins Dateiauswahldialogen.

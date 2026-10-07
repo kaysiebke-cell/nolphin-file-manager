@@ -42,6 +42,16 @@ on_widget_map (GSignalInvocationHint *hint, guint n_params, const GValue *params
 G_MODULE_EXPORT void
 gtk_module_init (gint *argc, gchar ***argv)
 {
+	guint map_signal;
+
+	/* Das Modul wird in gtk_init() geladen, bevor GtkWidget je benutzt wurde.
+	 * Erst mit referenzierter Klasse gibt es das Signal "map". */
+	g_type_class_ref (GTK_TYPE_WIDGET);
+	map_signal = g_signal_lookup ("map", GTK_TYPE_WIDGET);
+	if (map_signal == 0) {
+		return;
+	}
+
 	/* "map" aller Widgets beobachten; der Haken prüft nur auf Dateiauswahldialoge. */
-	g_signal_add_emission_hook (g_signal_lookup ("map", GTK_TYPE_WIDGET), 0, on_widget_map, NULL, NULL);
+	g_signal_add_emission_hook (map_signal, 0, on_widget_map, NULL, NULL);
 }
