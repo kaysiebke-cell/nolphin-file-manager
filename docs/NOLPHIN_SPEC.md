@@ -1,10 +1,11 @@
-# NOLPHIN – MASTER DEVELOPMENT CONTRACT (Version 2.4)
+# NOLPHIN – MASTER DEVELOPMENT CONTRACT (Version 2.5)
 
 Verbindlicher Entwicklungs-, Funktions- und Arbeitsvertrag
 
 **Aktualisierung 2.2:** Klarstellung und Konfliktauflösung zum rechten integrierten Arbeitsbereich (siehe Abschnitt 58.0 und 58.1).
 **Aktualisierung 2.3:** Nachträgliche Dokumentation der bereits implementierten Funktion „DEB-Paket erstellen" als Teil des Archiv-Panels (siehe Abschnitt 36.1). Alle übrigen Abschnitte sind gegenüber Version 2.1 inhaltlich unverändert.
 **Aktualisierung 2.4:** Neuer Abschnitt 60 „GID-Projekte“ (lokale Projektliste in der Seitenleiste, README-Panel im rechten Arbeitsbereich); vom Benutzer freigegeben.
+**Aktualisierung 2.5:** Abschnitt 3 (Technische Grundlage): Nolphin ist ein Fork von Nemo 6.7.7 (GPL); die frühere Aussage „kein Code aus Nemo kopiert“ ist damit korrigiert. Die Laufzeit-Eigenständigkeit (keine Abhängigkeit zu installiertem Nemo, keine Nemo-Konfiguration) bleibt unverändert. Vom Benutzer freigegeben.
 
 ---
 
@@ -61,9 +62,11 @@ Die Benutzeroberfläche orientiert sich an der von mir bereitgestellten Referenz
 
 ## 3. TECHNISCHE GRUNDLAGE
 
-Nolphin wird ausschließlich mit den Mitteln gebaut, die auch der Linux-Mint-Dateimanager Nemo verwendet bzw. die unter Linux Mint standardmäßig verfügbar sind. Nemo dient ausschließlich als technische Orientierung dafür, welche Bibliotheken, Systemdienste, APIs und Standards unter Linux Mint sinnvoll und verfügbar sind. Es wird kein Code aus Nemo oder anderen Projekten kopiert. Die Oberfläche richtet sich ausschließlich nach meiner bereitgestellten Referenz und den Anforderungen dieses Entwicklungsvertrags, nicht nach der Oberfläche von Nemo.
+Nolphin wird ausschließlich mit den Mitteln gebaut, die auch der Linux-Mint-Dateimanager Nemo verwendet bzw. die unter Linux Mint standardmäßig verfügbar sind.
 
-Nolphin ist eine vollständig eigenständige Anwendung. Es besteht keine Abhängigkeit zu Nemo, zu Nemo-Paketen, zu Nemo-Erweiterungsbibliotheken oder zu Nemo-Konfigurationsdateien. Nolphin darf keine Dateien, Einstellungen oder Konfigurationen anderer Dateimanager verändern.
+**Herkunft (Version 2.5):** Nolphin ist ein Fork von Nemo 6.7.7 (GTK3, C11, GPL). Der Quellcode von Nemo ist die Ausgangsbasis des Projekts und wurde vollständig in „Nolphin“ umbenannt und erweitert. Die ursprünglichen Urheberrechtshinweise (`AUTHORS`, `THANKS`, Dateikopfzeilen) bleiben erhalten; die Lizenz ist die GPL (siehe `COPYING`). Außerhalb dieser Nemo-Basis wird kein Code aus anderen Projekten kopiert. Neue Funktionen, Panels und Module sind eigene Entwicklung. Die Oberfläche richtet sich nach meiner bereitgestellten Referenz und den Anforderungen dieses Entwicklungsvertrags.
+
+Nolphin ist zur Laufzeit eine vollständig eigenständige Anwendung. Es besteht keine Abhängigkeit zu einem installierten Nemo, zu Nemo-Paketen, zu Nemo-Erweiterungsbibliotheken oder zu Nemo-Konfigurationsdateien. Nolphin darf keine Dateien, Einstellungen oder Konfigurationen anderer Dateimanager verändern.
 
 ### Sprache und Build
 
@@ -85,7 +88,7 @@ Diese Bibliotheken bilden die technische Grundlage der Kernanwendung. Die Kernfu
 
 ### Eigenständigkeit und Abgrenzung
 
-Nolphin muss als eigenständige Linux-Anwendung entwickelt und betrieben werden.
+Nolphin muss als eigenständige Linux-Anwendung betrieben werden (Code-Herkunft: Fork von Nemo 6.7.7, siehe oben).
 
 Insbesondere gilt:
 
@@ -97,7 +100,7 @@ Insbesondere gilt:
 * Keine Veränderung von Dateien oder Einstellungen anderer Dateimanager.
 * Keine Nachbildung von Nemo-internen APIs, wenn dafür eine standardisierte Linux-, GTK-, GLib-, GIO-, XDG- oder Freedesktop-Schnittstelle vorhanden ist.
 
-Nemo darf ausschließlich als technische Referenz dafür dienen, welche unter Linux Mint verfügbaren Systemmechanismen für eine bestimmte Funktion grundsätzlich geeignet sind.
+Der Nemo-Quellcode dient als Codebasis (Fork) und als technische Referenz dafür, welche unter Linux Mint verfügbaren Systemmechanismen für eine bestimmte Funktion grundsätzlich geeignet sind. Ein installiertes Nemo wird zur Laufzeit weder benötigt noch angesprochen.
 
 ---
 
@@ -1437,7 +1440,7 @@ Eine Funktion ist nur dann IMPLEMENTIERT, wenn Code vorhanden ist, kompiliert, t
 - Code, APIs oder nicht existierende Dateien erfinden
 - nicht getestete Funktionen als fertig markieren
 - Anforderungen still entfernen oder ohne Meldung vereinfachen
-- fremden Code kopieren
+- fremden Code kopieren (ausgenommen die Nemo-Basis des Forks, Abschnitt 3)
 - Qt- oder KDE-Bibliotheken verwenden
 - Pakete installieren oder Abhängigkeiten hinzufügen ohne meine Freigabe (Abschnitt 50.1)
 - Abhängigkeiten zu Nemo oder Nemo-Paketen
