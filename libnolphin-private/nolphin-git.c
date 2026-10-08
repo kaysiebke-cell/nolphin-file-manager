@@ -661,38 +661,170 @@ nolphin_git_commit_finish (GAsyncResult *result, GError **error)
     return g_task_propagate_boolean (G_TASK (result), error);
 }
 
-void
-nolphin_git_pull_async (GFile *repo_root,
-                        GCancellable *cancellable,
-                        GAsyncReadyCallback callback, gpointer user_data)
+static gboolean git_run_blocking (const gchar *repo_path, gchar **out, gchar **err_text, ...);
+
+/* Prüft, ob der aktuelle Zweig einen brauchbaren Server-Zweig hat, und
+ * verbindet ihn wenn möglich selbst. Der Nutzer soll dafür kein
+ * "git branch --set-upstream-to" im Terminal tippen müssen.
+ *   0 = verbunden
+ *   1 = es gibt den Zweig auf dem Server (noch) nicht; branch und remote gesetzt
+ *   2 = kein Server eingetragen oder HEAD ohne Zweig */
+static gint
+git_check_upstream (const gchar *repo_path, gchar **branch, gchar **remote)
+{
+    gchar *out = NULL, *err = NULL, *ref, *spec;
+    gchar **names;
+    guint i;
+    gint state;
+
+    *branch = NULL;
+    *remote = NULL;
+
+    if (git_run_blocking (repo_path, NULL, &err, "rev-parse", "--verify", "--quiet", "@{u}", NULL)) {
+        g_free (err);
+        return 0;
+    }
+    g_free (err);
+
+    if (!git_run_blocking (repo_path, &out, &err, "symbolic-ref", "--short", "HEAD", NULL)) {
+        g_free (out);
+        g_free (err);
+        return 2;
+    }
+    *branch = g_strstrip (out);
+    g_free (err);
+
+    if (!git_run_blocking (repo_path, &out, &err, "remote", NULL)) {
+        g_free (out);
+        g_free (err);
+        return 2;
+    }
+    g_free (err);
+    names = g_strsplit (out != NULL ? out : "", "\n", -1);
+    g_free (out);
+    for (i = 0; names[i] != NULL; i++) {
+        g_strstrip (names[i]);
+        if (names[i][0] == '\0') {
+            continue;
+        }
+        if (*remote == NULL || g_strcmp0 (names[i], "origin") == 0) {
+            g_free (*remote);
+            *remote = g_strdup (names[i]);
+        }
+    }
+    g_strfreev (names);
+    if (*remote == NULL) {
+        return 2;
+    }
+
+    ref = g_strdup_printf ("refs/remotes/%s/%s", *remote, *branch);
+    if (git_run_blocking (repo_path, NULL, &err, "rev-parse", "--verify", "--quiet", ref, NULL)) {
+        spec = g_strdup_printf ("%s/%s", *remote, *branch);
+        git_run_blocking (repo_path, NULL, NULL, "branch", "--set-upstream-to", spec, NULL);
+        g_free (spec);
+        state = 0;
+    } else {
+        state = 1;
+    }
+    g_free (err);
+    g_free (ref);
+    return state;
+}
+
+static gchar *
+git_combine_output (gchar *out, gchar *err)
+{
+    gchar *combined = g_strconcat (out != NULL ? out : "", err != NULL ? err : "", NULL);
+
+    g_free (out);
+    g_free (err);
+    return combined;
+}
+
+static void
+git_pull_push_thread (GTask *task, gpointer source, gpointer task_data, GCancellable *cancellable)
+{
+    gchar *repo_path = g_object_get_data (G_OBJECT (task), "repo-path");
+    gboolean is_push = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (task), "push"));
+    gchar *out = NULL, *err = NULL, *branch = NULL, *remote = NULL;
+    gboolean ok;
+    gint state;
+
+    if (!is_push) {
+        /* Ohne frischen Stand kennt git den Server-Zweig nicht. */
+        if (!git_run_blocking (repo_path, NULL, &err, "fetch", NULL)) {
+            g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED,
+                                     "%s%s%s", _("Abgleich mit dem Server fehlgeschlagen."),
+                                     err[0] != '\0' ? "\n" : "", err);
+            g_free (err);
+            return;
+        }
+        g_free (err);
+        err = NULL;
+    }
+
+    state = git_check_upstream (repo_path, &branch, &remote);
+    if (state == 2) {
+        g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED, "%s",
+                                 _("Es ist noch kein Server eingetragen. Trage über „Server eintragen …“ eine Adresse ein."));
+        goto out;
+    }
+    if (state == 1 && !is_push) {
+        g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED,
+                                 _("Den Zweig »%s« gibt es auf dem Server noch nicht – es gibt nichts herunterzuladen. Mit „Hochladen“ legst du ihn dort an."),
+                                 branch);
+        goto out;
+    }
+
+    if (state == 1) {
+        ok = git_run_blocking (repo_path, &out, &err, "push", "--set-upstream", remote, branch, NULL);
+    } else {
+        ok = git_run_blocking (repo_path, &out, &err, is_push ? "push" : "pull", NULL);
+    }
+
+    if (!ok) {
+        g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED,
+                                 "%s%s%s", _("git wurde mit einem Fehler beendet."),
+                                 err[0] != '\0' ? "\n" : "", err);
+        g_free (out);
+        g_free (err);
+    } else {
+        g_task_return_pointer (task, git_combine_output (out, err), g_free);
+    }
+
+out:
+    g_free (branch);
+    g_free (remote);
+}
+
+static void
+git_pull_push_async (GFile *repo_root, gboolean is_push, GCancellable *cancellable,
+                     GAsyncReadyCallback callback, gpointer user_data, gpointer source_tag)
 {
     GTask *task;
     gchar *repo_path;
-    GSubprocess *subprocess;
-    GError *error = NULL;
-
-    g_return_if_fail (G_IS_FILE (repo_root));
 
     task = g_task_new (NULL, cancellable, callback, user_data);
-    g_task_set_source_tag (task, nolphin_git_pull_async);
+    g_task_set_source_tag (task, source_tag);
 
     repo_path = require_repo_path (repo_root, task);
     if (repo_path == NULL) {
         return;
     }
 
-    subprocess = spawn_git (repo_path, G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-                            &error, "pull", NULL);
-    g_free (repo_path);
+    g_object_set_data_full (G_OBJECT (task), "repo-path", repo_path, g_free);
+    g_object_set_data (G_OBJECT (task), "push", GINT_TO_POINTER (is_push));
+    g_task_run_in_thread (task, git_pull_push_thread);
+    g_object_unref (task);
+}
 
-    if (subprocess == NULL) {
-        g_task_return_error (task, error);
-        g_object_unref (task);
-        return;
-    }
-
-    g_subprocess_communicate_utf8_async (subprocess, NULL, cancellable, simple_text_communicate_cb, task);
-    g_object_unref (subprocess);
+void
+nolphin_git_pull_async (GFile *repo_root,
+                        GCancellable *cancellable,
+                        GAsyncReadyCallback callback, gpointer user_data)
+{
+    g_return_if_fail (G_IS_FILE (repo_root));
+    git_pull_push_async (repo_root, FALSE, cancellable, callback, user_data, nolphin_git_pull_async);
 }
 
 gchar *
@@ -706,33 +838,8 @@ nolphin_git_push_async (GFile *repo_root,
                         GCancellable *cancellable,
                         GAsyncReadyCallback callback, gpointer user_data)
 {
-    GTask *task;
-    gchar *repo_path;
-    GSubprocess *subprocess;
-    GError *error = NULL;
-
     g_return_if_fail (G_IS_FILE (repo_root));
-
-    task = g_task_new (NULL, cancellable, callback, user_data);
-    g_task_set_source_tag (task, nolphin_git_push_async);
-
-    repo_path = require_repo_path (repo_root, task);
-    if (repo_path == NULL) {
-        return;
-    }
-
-    subprocess = spawn_git (repo_path, G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-                            &error, "push", NULL);
-    g_free (repo_path);
-
-    if (subprocess == NULL) {
-        g_task_return_error (task, error);
-        g_object_unref (task);
-        return;
-    }
-
-    g_subprocess_communicate_utf8_async (subprocess, NULL, cancellable, simple_text_communicate_cb, task);
-    g_object_unref (subprocess);
+    git_pull_push_async (repo_root, TRUE, cancellable, callback, user_data, nolphin_git_push_async);
 }
 
 gchar *
@@ -978,9 +1085,48 @@ git_sync_thread (GTask *task, gpointer source, gpointer task_data, GCancellable 
     }
     g_free (err);
 
+    {
+        gchar *branch = NULL, *remote = NULL;
+        gint state = git_check_upstream (repo_path, &branch, &remote);
+
+        if (state == 1) {
+            if (apply) {
+                if (!git_run_blocking (repo_path, NULL, &err, "push", "--set-upstream", remote, branch, NULL)) {
+                    g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED,
+                                             "%s%s%s", _("Hochladen fehlgeschlagen."),
+                                             err[0] != '\0' ? "\n" : "", err);
+                } else {
+                    g_string_append_printf (report, _("Den Zweig »%s« gab es auf dem Server noch nicht – er wurde angelegt und hochgeladen."), branch);
+                    g_task_return_pointer (task, g_string_free (report, FALSE), g_free);
+                    report = NULL;
+                }
+            } else {
+                g_string_append_printf (report, _("Den Zweig »%s« gibt es auf dem Server noch nicht. „Synchronisieren“ legt ihn dort an."), branch);
+                g_task_return_pointer (task, g_string_free (report, FALSE), g_free);
+                report = NULL;
+            }
+            g_free (err);
+            g_free (branch);
+            g_free (remote);
+            if (report != NULL) {
+                g_string_free (report, TRUE);
+            }
+            return;
+        }
+        g_free (branch);
+        g_free (remote);
+        if (state == 2) {
+            g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED, "%s",
+                                     _("Es ist noch kein Server eingetragen. Trage über „Server eintragen …“ eine Adresse ein."));
+            g_string_free (report, TRUE);
+            return;
+        }
+    }
+
     if (!git_run_blocking (repo_path, &out, &err, "rev-list", "--left-right", "--count", "HEAD...@{u}", NULL)) {
-        g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED, "%s",
-                                 _("Dieser Zweig ist noch mit keinem Server-Zweig verbunden. Trage zuerst über „Remote hinzufügen“ einen Server ein und führe einmal „Push“ aus."));
+        g_task_return_new_error (task, NOLPHIN_GIT_ERROR, NOLPHIN_GIT_ERROR_TOOL_FAILED, "%s%s%s",
+                                 _("Der Vergleich mit dem Server ist fehlgeschlagen."),
+                                 err[0] != '\0' ? "\n" : "", err);
         g_free (out);
         g_free (err);
         g_string_free (report, TRUE);

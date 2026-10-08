@@ -350,6 +350,70 @@ main (int argc, char **argv)
 	}
 	g_object_unref (pending_result);
 
+	/* --- Push/Pull ohne Upstream-Zweig: git soll nicht ratlos zurücklassen --- */
+	{
+		gchar *cmd, *text;
+		gchar *server = g_strdup_printf ("%s/server.git", tmpl);
+
+		cmd = g_strdup_printf ("git init -q --bare %s", server);
+		run_cmd (tmpl, cmd);
+		g_free (cmd);
+		cmd = g_strdup_printf ("git remote set-url origin %s", server);
+		run_cmd (quoted, cmd);
+		g_free (cmd);
+
+		/* 1. Zweig ist auf dem Server unbekannt: Pull sagt es verständlich */
+		pending_result = NULL;
+		nolphin_git_pull_async (repo_dir, NULL, on_ready, NULL);
+		gtk_main ();
+		text = nolphin_git_pull_finish (pending_result, &error);
+		if (text != NULL || error == NULL || strstr (error->message, "noch nicht") == NULL) {
+			fail ("pull on a branch missing on the server must explain that");
+		} else {
+			g_print ("PASS: pull without server branch gives a readable message\n");
+		}
+		g_free (text);
+		g_clear_error (&error);
+		g_object_unref (pending_result);
+
+		/* 2. Push legt den Zweig an und verbindet ihn selbst */
+		pending_result = NULL;
+		nolphin_git_push_async (repo_dir, NULL, on_ready, NULL);
+		gtk_main ();
+		text = nolphin_git_push_finish (pending_result, &error);
+		if (text == NULL) {
+			fail ("push without upstream must create the branch on the server");
+			g_clear_error (&error);
+		} else {
+			g_print ("PASS: push without upstream creates and connects the branch\n");
+		}
+		g_free (text);
+		g_object_unref (pending_result);
+		if (run_cmd (quoted, "git rev-parse --verify --quiet @{u} >/dev/null") != 0) {
+			fail ("upstream must be set after the first push");
+		}
+
+		/* 3. Server-Zweig verschwindet (wie nach dem Löschen auf GitHub):
+		 * Push muss ihn wieder anlegen */
+		cmd = g_strdup_printf ("git --git-dir=%s for-each-ref --format='%%(refname)' refs/heads | xargs -r -n1 git --git-dir=%s update-ref -d", server, server);
+		run_cmd (tmpl, cmd);
+		g_free (cmd);
+		run_cmd (quoted, "git fetch --prune -q");
+		pending_result = NULL;
+		nolphin_git_push_async (repo_dir, NULL, on_ready, NULL);
+		gtk_main ();
+		text = nolphin_git_push_finish (pending_result, &error);
+		if (text == NULL) {
+			fail ("push after the server branch was deleted must recreate it");
+			g_clear_error (&error);
+		} else {
+			g_print ("PASS: push recreates a branch deleted on the server\n");
+		}
+		g_free (text);
+		g_object_unref (pending_result);
+		g_free (server);
+	}
+
 	g_free (committed_path);
 	g_free (untracked_path);
 	g_free (tmpl);
