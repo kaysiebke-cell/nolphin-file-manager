@@ -36,7 +36,7 @@ env GSETTINGS_SCHEMA_DIR="$(pwd)/build/libnolphin-private" \
     ./build/src/nolphin
 ```
 
-Mit **F11** blendest du den rechten Arbeitsbereich ein, mit **F4** das Terminal.
+Mit **F11** blendest du den rechten Arbeitsbereich ein, mit **F4** das Terminal. Der Arbeitsbereich ist mindestens 400 Pixel breit (Standard 480); die Breite lässt sich mit dem Teiler ändern und wird gemerkt.
 
 Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](#bauen-und-installieren).
 
