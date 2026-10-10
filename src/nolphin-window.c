@@ -620,7 +620,7 @@ save_sidebar_width_cb (gpointer user_data)
 	return FALSE;
 }
 
-#define NOLPHIN_PREVIEW_MIN_WIDTH 300
+#define NOLPHIN_PREVIEW_MIN_WIDTH 400
 
 static gboolean
 save_preview_width_cb (gpointer user_data)
@@ -673,28 +673,26 @@ preview_size_allocate_callback (GtkWidget *widget,
 		g_timeout_add (100, save_preview_width_cb, window);
 }
 
-/* Beim Start ist die Fensterbreite noch unbekannt, die gespeicherte
- * Breite des rechten Bereichs wird daher bei der ersten echten
- * Zuteilung angewendet. */
+/* Die gespeicherte Breite des rechten Bereichs gilt bei jeder Änderung der
+ * Fensterbreite (auch beim Maximieren nach dem Start); eine vom Benutzer mit
+ * dem Teiler gewählte Breite wird gespeichert und danach so beibehalten. */
 static void
-preview_hpaned_first_allocate_callback (GtkWidget     *widget,
-					GtkAllocation *allocation,
-					gpointer       user_data)
+preview_hpaned_allocate_callback (GtkWidget     *widget,
+				  GtkAllocation *allocation,
+				  gpointer       user_data)
 {
 	NolphinWindow *window = user_data;
-	gint wanted_width;
+	gint wanted_width, last_width;
 
-	if (allocation->width <= 1) {
+	if (allocation->width <= 1 || !window->details->show_preview) {
 		return;
 	}
 
-	g_signal_handlers_disconnect_by_func (widget,
-					      preview_hpaned_first_allocate_callback,
-					      user_data);
-
-	if (!window->details->show_preview) {
+	last_width = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (widget), "nolphin-last-width"));
+	if (last_width == allocation->width) {
 		return;
 	}
+	g_object_set_data (G_OBJECT (widget), "nolphin-last-width", GINT_TO_POINTER (allocation->width));
 
 	wanted_width = MAX (g_settings_get_int (nolphin_window_state,
 						NOLPHIN_WINDOW_STATE_PREVIEW_WIDTH),
@@ -1062,7 +1060,7 @@ nolphin_window_constructed (GObject *self)
 	g_signal_connect (window->details->workspace_panel, "size-allocate",
 			  G_CALLBACK (preview_size_allocate_callback), window);
 	g_signal_connect (window->details->preview_hpaned, "size-allocate",
-			  G_CALLBACK (preview_hpaned_first_allocate_callback), window);
+			  G_CALLBACK (preview_hpaned_allocate_callback), window);
 
 	pane = nolphin_window_pane_new (window);
 	window->details->panes = g_list_prepend (window->details->panes, pane);
@@ -4266,6 +4264,7 @@ nolphin_window_set_show_preview (NolphinWindow *window,
 						MAX (total - wanted_width, 1));
 		}
 
+		g_object_set_data (G_OBJECT (window->details->preview_hpaned), "nolphin-last-width", NULL);
 		gtk_widget_show (window->details->workspace_panel);
 		nolphin_window_sync_preview_selection (window);
 	} else {

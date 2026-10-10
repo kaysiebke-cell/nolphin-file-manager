@@ -906,7 +906,7 @@
       <description>If set to true, newly opened windows will have the F11 info/preview panel visible.</description>
     </key>
     <key name="preview-width" type="i">
-      <default>350</default>
+      <default>480</default>
       <summary>Width of the info/preview panel</summary>
       <description>The default width in pixels of the F11 info/preview panel.</description>
     </key>
