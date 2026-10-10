@@ -172,6 +172,18 @@ populate_from_directory (NolphinActionConfigWidget *widget, const gchar *path)
         while ((name = g_dir_read_name (dir))) {
             if (g_str_has_suffix (name, ".nolphin_action")) {
                 char *filename;
+                GList *l;
+                gboolean seen = FALSE;
+
+                /* Gleichnamige Aktionen aus mehreren Datenordnern nur einmal listen. */
+                for (l = widget->actions; l != NULL && !seen; l = l->next) {
+                    g_autofree gchar *base = g_path_get_basename (((ActionProxy *) l->data)->filename);
+
+                    seen = g_strcmp0 (base, name) == 0;
+                }
+                if (seen) {
+                    continue;
+                }
 
                 filename = g_build_filename (path, name, NULL);
                 ActionProxy *p = make_action_proxy (name, filename);
