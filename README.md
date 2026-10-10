@@ -174,11 +174,12 @@ Im Ordner selbst zeigen **Overlay-Symbole** den Git-Status jeder Datei (Häkchen
 
 ![Massenumbenennung mit Suchen, Ersetzen und Nummerierung](docs/bilder/panel-massenumbenennung.png)
 
-**Geteilte Ansicht und Arbeitsbereiche** – bis zu vier Bereiche nebeneinander; das gesamte Layout lässt sich als Arbeitsbereich speichern:
+**Geteilte Ansicht und Arbeitsbereiche** – bis zu vier Bereiche mit eigenen Orten und Reitern. Über den Pfeil neben dem Split-Knopf oder *Ansicht ▸ Geteilte Ansicht ▸ Layout* wählst du ein fertiges Layout: zwei oder drei Spalten, 2×2, einen großen Bereich mit zwei kleinen oder zwei Zeilen. Vorhandene Bereiche und ihre Reiter bleiben dabei erhalten. Mit Strg+Alt+1 bis 4 springst du direkt zu einem Bereich, mit Alt+Umschalt+Links zurück zum zuletzt aktiven, Strg+Alt+0 blendet die Bereichsnummern kurz ein und Strg+Alt+X tauscht den aktiven Bereich mit dem nächsten. Das zuletzt gewählte Layout wird beim Neustart wiederhergestellt (Einstellung „Tabs beim Start wiederherstellen"). Das gesamte Layout lässt sich außerdem als Arbeitsbereich speichern:
 
-| Geteilte Ansicht | Vier Bereiche |
+| Layout-Auswahl | Geteilte Ansicht |
 | --- | --- |
-| ![Menü Ansicht ▸ Geteilte Ansicht](docs/bilder/menue-geteilte-ansicht.png) | ![Vier Bereiche mit verschiedenen Ordnern](docs/bilder/ansicht-vier-bereiche.png) |
+| ![Layout-Auswahl mit fünf Kacheln: zwei Spalten, drei Spalten, 2×2, ein großer Bereich plus zwei, zwei Zeilen](docs/bilder/layout-auswahl.png) | ![Menü Ansicht ▸ Geteilte Ansicht mit dem Untermenü Layout](docs/bilder/menue-geteilte-ansicht.png) |
+| ![Vier Bereiche im Raster mit verschiedenen Ordnern und sichtbarem Abstand](docs/bilder/ansicht-vier-bereiche.png) | |
 | ![Menü Datei ▸ Arbeitsbereiche](docs/bilder/menue-arbeitsbereiche.png) | ![Arbeitsbereiche-Panel mit einem gespeicherten Arbeitsbereich](docs/bilder/panel-arbeitsbereiche.png) |
 
 **Gehe zu und Hilfe** – Verlauf, häufig verwendete Orte und Reiter im Menü „Gehe zu“, die Diagnose im Menü „Hilfe“:
