@@ -364,7 +364,9 @@ on_ver_diff (GtkButton *button, gpointer data)
 			in = g_bytes_new_static ("", 0);
 			g_subprocess_communicate (proc, in, NULL, &out, NULL, NULL);
 			g_bytes_unref (in);
-			text = out != NULL ? g_utf8_make_valid (g_bytes_get_data (out, NULL), g_bytes_get_size (out)) : g_strdup ("");
+			/* Bei gleichen Dateien ist die Ausgabe leer (Daten-Zeiger NULL). */
+			text = (out != NULL && g_bytes_get_size (out) > 0) ?
+			       g_utf8_make_valid (g_bytes_get_data (out, NULL), g_bytes_get_size (out)) : g_strdup ("");
 			if (text[0] == '\0') {
 				g_free (text);
 				text = g_strdup (_("Keine Unterschiede: Version und aktuelle Datei sind gleich."));
