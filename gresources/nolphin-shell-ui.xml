@@ -98,6 +98,13 @@
 			<menu action="SplitViewMenu">
 				<menuitem name="Show Hide Extra Pane Sub" action="Show Hide Extra Pane"/>
 				<menuitem name="Split View Horizontal" action="Split View Horizontal"/>
+				<menu action="SplitLayoutMenu">
+					<menuitem name="Split Layout Two Columns" action="Split Layout Two Columns"/>
+					<menuitem name="Split Layout Three Columns" action="Split Layout Three Columns"/>
+					<menuitem name="Split Layout Grid" action="Split Layout Grid"/>
+					<menuitem name="Split Layout Big Plus Two" action="Split Layout Big Plus Two"/>
+					<menuitem name="Split Layout Two Rows" action="Split Layout Two Rows"/>
+				</menu>
 				<separator/>
 				<menuitem name="Duplicate Pane" action="Duplicate Pane"/>
 				<menuitem name="Maximize Pane" action="Maximize Pane"/>

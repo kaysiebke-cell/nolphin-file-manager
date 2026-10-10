@@ -3633,6 +3633,218 @@ nolphin_window_split_view_add_pane (NolphinWindow *window)
 	nolphin_window_sync_tab_actions (window);
 }
 
+/* --- Layouts der geteilten Ansicht (§16) ----------------------------------
+ * Die vorhandenen Bereiche werden in den Baum des gewählten Layouts umgesetzt.
+ * Sie bleiben dabei unverändert (Reiter, Auswahl, Ort). Gibt es mehr Bereiche
+ * als Zonen, wandern die Orte der überzähligen als Reiter in die letzte Zone;
+ * fehlende Zonen bekommen einen neuen Bereich am Ort des aktiven Bereichs. */
+
+static gint
+split_layout_zones (NolphinSplitLayout layout)
+{
+	switch (layout) {
+	case NOLPHIN_SPLIT_LAYOUT_TWO_COLUMNS:
+	case NOLPHIN_SPLIT_LAYOUT_TWO_ROWS:
+		return 2;
+	case NOLPHIN_SPLIT_LAYOUT_THREE_COLUMNS:
+	case NOLPHIN_SPLIT_LAYOUT_BIG_PLUS_TWO:
+		return 3;
+	case NOLPHIN_SPLIT_LAYOUT_GRID:
+	default:
+		return 4;
+	}
+}
+
+static void
+collect_panes_in_tree (GtkWidget *widget, GList **out)
+{
+	if (widget == NULL) {
+		return;
+	}
+	if (NOLPHIN_IS_WINDOW_PANE (widget)) {
+		*out = g_list_append (*out, widget);
+	} else if (GTK_IS_PANED (widget)) {
+		collect_panes_in_tree (gtk_paned_get_child1 (GTK_PANED (widget)), out);
+		collect_panes_in_tree (gtk_paned_get_child2 (GTK_PANED (widget)), out);
+	}
+}
+
+/* Setzt die Trennlinie einmalig auf @user_data Promille der Größe. */
+static void
+layout_set_divider (GtkWidget *paned, GdkRectangle *allocation, gpointer user_data)
+{
+	gint size = gtk_orientable_get_orientation (GTK_ORIENTABLE (paned)) == GTK_ORIENTATION_HORIZONTAL
+		    ? allocation->width : allocation->height;
+
+	if (size <= 1) {
+		return;
+	}
+	gtk_paned_set_position (GTK_PANED (paned), size * GPOINTER_TO_INT (user_data) / 1000);
+	g_signal_handlers_disconnect_by_func (paned, layout_set_divider, user_data);
+}
+
+static void
+layout_fill_paned (GtkPaned *paned, GtkOrientation orientation,
+		   GtkWidget *a, GtkWidget *b, gint permille)
+{
+	gtk_orientable_set_orientation (GTK_ORIENTABLE (paned), orientation);
+	gtk_paned_pack1 (paned, a, TRUE, FALSE);
+	gtk_paned_pack2 (paned, b, TRUE, FALSE);
+	g_signal_connect (paned, "size-allocate", G_CALLBACK (layout_set_divider), GINT_TO_POINTER (permille));
+	gtk_widget_show (GTK_WIDGET (paned));
+}
+
+static GtkWidget *
+layout_new_paned (GtkOrientation orientation, GtkWidget *a, GtkWidget *b, gint permille)
+{
+	GtkWidget *paned = gtk_paned_new (orientation);
+
+	layout_fill_paned (GTK_PANED (paned), orientation, a, b, permille);
+	return paned;
+}
+
+void
+nolphin_window_apply_split_layout (NolphinWindow *window, NolphinSplitLayout layout)
+{
+	GList *tree = NULL, *l;
+	GPtrArray *keep;
+	NolphinWindowPane *active, *target;
+	GtkPaned *root;
+	GtkWidget *child;
+	gint zones, count, i;
+	GtkWidget **p;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	if (nolphin_window_is_desktop (window)) {
+		return;
+	}
+
+	zones = split_layout_zones (layout);
+	root = GTK_PANED (window->details->split_view_hpane);
+	set_pane_maximized (window, FALSE);
+	active = nolphin_window_get_active_pane (window);
+
+	collect_panes_in_tree (GTK_WIDGET (root), &tree);
+
+	/* Überzählige Bereiche: Orte als Reiter in die letzte Zone übernehmen */
+	if ((gint) g_list_length (tree) > zones) {
+		NolphinWindowPane *last = g_list_nth_data (tree, zones - 1);
+
+		for (l = g_list_nth (tree, zones); l != NULL; l = l->next) {
+			NolphinWindowPane *extra = l->data;
+			GList *s;
+
+			for (s = extra->slots; s != NULL; s = s->next) {
+				GFile *loc = nolphin_window_slot_get_location (s->data);
+
+				if (loc != NULL && !g_file_has_uri_scheme (loc, "x-nolphin-search")) {
+					NolphinWindowSlot *slot = nolphin_window_pane_open_slot (last, NOLPHIN_WINDOW_OPEN_SLOT_APPEND);
+
+					nolphin_window_slot_open_location (slot, loc, 0);
+				}
+				g_clear_object (&loc);
+			}
+		}
+		for (l = g_list_nth (tree, zones); l != NULL; l = l->next) {
+			if (l->data == active) {
+				active = last;
+			}
+			nolphin_window_close_pane (window, l->data);
+		}
+		g_list_free (tree);
+		tree = NULL;
+		collect_panes_in_tree (GTK_WIDGET (root), &tree);
+	}
+
+	/* Fehlende Zonen: neue Bereiche am Ort des aktiven Bereichs */
+	count = g_list_length (tree);
+	while (count < zones) {
+		NolphinWindowPane *pane = nolphin_window_pane_new (window);
+		GFile *location = NULL;
+
+		window->details->panes = g_list_append (window->details->panes, pane);
+		gtk_widget_hide (pane->tool_bar);
+		pane->active_slot = nolphin_window_pane_open_slot (pane, NOLPHIN_WINDOW_OPEN_SLOT_APPEND);
+
+		if (active != NULL && active->active_slot != NULL) {
+			location = nolphin_window_slot_get_location (active->active_slot);
+			if (location != NULL && g_file_has_uri_scheme (location, "x-nolphin-search")) {
+				g_clear_object (&location);
+			}
+		}
+		if (location == NULL) {
+			location = g_file_new_for_path (g_get_home_dir ());
+		}
+		nolphin_window_slot_open_location (pane->active_slot, location, 0);
+		g_object_unref (location);
+
+		tree = g_list_append (tree, pane);
+		count++;
+	}
+
+	/* Alle Bereiche aus dem alten Baum lösen, danach den Rest abbauen */
+	keep = g_ptr_array_new ();
+	for (l = tree; l != NULL; l = l->next) {
+		GtkWidget *w = l->data;
+		GtkWidget *parent = gtk_widget_get_parent (w);
+
+		g_ptr_array_add (keep, g_object_ref (w));
+		if (parent != NULL) {
+			gtk_container_remove (GTK_CONTAINER (parent), w);
+		}
+	}
+	while ((child = gtk_paned_get_child1 (root)) != NULL) {
+		gtk_container_remove (GTK_CONTAINER (root), child);
+	}
+	while ((child = gtk_paned_get_child2 (root)) != NULL) {
+		gtk_container_remove (GTK_CONTAINER (root), child);
+	}
+	g_signal_handlers_disconnect_by_func (root, center_pane_divider, NULL);
+	g_object_set (G_OBJECT (root), "position", 0, "position-set", FALSE, NULL);
+
+	p = (GtkWidget **) keep->pdata;
+	switch (layout) {
+	case NOLPHIN_SPLIT_LAYOUT_TWO_COLUMNS:
+		layout_fill_paned (root, GTK_ORIENTATION_HORIZONTAL, p[0], p[1], 500);
+		break;
+	case NOLPHIN_SPLIT_LAYOUT_THREE_COLUMNS:
+		layout_fill_paned (root, GTK_ORIENTATION_HORIZONTAL, p[0],
+				   layout_new_paned (GTK_ORIENTATION_HORIZONTAL, p[1], p[2], 500), 333);
+		break;
+	case NOLPHIN_SPLIT_LAYOUT_GRID:
+		layout_fill_paned (root, GTK_ORIENTATION_VERTICAL,
+				   layout_new_paned (GTK_ORIENTATION_HORIZONTAL, p[0], p[1], 500),
+				   layout_new_paned (GTK_ORIENTATION_HORIZONTAL, p[2], p[3], 500), 500);
+		break;
+	case NOLPHIN_SPLIT_LAYOUT_BIG_PLUS_TWO:
+		layout_fill_paned (root, GTK_ORIENTATION_HORIZONTAL, p[0],
+				   layout_new_paned (GTK_ORIENTATION_VERTICAL, p[1], p[2], 500), 667);
+		break;
+	case NOLPHIN_SPLIT_LAYOUT_TWO_ROWS:
+	default:
+		layout_fill_paned (root, GTK_ORIENTATION_VERTICAL, p[0], p[1], 500);
+		break;
+	}
+	for (i = 0; i < (gint) keep->len; i++) {
+		gtk_widget_show (p[i]);
+		g_object_unref (p[i]);
+	}
+	g_ptr_array_free (keep, TRUE);
+
+	/* Reihenfolge der Bereichsliste = Reihenfolge im Baum */
+	g_list_free (window->details->panes);
+	window->details->panes = g_list_copy (tree);
+
+	target = (active != NULL && g_list_find (tree, active) != NULL) ? active : tree->data;
+	g_list_free (tree);
+
+	nolphin_window_set_active_pane (window, target);
+	nolphin_navigation_state_set_master (window->details->nav_state, target->action_group);
+	nolphin_window_update_show_hide_ui_elements (window);
+	nolphin_window_sync_tab_actions (window);
+}
+
 /* Bereich schließen: schließt den aktiven Bereich (nur bei mehreren). */
 void
 nolphin_window_close_active_pane (NolphinWindow *window)

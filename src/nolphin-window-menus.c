@@ -328,6 +328,34 @@ action_maximize_pane_callback (GtkAction *action, gpointer user_data)
 }
 
 static void
+action_split_layout_callback (GtkAction *action, gpointer user_data)
+{
+	static const struct {
+		const char *name;
+		NolphinSplitLayout layout;
+	} layouts[] = {
+		{ NOLPHIN_ACTION_SPLIT_LAYOUT_TWO_COLUMNS, NOLPHIN_SPLIT_LAYOUT_TWO_COLUMNS },
+		{ NOLPHIN_ACTION_SPLIT_LAYOUT_THREE_COLUMNS, NOLPHIN_SPLIT_LAYOUT_THREE_COLUMNS },
+		{ NOLPHIN_ACTION_SPLIT_LAYOUT_GRID, NOLPHIN_SPLIT_LAYOUT_GRID },
+		{ NOLPHIN_ACTION_SPLIT_LAYOUT_BIG_PLUS_TWO, NOLPHIN_SPLIT_LAYOUT_BIG_PLUS_TWO },
+		{ NOLPHIN_ACTION_SPLIT_LAYOUT_TWO_ROWS, NOLPHIN_SPLIT_LAYOUT_TWO_ROWS },
+	};
+	const char *name;
+	guint i;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	name = gtk_action_get_name (action);
+	for (i = 0; i < G_N_ELEMENTS (layouts); i++) {
+		if (g_strcmp0 (name, layouts[i].name) == 0) {
+			nolphin_window_apply_split_layout (NOLPHIN_WINDOW (user_data), layouts[i].layout);
+			return;
+		}
+	}
+}
+
+static void
 action_close_pane_callback (GtkAction *action, gpointer user_data)
 {
 	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
@@ -1895,6 +1923,27 @@ static const GtkActionEntry main_entries[] = {
   /* tooltip */                  N_("Gespeicherte Arbeitsbereiche laden, duplizieren und löschen"),
                                  G_CALLBACK (action_workspace_callback) },
   /* name, stock id, label */  { "SplitViewMenu", NULL, N_("_Geteilte Ansicht") },
+  /* name, stock id, label */  { "SplitLayoutMenu", NULL, N_("_Layout") },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_LAYOUT_TWO_COLUMNS, NULL,
+  /* label, accelerator */       N_("_Zwei Spalten"), NULL,
+  /* tooltip */                  N_("Die Ansicht in zwei Spalten teilen"),
+                                 G_CALLBACK (action_split_layout_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_LAYOUT_THREE_COLUMNS, NULL,
+  /* label, accelerator */       N_("_Drei Spalten"), NULL,
+  /* tooltip */                  N_("Die Ansicht in drei Spalten teilen"),
+                                 G_CALLBACK (action_split_layout_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_LAYOUT_GRID, NULL,
+  /* label, accelerator */       N_("_Raster 2×2"), NULL,
+  /* tooltip */                  N_("Die Ansicht in vier Bereiche als Raster teilen"),
+                                 G_CALLBACK (action_split_layout_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_LAYOUT_BIG_PLUS_TWO, NULL,
+  /* label, accelerator */       N_("_Eine große und zwei kleine"), NULL,
+  /* tooltip */                  N_("Links ein großer Bereich, rechts zwei kleine untereinander"),
+                                 G_CALLBACK (action_split_layout_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_LAYOUT_TWO_ROWS, NULL,
+  /* label, accelerator */       N_("Zwei Ze_ilen"), NULL,
+  /* tooltip */                  N_("Die Ansicht in zwei Zeilen teilen"),
+                                 G_CALLBACK (action_split_layout_callback) },
   /* name, stock id */         { "Duplicate Pane", NULL,
   /* label, accelerator */       N_("Bereich _duplizieren"), NULL,
   /* tooltip */                  N_("Einen weiteren Bereich (bis zu vier) am Ort des aktiven Bereichs öffnen"),
@@ -2375,6 +2424,7 @@ nolphin_window_create_toolbar_action_group (NolphinWindow *window)
     gtk_action_set_icon_name (GTK_ACTION (action), "xsi-view-dual-symbolic");
 
     g_object_unref (action);
+
 
 	navigation_state = nolphin_window_get_navigation_state (window);
 	nolphin_navigation_state_add_group (navigation_state, action_group);

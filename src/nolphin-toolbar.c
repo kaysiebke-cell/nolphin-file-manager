@@ -57,6 +57,7 @@ struct _NolphinToolbarPriv {
     GtkWidget *compact_view_button;
     GtkWidget *show_thumbnails_button;
     GtkWidget *show_extra_pane_button;
+    GtkWidget *split_layout_button;
 
 	GtkWidget *path_bar;
 	GtkWidget *location_bar;
@@ -203,6 +204,10 @@ toolbar_update_appearance (NolphinToolbar *self)
     icon_toolbar = g_settings_get_boolean (nolphin_preferences, NOLPHIN_PREFERENCES_SHOW_TOGGLE_EXTRA_PANE_TOOLBAR);
     if ( icon_toolbar == FALSE ) { gtk_widget_hide (widgetitem); }
     else {gtk_widget_show (GTK_WIDGET(widgetitem));}
+
+    widgetitem = self->priv->split_layout_button;
+    if ( icon_toolbar == FALSE ) { gtk_widget_hide (widgetitem); }
+    else {gtk_widget_show (GTK_WIDGET(widgetitem));}
 }
 
 static void
@@ -246,6 +251,114 @@ toolbar_create_toolbutton (NolphinToolbar *self,
     gtk_widget_set_can_focus (button, FALSE);
     gtk_style_context_add_class (gtk_widget_get_style_context (button), GTK_STYLE_CLASS_FLAT);
 
+    return button;
+}
+
+/* Kachel-Symbol für die Layout-Auswahl: zeichnet die Zonen in Theme-Farben. */
+static gboolean
+layout_tile_draw (GtkWidget *widget, cairo_t *cr, gpointer user_data)
+{
+    static const double zones[][5][4] = {
+        { {0, 0, .5, 1}, {.5, 0, .5, 1}, {0} },
+        { {0, 0, 1/3., 1}, {1/3., 0, 1/3., 1}, {2/3., 0, 1/3., 1}, {0} },
+        { {0, 0, .5, .5}, {.5, 0, .5, .5}, {0, .5, .5, .5}, {.5, .5, .5, .5}, {0} },
+        { {0, 0, 2/3., 1}, {2/3., 0, 1/3., .5}, {2/3., .5, 1/3., .5}, {0} },
+        { {0, 0, 1, .5}, {0, .5, 1, .5}, {0} },
+    };
+    GtkStyleContext *context = gtk_widget_get_style_context (widget);
+    GtkStateFlags state = gtk_widget_get_state_flags (widget);
+    GdkRGBA color;
+    gint w = gtk_widget_get_allocated_width (widget);
+    gint h = gtk_widget_get_allocated_height (widget);
+    gint i;
+
+    gtk_style_context_get_color (context, state, &color);
+    gdk_cairo_set_source_rgba (cr, &color);
+    cairo_set_line_width (cr, 1.0);
+    for (i = 0; zones[GPOINTER_TO_INT (user_data)][i][2] > 0; i++) {
+        const double *z = zones[GPOINTER_TO_INT (user_data)][i];
+
+        cairo_rectangle (cr, z[0] * w + 1.5, z[1] * h + 1.5, z[2] * w - 3, z[3] * h - 3);
+        cairo_stroke (cr);
+    }
+    return FALSE;
+}
+
+static void
+layout_tile_clicked (GtkButton *button, gpointer user_data)
+{
+    const gchar *name = g_object_get_data (G_OBJECT (button), "nolphin-layout-action");
+    GtkWidget *window = gtk_widget_get_toplevel (GTK_WIDGET (user_data));
+    GtkAction *action = NULL;
+
+    gtk_popover_popdown (GTK_POPOVER (gtk_widget_get_ancestor (GTK_WIDGET (button), GTK_TYPE_POPOVER)));
+    /* Die Layout-Aktionen liegen in der Hauptaktionsgruppe des Fensters
+     * (wie im Menü), nicht in der Gruppe dieser Werkzeugleiste. */
+    if (NOLPHIN_IS_WINDOW (window)) {
+        action = gtk_action_group_get_action (nolphin_window_get_main_action_group (NOLPHIN_WINDOW (window)), name);
+    }
+    if (action != NULL) {
+        gtk_action_activate (action);
+    }
+}
+
+static GtkWidget *
+toolbar_create_split_layout_button (NolphinToolbar *self)
+{
+    static const struct {
+        const char *action;
+        const char *label;
+        const char *tooltip;
+    } tiles[] = {
+        { NOLPHIN_ACTION_SPLIT_LAYOUT_TWO_COLUMNS, N_("2 Spalten"), N_("Die Ansicht in zwei Spalten teilen") },
+        { NOLPHIN_ACTION_SPLIT_LAYOUT_THREE_COLUMNS, N_("3 Spalten"), N_("Die Ansicht in drei Spalten teilen") },
+        { NOLPHIN_ACTION_SPLIT_LAYOUT_GRID, N_("2×2"), N_("Die Ansicht in vier Bereiche als Raster teilen") },
+        { NOLPHIN_ACTION_SPLIT_LAYOUT_BIG_PLUS_TWO, N_("1 groß + 2"), N_("Links ein großer Bereich, rechts zwei kleine untereinander") },
+        { NOLPHIN_ACTION_SPLIT_LAYOUT_TWO_ROWS, N_("2 Zeilen"), N_("Die Ansicht in zwei Zeilen teilen") },
+    };
+    GtkWidget *button = gtk_menu_button_new ();
+    GtkWidget *popover = gtk_popover_new (button);
+    GtkWidget *title = gtk_label_new (NULL);
+    GtkWidget *vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+    GtkWidget *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+    gchar *markup = g_markup_printf_escaped ("<b>%s</b>", _("Layout wählen"));
+    guint i;
+
+    gtk_label_set_markup (GTK_LABEL (title), markup);
+    g_free (markup);
+    gtk_widget_set_halign (title, GTK_ALIGN_START);
+    gtk_box_pack_start (GTK_BOX (vbox), title, FALSE, FALSE, 0);
+
+    for (i = 0; i < G_N_ELEMENTS (tiles); i++) {
+        GtkWidget *tile = gtk_button_new ();
+        GtkWidget *tbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
+        GtkWidget *area = gtk_drawing_area_new ();
+        GtkWidget *label = gtk_label_new (_(tiles[i].label));
+
+        gtk_widget_set_size_request (area, 64, 44);
+        g_signal_connect (area, "draw", G_CALLBACK (layout_tile_draw), GINT_TO_POINTER ((gint) i));
+        gtk_box_pack_start (GTK_BOX (tbox), area, FALSE, FALSE, 0);
+        gtk_box_pack_start (GTK_BOX (tbox), label, FALSE, FALSE, 0);
+        gtk_container_add (GTK_CONTAINER (tile), tbox);
+        gtk_button_set_relief (GTK_BUTTON (tile), GTK_RELIEF_NONE);
+        g_object_set_data (G_OBJECT (tile), "nolphin-layout-action", (gpointer) tiles[i].action);
+        gtk_widget_set_tooltip_text (tile, _(tiles[i].tooltip));
+        g_signal_connect (tile, "clicked", G_CALLBACK (layout_tile_clicked), button);
+        gtk_box_pack_start (GTK_BOX (row), tile, FALSE, FALSE, 0);
+    }
+    gtk_box_pack_start (GTK_BOX (vbox), row, FALSE, FALSE, 0);
+    gtk_widget_set_margin_start (vbox, 10);
+    gtk_widget_set_margin_end (vbox, 10);
+    gtk_widget_set_margin_top (vbox, 10);
+    gtk_widget_set_margin_bottom (vbox, 10);
+    gtk_container_add (GTK_CONTAINER (popover), vbox);
+    gtk_widget_show_all (vbox);
+
+    gtk_menu_button_set_popover (GTK_MENU_BUTTON (button), popover);
+    gtk_button_set_image (GTK_BUTTON (button), gtk_image_new_from_icon_name ("pan-down-symbolic", GTK_ICON_SIZE_MENU));
+    gtk_widget_set_tooltip_text (button, _("Layout der geteilten Ansicht wählen"));
+    gtk_widget_set_can_focus (button, FALSE);
+    gtk_style_context_add_class (gtk_widget_get_style_context (button), GTK_STYLE_CLASS_FLAT);
     return button;
 }
 
@@ -351,6 +464,9 @@ nolphin_toolbar_constructed (GObject *obj)
 
     self->priv->show_extra_pane_button = toolbar_create_toolbutton (self, TRUE, NOLPHIN_ACTION_SHOW_HIDE_EXTRA_PANE);
     gtk_container_add (GTK_CONTAINER (box), self->priv->show_extra_pane_button);
+
+    self->priv->split_layout_button = toolbar_create_split_layout_button (self);
+    gtk_container_add (GTK_CONTAINER (box), self->priv->split_layout_button);
 
     self->priv->icon_view_button = toolbar_create_toolbutton (self, TRUE, NOLPHIN_ACTION_ICON_VIEW);
     gtk_container_add (GTK_CONTAINER (box), self->priv->icon_view_button);

@@ -125,6 +125,16 @@ void             nolphin_window_close_all_tabs       (NolphinWindow    *window);
 void             nolphin_window_toggle_lock_tab      (NolphinWindow    *window);
 void             nolphin_window_workspace_capture    (NolphinWindow    *window, GKeyFile *kf);
 gboolean         nolphin_window_workspace_apply      (NolphinWindow    *window, GKeyFile *kf);
+typedef enum {
+	NOLPHIN_SPLIT_LAYOUT_TWO_COLUMNS,
+	NOLPHIN_SPLIT_LAYOUT_THREE_COLUMNS,
+	NOLPHIN_SPLIT_LAYOUT_GRID,
+	NOLPHIN_SPLIT_LAYOUT_BIG_PLUS_TWO,
+	NOLPHIN_SPLIT_LAYOUT_TWO_ROWS
+} NolphinSplitLayout;
+
+void             nolphin_window_apply_split_layout   (NolphinWindow    *window,
+                                                       NolphinSplitLayout layout);
 void             nolphin_window_split_view_add_pane  (NolphinWindow    *window);
 void             nolphin_window_close_active_pane    (NolphinWindow    *window);
 void             nolphin_window_toggle_maximize_pane (NolphinWindow    *window);
