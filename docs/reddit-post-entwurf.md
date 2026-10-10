@@ -1,4 +1,4 @@
-# Reddit-Entwurf (nur Entwurf, nicht im Repository eingecheckt)
+# Reddit-Entwurf (nur Entwurf, noch nicht veröffentlicht)
 
 Geeignete Subreddits: r/linuxmint (Englisch), ggf. r/linux_gaming ist unpassend.
 r/linux erlaubt Eigenwerbung nur eingeschränkt – vorher die Regeln des Subreddits lesen.
