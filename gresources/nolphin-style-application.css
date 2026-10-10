@@ -65,3 +65,11 @@ NolphinDesktopWindow GtkPaned {
     color: @theme_selected_fg_color;
     text-shadow: none;
 }
+
+/* Geteilte Ansicht: leichter Abstand zwischen den Bereichen */
+paned.nolphin-split-paned > separator {
+    min-width: 10px;
+    min-height: 10px;
+    background-image: none;
+    background-color: shade(@theme_bg_color, 0.7);
+}

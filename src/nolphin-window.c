@@ -1031,6 +1031,7 @@ nolphin_window_constructed (GObject *self)
 	gtk_widget_show (vbox);
 
 	hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
+	gtk_style_context_add_class (gtk_widget_get_style_context (hpaned), "nolphin-split-paned");
 	gtk_widget_show (hpaned);
 	window->details->split_view_hpane = hpaned;
 
@@ -3579,6 +3580,7 @@ split_pane_nested (NolphinWindow *window, NolphinWindowPane *active, GtkOrientat
 	window->details->panes = g_list_append (window->details->panes, pane);
 
 	nested = GTK_PANED (gtk_paned_new (orientation));
+	gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (nested)), "nolphin-split-paned");
 	g_object_ref (active);
 	gtk_container_remove (GTK_CONTAINER (parent), GTK_WIDGET (active));
 	gtk_paned_pack1 (nested, GTK_WIDGET (active), TRUE, FALSE);
@@ -3718,6 +3720,7 @@ layout_new_paned (GtkOrientation orientation, GtkWidget *a, GtkWidget *b, gint p
 {
 	GtkWidget *paned = gtk_paned_new (orientation);
 
+	gtk_style_context_add_class (gtk_widget_get_style_context (paned), "nolphin-split-paned");
 	layout_fill_paned (GTK_PANED (paned), orientation, a, b, permille);
 	return paned;
 }
