@@ -356,6 +356,26 @@ action_split_layout_callback (GtkAction *action, gpointer user_data)
 }
 
 static void
+action_split_pane_callback (GtkAction *action, gpointer user_data)
+{
+	const char *name;
+	NolphinWindow *window;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	name = gtk_action_get_name (action);
+	if (g_strcmp0 (name, NOLPHIN_ACTION_SPLIT_PANE_PREVIOUS) == 0) {
+		nolphin_window_activate_previous_pane (window);
+	} else if (g_strcmp0 (name, NOLPHIN_ACTION_SPLIT_PANE_NUMBERS) == 0) {
+		nolphin_window_show_pane_numbers (window);
+	} else if (g_str_has_prefix (name, "Split Pane ")) {
+		nolphin_window_activate_pane_number (window, name[strlen ("Split Pane ")] - '0');
+	}
+}
+
+static void
 action_close_pane_callback (GtkAction *action, gpointer user_data)
 {
 	if (!NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
@@ -987,6 +1007,24 @@ nolphin_window_update_split_view_actions_sensitivity (NolphinWindow *window)
 	/* same location */
 	action = gtk_action_group_get_action (action_group, "SplitViewSameLocation");
 	gtk_action_set_sensitive (action, have_multiple_panes && !next_pane_is_in_same_location);
+
+	/* jump to pane N, previous pane, show numbers */
+	{
+		static const char *pane_actions[] = {
+			NOLPHIN_ACTION_SPLIT_PANE_1, NOLPHIN_ACTION_SPLIT_PANE_2,
+			NOLPHIN_ACTION_SPLIT_PANE_3, NOLPHIN_ACTION_SPLIT_PANE_4
+		};
+		guint i, n_panes = g_list_length (window->details->panes);
+
+		for (i = 0; i < G_N_ELEMENTS (pane_actions); i++) {
+			action = gtk_action_group_get_action (action_group, pane_actions[i]);
+			gtk_action_set_sensitive (action, i < n_panes);
+		}
+		action = gtk_action_group_get_action (action_group, NOLPHIN_ACTION_SPLIT_PANE_PREVIOUS);
+		gtk_action_set_sensitive (action, have_multiple_panes);
+		action = gtk_action_group_get_action (action_group, NOLPHIN_ACTION_SPLIT_PANE_NUMBERS);
+		gtk_action_set_sensitive (action, have_multiple_panes);
+	}
 
 	/* clean up */
 	g_clear_object (&active_pane_location);
@@ -1944,6 +1982,31 @@ static const GtkActionEntry main_entries[] = {
   /* label, accelerator */       N_("Zwei Ze_ilen"), NULL,
   /* tooltip */                  N_("Die Ansicht in zwei Zeilen teilen"),
                                  G_CALLBACK (action_split_layout_callback) },
+  /* name, stock id, label */  { "SplitPaneMenu", NULL, N_("_Zu Bereich springen") },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_PANE_1, NULL,
+  /* label, accelerator */       N_("Bereich _1"), "<control><alt>1",
+  /* tooltip */                  N_("Zum ersten Bereich wechseln"),
+                                 G_CALLBACK (action_split_pane_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_PANE_2, NULL,
+  /* label, accelerator */       N_("Bereich _2"), "<control><alt>2",
+  /* tooltip */                  N_("Zum zweiten Bereich wechseln"),
+                                 G_CALLBACK (action_split_pane_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_PANE_3, NULL,
+  /* label, accelerator */       N_("Bereich _3"), "<control><alt>3",
+  /* tooltip */                  N_("Zum dritten Bereich wechseln"),
+                                 G_CALLBACK (action_split_pane_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_PANE_4, NULL,
+  /* label, accelerator */       N_("Bereich _4"), "<control><alt>4",
+  /* tooltip */                  N_("Zum vierten Bereich wechseln"),
+                                 G_CALLBACK (action_split_pane_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_PANE_PREVIOUS, NULL,
+  /* label, accelerator */       N_("_Vorheriger Bereich"), "<alt><shift>Left",
+  /* tooltip */                  N_("Zurück zum zuletzt aktiven Bereich"),
+                                 G_CALLBACK (action_split_pane_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_PANE_NUMBERS, NULL,
+  /* label, accelerator */       N_("Bereichs_nummern anzeigen"), "<control><alt>0",
+  /* tooltip */                  N_("Die Nummern der Bereiche kurz einblenden"),
+                                 G_CALLBACK (action_split_pane_callback) },
   /* name, stock id */         { "Duplicate Pane", NULL,
   /* label, accelerator */       N_("Bereich _duplizieren"), NULL,
   /* tooltip */                  N_("Einen weiteren Bereich (bis zu vier) am Ort des aktiven Bereichs öffnen"),

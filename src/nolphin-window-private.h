@@ -71,6 +71,8 @@ struct NolphinWindowDetails
          */
         GList *panes;
         NolphinWindowPane *active_pane;
+        NolphinWindowPane *previous_pane;
+        guint pane_numbers_timeout;
 
         GtkWidget *content_paned;
         NolphinNavigationState *nav_state;

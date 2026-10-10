@@ -1428,6 +1428,9 @@ nolphin_window_close_pane (NolphinWindow *window,
 	if (window->details->active_pane == pane) {
 		window->details->active_pane = NULL;
 	}
+	if (window->details->previous_pane == pane) {
+		window->details->previous_pane = NULL;
+	}
 
 	/* Required really. Destroying the NolphinWindowPane still leaves behind the toolbar.
 	 * This kills it off. Do it before we call gtk_widget_destroy for safety. */
@@ -1457,6 +1460,7 @@ real_set_active_pane (NolphinWindow *window, NolphinWindowPane *new_pane)
 	if (window->details->active_pane &&
 	    window->details->active_pane != new_pane) {
 		nolphin_window_pane_set_active (window->details->active_pane, FALSE);
+		window->details->previous_pane = window->details->active_pane;
 	}
 	nolphin_window_pane_set_active (new_pane, TRUE);
 
@@ -3843,6 +3847,138 @@ nolphin_window_apply_split_layout (NolphinWindow *window, NolphinSplitLayout lay
 	nolphin_navigation_state_set_master (window->details->nav_state, target->action_group);
 	nolphin_window_update_show_hide_ui_elements (window);
 	nolphin_window_sync_tab_actions (window);
+}
+
+/* --- Zwischen Bereichen springen (§16) -------------------------------------
+ * Bereiche werden in der Reihenfolge des Baums nummeriert (oben/links = 1). */
+
+void
+nolphin_window_activate_pane_number (NolphinWindow *window, gint number)
+{
+	GList *tree = NULL;
+	NolphinWindowPane *pane;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	collect_panes_in_tree (window->details->split_view_hpane, &tree);
+	pane = g_list_nth_data (tree, number - 1);
+	g_list_free (tree);
+
+	if (pane == NULL || pane == window->details->active_pane || !gtk_widget_get_visible (GTK_WIDGET (pane))) {
+		return;
+	}
+	nolphin_window_set_active_pane (window, pane);
+	nolphin_navigation_state_set_master (window->details->nav_state, pane->action_group);
+	nolphin_window_pane_grab_focus (pane);
+	nolphin_window_sync_tab_actions (window);
+}
+
+void
+nolphin_window_activate_previous_pane (NolphinWindow *window)
+{
+	NolphinWindowPane *pane;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	pane = window->details->previous_pane;
+	if (pane == NULL || pane == window->details->active_pane || !gtk_widget_get_visible (GTK_WIDGET (pane))) {
+		return;
+	}
+	nolphin_window_set_active_pane (window, pane);
+	nolphin_navigation_state_set_master (window->details->nav_state, pane->action_group);
+	nolphin_window_pane_grab_focus (pane);
+	nolphin_window_sync_tab_actions (window);
+}
+
+/* Zeichnet die Bereichsnummer über den Inhalt des Bereichs (kein eigenes Fenster). */
+static gboolean
+pane_number_draw_after (GtkWidget *widget, cairo_t *cr, gpointer user_data)
+{
+	gint number = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (widget), "nolphin-pane-number"));
+	GtkStyleContext *context;
+	GdkRGBA fg, bg;
+	cairo_text_extents_t ext;
+	gchar *text;
+	double w, h, r, cx, cy;
+
+	if (number <= 0) {
+		return FALSE;
+	}
+	context = gtk_widget_get_style_context (widget);
+	gtk_style_context_get_color (context, GTK_STATE_FLAG_NORMAL, &fg);
+	gtk_style_context_get (context, GTK_STATE_FLAG_NORMAL, GTK_STYLE_PROPERTY_BACKGROUND_COLOR, &bg, NULL);
+	if (bg.alpha < 0.5) {
+		bg.red = 1 - fg.red;
+		bg.green = 1 - fg.green;
+		bg.blue = 1 - fg.blue;
+	}
+	w = gtk_widget_get_allocated_width (widget);
+	h = gtk_widget_get_allocated_height (widget);
+	r = MIN (w, h) / 6;
+	cx = w / 2;
+	cy = h / 2;
+
+	cairo_arc (cr, cx, cy, r, 0, 2 * G_PI);
+	cairo_set_source_rgba (cr, bg.red, bg.green, bg.blue, 0.85);
+	cairo_fill_preserve (cr);
+	cairo_set_source_rgba (cr, fg.red, fg.green, fg.blue, 0.9);
+	cairo_set_line_width (cr, 2);
+	cairo_stroke (cr);
+
+	text = g_strdup_printf ("%d", number);
+	cairo_select_font_face (cr, "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+	cairo_set_font_size (cr, r * 1.3);
+	cairo_text_extents (cr, text, &ext);
+	cairo_move_to (cr, cx - ext.width / 2 - ext.x_bearing, cy - ext.height / 2 - ext.y_bearing);
+	cairo_show_text (cr, text);
+	g_free (text);
+	return FALSE;
+}
+
+static void
+set_pane_numbers (NolphinWindow *window, gboolean show)
+{
+	GList *tree = NULL, *l;
+	gint n = 1;
+
+	collect_panes_in_tree (window->details->split_view_hpane, &tree);
+	for (l = tree; l != NULL; l = l->next, n++) {
+		GObject *pane = l->data;
+
+		if (g_object_get_data (pane, "nolphin-pane-number-hooked") == NULL) {
+			g_signal_connect_after (pane, "draw", G_CALLBACK (pane_number_draw_after), NULL);
+			g_object_set_data (pane, "nolphin-pane-number-hooked", GINT_TO_POINTER (1));
+		}
+		g_object_set_data (pane, "nolphin-pane-number", GINT_TO_POINTER (show ? n : 0));
+		gtk_widget_queue_draw (GTK_WIDGET (pane));
+	}
+	g_list_free (tree);
+}
+
+static gboolean
+hide_pane_numbers_cb (gpointer user_data)
+{
+	NolphinWindow *window = NOLPHIN_WINDOW (user_data);
+
+	window->details->pane_numbers_timeout = 0;
+	set_pane_numbers (window, FALSE);
+	return G_SOURCE_REMOVE;
+}
+
+/* Blendet die Bereichsnummern kurz ein (nur bei mehreren Bereichen). */
+void
+nolphin_window_show_pane_numbers (NolphinWindow *window)
+{
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	if (!nolphin_window_split_view_showing (window)) {
+		return;
+	}
+	if (window->details->pane_numbers_timeout != 0) {
+		g_source_remove (window->details->pane_numbers_timeout);
+	}
+	set_pane_numbers (window, TRUE);
+	window->details->pane_numbers_timeout = g_timeout_add (1500, hide_pane_numbers_cb, window);
 }
 
 /* Bereich schließen: schließt den aktiven Bereich (nur bei mehreren). */

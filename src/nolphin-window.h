@@ -135,6 +135,10 @@ typedef enum {
 
 void             nolphin_window_apply_split_layout   (NolphinWindow    *window,
                                                        NolphinSplitLayout layout);
+void             nolphin_window_activate_pane_number (NolphinWindow    *window,
+                                                       gint               number);
+void             nolphin_window_activate_previous_pane (NolphinWindow  *window);
+void             nolphin_window_show_pane_numbers    (NolphinWindow    *window);
 void             nolphin_window_split_view_add_pane  (NolphinWindow    *window);
 void             nolphin_window_close_active_pane    (NolphinWindow    *window);
 void             nolphin_window_toggle_maximize_pane (NolphinWindow    *window);

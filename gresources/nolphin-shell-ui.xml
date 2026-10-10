@@ -105,6 +105,15 @@
 					<menuitem name="Split Layout Big Plus Two" action="Split Layout Big Plus Two"/>
 					<menuitem name="Split Layout Two Rows" action="Split Layout Two Rows"/>
 				</menu>
+				<menu action="SplitPaneMenu">
+					<menuitem name="Split Pane 1" action="Split Pane 1"/>
+					<menuitem name="Split Pane 2" action="Split Pane 2"/>
+					<menuitem name="Split Pane 3" action="Split Pane 3"/>
+					<menuitem name="Split Pane 4" action="Split Pane 4"/>
+					<separator/>
+					<menuitem name="Split Pane Previous" action="Split Pane Previous"/>
+					<menuitem name="Split Pane Numbers" action="Split Pane Numbers"/>
+				</menu>
 				<separator/>
 				<menuitem name="Duplicate Pane" action="Duplicate Pane"/>
 				<menuitem name="Maximize Pane" action="Maximize Pane"/>
