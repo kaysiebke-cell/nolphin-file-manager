@@ -114,6 +114,26 @@ add_directory_to_actions_directory_list (NolphinActionManager *action_manager,
     }
 }
 
+static gboolean
+action_with_name_in_other_directory (NolphinActionManager *action_manager,
+                                     const gchar       *directory,
+                                     const gchar       *name)
+{
+    NolphinActionManagerPrivate *priv = nolphin_action_manager_get_instance_private (action_manager);
+    GList *l;
+
+    for (l = priv->actions; l != NULL; l = l->next) {
+        NolphinAction *action = NOLPHIN_ACTION (l->data);
+        g_autofree gchar *base = g_path_get_basename (action->key_file_path);
+
+        if (g_strcmp0 (base, name) == 0 && g_strcmp0 (action->parent_dir, directory) != 0) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 static void
 process_directory_actions (NolphinActionManager *action_manager,
                            const gchar       *directory)
@@ -138,6 +158,14 @@ process_directory_actions (NolphinActionManager *action_manager,
                 }
 
                 gchar *filename;
+
+                /* Gleichnamige Aktionen in mehreren Datenordnern (z. B. /usr/share
+                 * und /usr/local/share) erscheinen nur einmal. */
+                if (action_with_name_in_other_directory (action_manager, directory, name)) {
+                    DEBUG ("Skipping duplicate action '%s' in %s", name, directory);
+                    continue;
+                }
+
                 filename = g_build_filename (directory, name, NULL);
 
                 DEBUG ("Found: %s", filename);
