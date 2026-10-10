@@ -630,6 +630,7 @@ save_preview_width_cb (gpointer user_data)
 
 	window->details->preview_width_handler_id = 0;
 
+
 	/* Mirrors save_terminal_height_cb: "position" is pack1's (the
 	 * file-view side's) extent, so the preview panel's own width is
 	 * total - position. */
@@ -1052,7 +1053,9 @@ nolphin_window_constructed (GObject *self)
 	window->details->workspace_panel = nolphin_workspace_panel_new (window,
 									 window->details->preview,
 									 window->details->terminal);
-	gtk_paned_pack2 (GTK_PANED (window->details->preview_hpaned), window->details->workspace_panel, FALSE, TRUE);
+	/* Nicht schrumpfbar: die Leiste behält ihre Mindestbreite, das Fenster
+	 * wird dafür notfalls breiter, statt den Inhalt abzuschneiden. */
+	gtk_paned_pack2 (GTK_PANED (window->details->preview_hpaned), window->details->workspace_panel, FALSE, FALSE);
 	window->details->show_preview = FALSE;
 	window->details->show_terminal = FALSE;
 
