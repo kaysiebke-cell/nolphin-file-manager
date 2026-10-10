@@ -139,6 +139,7 @@ void             nolphin_window_activate_pane_number (NolphinWindow    *window,
                                                        gint               number);
 void             nolphin_window_activate_previous_pane (NolphinWindow  *window);
 void             nolphin_window_show_pane_numbers    (NolphinWindow    *window);
+void             nolphin_window_swap_active_pane     (NolphinWindow    *window);
 void             nolphin_window_split_view_add_pane  (NolphinWindow    *window);
 void             nolphin_window_close_active_pane    (NolphinWindow    *window);
 void             nolphin_window_toggle_maximize_pane (NolphinWindow    *window);

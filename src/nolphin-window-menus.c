@@ -368,6 +368,8 @@ action_split_pane_callback (GtkAction *action, gpointer user_data)
 	name = gtk_action_get_name (action);
 	if (g_strcmp0 (name, NOLPHIN_ACTION_SPLIT_PANE_PREVIOUS) == 0) {
 		nolphin_window_activate_previous_pane (window);
+	} else if (g_strcmp0 (name, NOLPHIN_ACTION_SPLIT_PANE_SWAP) == 0) {
+		nolphin_window_swap_active_pane (window);
 	} else if (g_strcmp0 (name, NOLPHIN_ACTION_SPLIT_PANE_NUMBERS) == 0) {
 		nolphin_window_show_pane_numbers (window);
 	} else if (g_str_has_prefix (name, "Split Pane ")) {
@@ -1023,6 +1025,8 @@ nolphin_window_update_split_view_actions_sensitivity (NolphinWindow *window)
 		action = gtk_action_group_get_action (action_group, NOLPHIN_ACTION_SPLIT_PANE_PREVIOUS);
 		gtk_action_set_sensitive (action, have_multiple_panes);
 		action = gtk_action_group_get_action (action_group, NOLPHIN_ACTION_SPLIT_PANE_NUMBERS);
+		gtk_action_set_sensitive (action, have_multiple_panes);
+		action = gtk_action_group_get_action (action_group, NOLPHIN_ACTION_SPLIT_PANE_SWAP);
 		gtk_action_set_sensitive (action, have_multiple_panes);
 	}
 
@@ -2006,6 +2010,10 @@ static const GtkActionEntry main_entries[] = {
   /* name, stock id */         { NOLPHIN_ACTION_SPLIT_PANE_NUMBERS, NULL,
   /* label, accelerator */       N_("Bereichs_nummern anzeigen"), "<control><alt>0",
   /* tooltip */                  N_("Die Nummern der Bereiche kurz einblenden"),
+                                 G_CALLBACK (action_split_pane_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_SPLIT_PANE_SWAP, NULL,
+  /* label, accelerator */       N_("Bereich mit nächstem _tauschen"), "<control><alt>x",
+  /* tooltip */                  N_("Den aktiven Bereich mit dem nächsten Bereich vertauschen"),
                                  G_CALLBACK (action_split_pane_callback) },
   /* name, stock id */         { "Duplicate Pane", NULL,
   /* label, accelerator */       N_("Bereich _duplizieren"), NULL,

@@ -3256,9 +3256,12 @@ nolphin_window_workspace_apply (NolphinWindow *window, GKeyFile *kf)
 	return restored;
 }
 
-/* Sitzung beim Start wiederherstellen: ein gespeichertes Layout mit mehr als
- * zwei Bereichen hat Vorrang, sonst die bewährte Wiederherstellung aus
- * GSettings (links/rechts). */
+static gint split_layout_zones (NolphinSplitLayout layout);
+
+/* Sitzung beim Start wiederherstellen: ein gespeichertes Layout aus
+ * mindestens zwei Bereichen hat Vorrang, sonst die bewährte Wiederherstellung
+ * aus GSettings (links/rechts). Wurde zuletzt ein Layout aus der Auswahl
+ * gewählt, wird es mit seinen Größenverhältnissen wieder angewendet. */
 gboolean
 nolphin_window_restore_saved_tabs (NolphinWindow *window)
 {
@@ -3276,6 +3279,14 @@ nolphin_window_restore_saved_tabs (NolphinWindow *window)
 	kf = g_key_file_new ();
 	if (g_key_file_load_from_file (kf, path, G_KEY_FILE_NONE, NULL)) {
 		ok = workspace_apply_layout (window, kf);
+		if (ok && g_key_file_has_key (kf, WS_GROUP, "preset", NULL)) {
+			gint preset = g_key_file_get_integer (kf, WS_GROUP, "preset", NULL);
+
+			if (preset >= NOLPHIN_SPLIT_LAYOUT_TWO_COLUMNS && preset <= NOLPHIN_SPLIT_LAYOUT_TWO_ROWS &&
+			    split_layout_zones (preset) == (gint) g_list_length (window->details->panes)) {
+				nolphin_window_apply_split_layout (window, preset);
+			}
+		}
 	}
 	g_key_file_free (kf);
 	g_free (path);
@@ -3295,11 +3306,15 @@ real_window_close (NolphinWindow *window)
 	if (!nolphin_window_is_desktop (window)) {
 		gchar *path = last_session_path ();
 
-		if (g_list_length (window->details->panes) > 2) {
+		if (g_list_length (window->details->panes) > 1) {
 			GKeyFile *kf = g_key_file_new ();
 			gchar *dir = g_path_get_dirname (path), *data;
+			gint preset = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (window), "nolphin-split-preset")) - 1;
 
 			workspace_capture_layout (window, kf);
+			if (preset >= 0 && split_layout_zones (preset) == (gint) g_list_length (window->details->panes)) {
+				g_key_file_set_integer (kf, WS_GROUP, "preset", preset);
+			}
 			g_mkdir_with_parents (dir, 0700);
 			data = g_key_file_to_data (kf, NULL, NULL);
 			g_file_set_contents (path, data, -1, NULL);
@@ -3717,6 +3732,7 @@ nolphin_window_apply_split_layout (NolphinWindow *window, NolphinSplitLayout lay
 	GtkWidget *child;
 	gint zones, count, i;
 	GtkWidget **p;
+	gboolean *was_visible;
 
 	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
 
@@ -3789,10 +3805,14 @@ nolphin_window_apply_split_layout (NolphinWindow *window, NolphinSplitLayout lay
 
 	/* Alle Bereiche aus dem alten Baum lösen, danach den Rest abbauen */
 	keep = g_ptr_array_new ();
-	for (l = tree; l != NULL; l = l->next) {
+	was_visible = g_new0 (gboolean, g_list_length (tree));
+	for (l = tree, i = 0; l != NULL; l = l->next, i++) {
 		GtkWidget *w = l->data;
 		GtkWidget *parent = gtk_widget_get_parent (w);
 
+		/* Noch nicht geladene Bereiche bleiben unsichtbar: das Fenster
+		 * zeigt sich erst, wenn alle Bereiche von selbst sichtbar werden. */
+		was_visible[i] = gtk_widget_get_visible (w);
 		g_ptr_array_add (keep, g_object_ref (w));
 		if (parent != NULL) {
 			gtk_container_remove (GTK_CONTAINER (parent), w);
@@ -3831,10 +3851,11 @@ nolphin_window_apply_split_layout (NolphinWindow *window, NolphinSplitLayout lay
 		break;
 	}
 	for (i = 0; i < (gint) keep->len; i++) {
-		gtk_widget_show (p[i]);
+		gtk_widget_set_visible (p[i], was_visible[i]);
 		g_object_unref (p[i]);
 	}
 	g_ptr_array_free (keep, TRUE);
+	g_free (was_visible);
 
 	/* Reihenfolge der Bereichsliste = Reihenfolge im Baum */
 	g_list_free (window->details->panes);
@@ -3843,10 +3864,68 @@ nolphin_window_apply_split_layout (NolphinWindow *window, NolphinSplitLayout lay
 	target = (active != NULL && g_list_find (tree, active) != NULL) ? active : tree->data;
 	g_list_free (tree);
 
+	g_object_set_data (G_OBJECT (window), "nolphin-split-preset", GINT_TO_POINTER ((gint) layout + 1));
+
 	nolphin_window_set_active_pane (window, target);
 	nolphin_navigation_state_set_master (window->details->nav_state, target->action_group);
 	nolphin_window_update_show_hide_ui_elements (window);
 	nolphin_window_sync_tab_actions (window);
+}
+
+/* Tauscht den aktiven Bereich mit dem nächsten in der Reihenfolge des Baums.
+ * Die Zonen (Größen, Teilungen) bleiben, nur die Inhalte wechseln den Platz. */
+void
+nolphin_window_swap_active_pane (NolphinWindow *window)
+{
+	GList *tree = NULL;
+	GtkWidget *a, *b, *pa, *pb;
+	gboolean a_first, b_first;
+	gint idx, n;
+
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	collect_panes_in_tree (GTK_WIDGET (window->details->split_view_hpane), &tree);
+	n = g_list_length (tree);
+	idx = g_list_index (tree, window->details->active_pane);
+	if (n < 2 || idx < 0) {
+		g_list_free (tree);
+		return;
+	}
+	set_pane_maximized (window, FALSE);
+	a = g_list_nth_data (tree, idx);
+	b = g_list_nth_data (tree, (idx + 1) % n);
+	g_list_free (tree);
+
+	pa = gtk_widget_get_parent (a);
+	pb = gtk_widget_get_parent (b);
+	a_first = gtk_paned_get_child1 (GTK_PANED (pa)) == a;
+	b_first = gtk_paned_get_child1 (GTK_PANED (pb)) == b;
+
+	g_object_ref (a);
+	g_object_ref (b);
+	gtk_container_remove (GTK_CONTAINER (pa), a);
+	gtk_container_remove (GTK_CONTAINER (pb), b);
+	if (b_first) {
+		gtk_paned_pack1 (GTK_PANED (pb), a, TRUE, FALSE);
+	} else {
+		gtk_paned_pack2 (GTK_PANED (pb), a, TRUE, FALSE);
+	}
+	if (a_first) {
+		gtk_paned_pack1 (GTK_PANED (pa), b, TRUE, FALSE);
+	} else {
+		gtk_paned_pack2 (GTK_PANED (pa), b, TRUE, FALSE);
+	}
+	g_object_unref (a);
+	g_object_unref (b);
+
+	tree = NULL;
+	collect_panes_in_tree (GTK_WIDGET (window->details->split_view_hpane), &tree);
+	g_list_free (window->details->panes);
+	window->details->panes = g_list_copy (tree);
+	g_list_free (tree);
+
+	nolphin_window_pane_grab_focus (NOLPHIN_WINDOW_PANE (a));
+	nolphin_window_update_show_hide_ui_elements (window);
 }
 
 /* --- Zwischen Bereichen springen (§16) -------------------------------------

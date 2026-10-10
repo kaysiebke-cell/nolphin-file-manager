@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nolphin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-05 20:23+0200\n"
+"POT-Creation-Date: 2026-10-10 17:55+0200\n"
 "PO-Revision-Date: 2025-11-29 13:59+0000\n"
 "Last-Translator: Tobias Bannert <tobannert@gmail.com>\n"
 "Language-Team: German <de@li.org>\n"
@@ -225,7 +225,7 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: libnolphin-private/nolphin-clipboard.c:444 src/nolphin-view.c:10563
+#: libnolphin-private/nolphin-clipboard.c:444 src/nolphin-view.c:10709
 msgid "_Alles auswählen"
 msgstr ""
 
@@ -402,7 +402,7 @@ msgstr ""
 #. TRANSLATORS: The Location column displays the parent path of a given file. This
 #. is useful in special file listings like search results, Recents or Favorites.
 #: libnolphin-private/nolphin-column-utilities.c:248
-#: src/nolphin-window-menus.c:2269
+#: src/nolphin-window-menus.c:2397
 msgid "Speicherort"
 msgstr ""
 
@@ -461,8 +461,8 @@ msgid "_Hierher verknüpfen"
 msgstr ""
 
 #: libnolphin-private/nolphin-dnd.c:915
-#: src/nolphin-template-config-widget.c:428 src/nolphin-view.c:8772
-#: src/nolphin-view.c:8959
+#: src/nolphin-template-config-widget.c:429 src/nolphin-view.c:8774
+#: src/nolphin-view.c:8961
 msgid "Abbrechen"
 msgstr ""
 
@@ -551,7 +551,7 @@ msgstr ""
 
 #: libnolphin-private/nolphin-file.c:3818
 #: libnolphin-private/nolphin-file.c:5635
-#: src/nolphin-file-management-properties.c:569
+#: src/nolphin-file-management-properties.c:570
 #, no-c-format
 msgid "Gestern"
 msgstr ""
@@ -705,7 +705,7 @@ msgstr ""
 msgid "Die angegebene Gruppe »%s« existiert nicht"
 msgstr ""
 
-#: libnolphin-private/nolphin-file.c:6921 src/nolphin-view.c:3524
+#: libnolphin-private/nolphin-file.c:6921 src/nolphin-view.c:3526
 #, c-format
 msgid "%'u Objekt"
 msgid_plural "%'u Objekte"
@@ -965,10 +965,10 @@ msgstr ""
 #. Add buttons
 #: libnolphin-private/nolphin-file-conflict-dialog.c:582
 #: libnolphin-private/nolphin-mime-application-chooser.c:481
-#: src/nolphin-file-management-properties.c:957
-#: src/nolphin-file-management-properties.c:1014
-#: src/nolphin-file-management-properties.c:1048
-#: src/nolphin-template-config-widget.c:329 src/nolphin-view.c:8117
+#: src/nolphin-file-management-properties.c:958
+#: src/nolphin-file-management-properties.c:1015
+#: src/nolphin-file-management-properties.c:1049
+#: src/nolphin-template-config-widget.c:330 src/nolphin-view.c:8119
 msgid "_Abbrechen"
 msgstr ""
 
@@ -980,12 +980,12 @@ msgstr ""
 #. name, stock id
 #. label, accelerator
 #: libnolphin-private/nolphin-file-conflict-dialog.c:587
-#: src/nolphin-view.c:10587
+#: src/nolphin-view.c:10733
 msgid "Ver_doppeln"
 msgstr ""
 
 #: libnolphin-private/nolphin-file-conflict-dialog.c:592
-#: src/nolphin-template-config-widget.c:331
+#: src/nolphin-template-config-widget.c:332
 msgid "_Umbenennen"
 msgstr ""
 
@@ -1251,8 +1251,8 @@ msgstr ""
 #. label, accelerator
 #: libnolphin-private/nolphin-file-operations.c:1581
 #: src/nolphin-mime-actions.c:664 src/nolphin-tree-sidebar.c:1375
-#: src/nolphin-view.c:10608 src/nolphin-view.c:10713 src/nolphin-view.c:11770
-#: src/nolphin-view.c:12110
+#: src/nolphin-view.c:10754 src/nolphin-view.c:10859 src/nolphin-view.c:11916
+#: src/nolphin-view.c:12266
 msgid "In den _Papierkorb verschieben"
 msgstr ""
 
@@ -1777,23 +1777,23 @@ msgstr ""
 
 #. Reset to default info
 #: libnolphin-private/nolphin-file-undo-operations.c:147
-#: src/nolphin-view.c:2958
+#: src/nolphin-view.c:2960
 msgid "Rückgängig machen"
 msgstr ""
 
 #: libnolphin-private/nolphin-file-undo-operations.c:150
-#: src/nolphin-view.c:2959
+#: src/nolphin-view.c:2961
 msgid "Letzte Aktion zurücknehmen"
 msgstr ""
 
 #. Reset to default info
 #: libnolphin-private/nolphin-file-undo-operations.c:154
-#: src/nolphin-view.c:2977
+#: src/nolphin-view.c:2979
 msgid "Wiederherstellen"
 msgstr ""
 
 #: libnolphin-private/nolphin-file-undo-operations.c:157
-#: src/nolphin-view.c:2978
+#: src/nolphin-view.c:2980
 msgid "Die zuletzt rückgängig gemachte Aktion wiederholen"
 msgstr ""
 
@@ -2203,7 +2203,7 @@ msgstr ""
 #. label, accelerator
 #: libnolphin-private/nolphin-mime-application-chooser.c:483
 #: src/nolphin-places-sidebar.c:3523 src/nolphin-tree-sidebar.c:1366
-#: src/nolphin-view.c:10358 src/nolphin-view.c:12042
+#: src/nolphin-view.c:10500 src/nolphin-view.c:12198
 msgid "_Öffnen"
 msgstr ""
 
@@ -2281,7 +2281,7 @@ msgstr ""
 #: libnolphin-private/nolphin-search-directory-file.c:164
 #: libnolphin-private/nolphin-search-directory-file.c:198
 #: libnolphin-private/nolphin-search-directory-file.c:232
-#: src/nolphin-window-menus.c:2338
+#: src/nolphin-window-menus.c:2466
 msgid "Suche"
 msgstr ""
 
@@ -2466,8 +2466,8 @@ msgid "Fortsetzen"
 msgstr ""
 
 #: src/nolphin-connect-server-dialog.c:712
-#: src/nolphin-connect-server-dialog.c:1106 src/nolphin-view.c:10115
-#: src/nolphin-view.c:11399 src/nolphin-view.c:11486 src/nolphin-view.c:11590
+#: src/nolphin-connect-server-dialog.c:1106 src/nolphin-view.c:10257
+#: src/nolphin-view.c:11545 src/nolphin-view.c:11632 src/nolphin-view.c:11736
 msgid "_Verbinden"
 msgstr ""
 
@@ -2491,7 +2491,7 @@ msgid "_Port:"
 msgstr "_Port:"
 
 #. second row: type combobox
-#: src/nolphin-connect-server-dialog.c:922 src/nolphin-view.c:1901
+#: src/nolphin-connect-server-dialog.c:922 src/nolphin-view.c:1903
 msgid "_Typ:"
 msgstr ""
 
@@ -2546,7 +2546,7 @@ msgid ""
 "Mit Server verbinden"
 msgstr ""
 
-#: src/nolphin-desktop-application.c:258 src/nolphin-main-application.c:884
+#: src/nolphin-desktop-application.c:258 src/nolphin-main-application.c:885
 msgid "Die Programmversion anzeigen"
 msgstr ""
 
@@ -2564,7 +2564,7 @@ msgstr ""
 #. name, stock id
 #. label, accelerator
 #: src/nolphin-desktop-icon-grid-view.c:922 src/nolphin-desktop-icon-view.c:682
-#: src/nolphin-view.c:10539 src/nolphin-view.c:12190
+#: src/nolphin-view.c:10685 src/nolphin-view.c:12346
 msgid "Papierkorb _leeren"
 msgstr ""
 
@@ -2633,7 +2633,7 @@ msgstr ""
 #. tooltip
 #: src/nolphin-desktop-icon-grid-view.c:1108
 #: src/nolphin-desktop-icon-view.c:724 src/nolphin-trash-bar.c:227
-#: src/nolphin-view.c:10540
+#: src/nolphin-view.c:10686
 msgid "Alle Objekte im Papierkorb löschen"
 msgstr ""
 
@@ -2851,120 +2851,148 @@ msgid "Erweiterungen geändert. Neustart wird benötigt!"
 msgstr ""
 
 #. Translators: this is referred to captions under icons.
-#: src/nolphin-file-management-properties.c:364
+#: src/nolphin-file-management-properties.c:365
 msgid "Keine"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:974
+#: src/nolphin-file-management-properties.c:975
 #, c-format
 msgid "Das Systemwerkzeug »dconf« ist nicht installiert."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:992
+#: src/nolphin-file-management-properties.c:993
 msgid "dconf wurde mit einem Fehler beendet."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1011
+#: src/nolphin-file-management-properties.c:1012
 msgid "Einstellungen exportieren"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1015
+#: src/nolphin-file-management-properties.c:1016
 msgid "_Exportieren"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1028
+#: src/nolphin-file-management-properties.c:1029
 msgid "Einstellungen exportiert."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1031
+#: src/nolphin-file-management-properties.c:1032
 msgid "Die Einstellungen konnten nicht exportiert werden."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1045
+#: src/nolphin-file-management-properties.c:1046
 msgid "Einstellungen importieren"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1049
-#: src/nolphin-file-management-properties.c:1068
+#: src/nolphin-file-management-properties.c:1050
+#: src/nolphin-file-management-properties.c:1070
 msgid "_Importieren"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1062
+#: src/nolphin-file-management-properties.c:1064
 msgid "Das ist keine gültige Einstellungsdatei."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1066
+#: src/nolphin-file-management-properties.c:1068
 msgid "Einstellungen importieren?"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1067
+#: src/nolphin-file-management-properties.c:1069
 msgid ""
 "Die gespeicherten Werte aus der Datei ersetzen die entsprechenden aktuellen "
 "Einstellungen."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1070
+#: src/nolphin-file-management-properties.c:1072
 msgid "Einstellungen importiert."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1071
-#: src/nolphin-file-management-properties.c:1100
+#: src/nolphin-file-management-properties.c:1073
+#: src/nolphin-file-management-properties.c:1102
 msgid "Manche Änderungen greifen erst nach einem Neustart von Nolphin."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1074
+#: src/nolphin-file-management-properties.c:1076
 msgid "Die Einstellungen konnten nicht importiert werden."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1093
+#: src/nolphin-file-management-properties.c:1095
 msgid "Alle Einstellungen zurücksetzen?"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1094
+#: src/nolphin-file-management-properties.c:1096
 msgid ""
 "Alle Nolphin-Einstellungen gehen auf die Werkseinstellungen zurück. Das "
 "lässt sich nicht rückgängig machen; vorher exportieren sichert sie."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1095
+#: src/nolphin-file-management-properties.c:1097
 msgid "_Zurücksetzen"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1099
+#: src/nolphin-file-management-properties.c:1101
 msgid "Einstellungen zurückgesetzt."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1103
+#: src/nolphin-file-management-properties.c:1105
 msgid "Die Einstellungen konnten nicht zurückgesetzt werden."
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1116
+#: src/nolphin-file-management-properties.c:1118
 msgid "Exportieren …"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1117
+#: src/nolphin-file-management-properties.c:1119
 msgid "Alle Einstellungen in eine Datei sichern"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1121
+#: src/nolphin-file-management-properties.c:1123
 msgid "Importieren …"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1122
+#: src/nolphin-file-management-properties.c:1124
 msgid "Einstellungen aus einer zuvor exportierten Datei laden"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1126
+#: src/nolphin-file-management-properties.c:1128
 msgid "Zurücksetzen …"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1127
+#: src/nolphin-file-management-properties.c:1129
 msgid "Alle Einstellungen auf die Werkseinstellungen zurücksetzen"
 msgstr ""
 
-#: src/nolphin-file-management-properties.c:1451
+#: src/nolphin-file-management-properties.c:1453
 msgid "Close"
 msgstr "Schließen"
+
+#: src/nolphin-help.c:344
+#, c-format
+msgid ""
+"# Keine Treffer\n"
+"\n"
+"Zu „%s“ gibt es kein Hilfethema. Versuchen Sie ein anderes Stichwort oder "
+"leeren Sie das Suchfeld."
+msgstr ""
+
+#: src/nolphin-help.c:368
+#, fuzzy
+msgid "<b>Hilfe zu Nolphin</b>"
+msgstr "<b>Dateieigenschaften</b>"
+
+#: src/nolphin-help.c:380
+msgid ""
+"Die Hilfetexte wurden nicht gefunden. Sie liegen im Ordner »help« der "
+"Nolphin-Daten (oder in NOLPHIN_HELPDIR)."
+msgstr ""
+
+#: src/nolphin-help.c:399
+msgid "Themen durchsuchen"
+msgstr ""
+
+#: src/nolphin-help.c:446
+msgid "Schließen"
+msgstr ""
 
 #: src/nolphin-icon-view.c:139
 msgid "nach _Name"
@@ -3105,8 +3133,8 @@ msgstr ""
 #. translators: this is used in the view selection dropdown
 #. * of navigation windows and in the preferences dialog
 #: src/nolphin-icon-view.c:2963 src/nolphin-icon-view-container.c:2157
-#: src/nolphin-icon-view-grid-container.c:1593 src/nolphin-window-menus.c:2142
-#: src/nolphin-window-menus.c:2304
+#: src/nolphin-icon-view-grid-container.c:1593 src/nolphin-window-menus.c:2270
+#: src/nolphin-window-menus.c:2432
 msgid "Symbolansicht"
 msgstr ""
 
@@ -3129,8 +3157,8 @@ msgstr ""
 
 #. translators: this is used in the view selection dropdown
 #. * of navigation windows and in the preferences dialog
-#: src/nolphin-icon-view.c:2977 src/nolphin-window-menus.c:2148
-#: src/nolphin-window-menus.c:2327
+#: src/nolphin-icon-view.c:2977 src/nolphin-window-menus.c:2276
+#: src/nolphin-window-menus.c:2455
 msgid "Kompaktansicht"
 msgstr ""
 
@@ -3153,7 +3181,7 @@ msgstr ""
 
 #. translators: this is used in the view selection dropdown
 #. * of navigation windows and in the preferences dialog
-#: src/nolphin-icon-view.c:2991 src/nolphin-window-menus.c:2151
+#: src/nolphin-icon-view.c:2991 src/nolphin-window-menus.c:2279
 msgid "Galerieansicht"
 msgstr ""
 
@@ -3354,7 +3382,7 @@ msgstr ""
 #. translators: this is used in the view selection dropdown
 #. * of navigation windows and in the preferences dialog
 #: src/nolphin-list-view.c:2837 src/nolphin-list-view.c:4563
-#: src/nolphin-window-menus.c:2145 src/nolphin-window-menus.c:2315
+#: src/nolphin-window-menus.c:2273 src/nolphin-window-menus.c:2443
 msgid "Listenansicht"
 msgstr ""
 
@@ -3389,85 +3417,85 @@ msgid_plural "Dies würde %d Einzelfenster öffnen."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-main-application.c:813
+#: src/nolphin-main-application.c:814
 msgid "--check kann nicht zusammen mit anderen Optionen verwendet werden."
 msgstr ""
 
-#: src/nolphin-main-application.c:819
+#: src/nolphin-main-application.c:820
 msgid "--quit kann nicht mit Adressen benutzt werden."
 msgstr ""
 
-#: src/nolphin-main-application.c:827
+#: src/nolphin-main-application.c:828
 msgid "--geometry kann nicht mit mehr als einer Adresse benutzt werden."
 msgstr ""
 
-#: src/nolphin-main-application.c:878
+#: src/nolphin-main-application.c:879
 msgid "Eine Reihe schneller Selbsttests durchführen."
 msgstr ""
 
-#: src/nolphin-main-application.c:886
+#: src/nolphin-main-application.c:887
 msgid ""
 "Das Anfangsfenster mit der angegebenen Geometrie erstellen. Beispiele: "
 "nolphin --geometry=+100+100, nolphin --geometry=600x400, nolphin --"
 "geometry=600x400+100+100."
 msgstr ""
 
-#: src/nolphin-main-application.c:886
+#: src/nolphin-main-application.c:887
 msgid "GEOMETRIE"
 msgstr ""
 
-#: src/nolphin-main-application.c:888
+#: src/nolphin-main-application.c:889
 msgid "Nur für ausdrücklich angegebene Adressen die Fenster erstellen."
 msgstr ""
 
-#: src/nolphin-main-application.c:890
+#: src/nolphin-main-application.c:891
 msgid "Ignorierter Ausdruck – wird nur zur Kompatibilität zugelassen."
 msgstr ""
 
-#: src/nolphin-main-application.c:892
+#: src/nolphin-main-application.c:893
 msgid "Adressen in Reitern öffnen."
 msgstr ""
 
-#: src/nolphin-main-application.c:894
+#: src/nolphin-main-application.c:895
 msgid "Adressen in einem bestehenden Fenster öffnen."
 msgstr ""
 
-#: src/nolphin-main-application.c:896
+#: src/nolphin-main-application.c:897
 msgid ""
 "Den übergeordneten Ordner der Adresse anzeigen und die Adresse auswählen."
 msgstr ""
 
-#: src/nolphin-main-application.c:898
+#: src/nolphin-main-application.c:899
 msgid ""
 "Bitte den Benutzervorschaubildpuffer reparieren - das kann nützlich sein, "
 "wenn Sie Probleme mit den Vorschaubildern haben. Muss als Systemverwalter "
 "ausgeführt werden."
 msgstr ""
 
-#: src/nolphin-main-application.c:902
+#: src/nolphin-main-application.c:903
 msgid "Nolphin beenden."
 msgstr ""
 
-#: src/nolphin-main-application.c:903
+#: src/nolphin-main-application.c:904
 msgid "[Adresse …]"
 msgstr ""
 
-#: src/nolphin-main-application.c:914
+#: src/nolphin-main-application.c:915
 msgid ""
 "\n"
 "\n"
 "Das Dateisystem mit Hilfe der Dateiverwaltung durchsuchen"
 msgstr ""
 
-#: src/nolphin-main-application.c:1038
+#: src/nolphin-main-application.c:1039
 msgid "--select muss mit mindestens einer Adresse verwendet werden."
 msgstr ""
 
-#: src/nolphin-main-application.c:1111
+#: src/nolphin-main-application.c:1112
 msgid "Nolphins Hauptmenü ist nun ausgeblendet"
 msgstr ""
 
-#: src/nolphin-main-application.c:1114
+#: src/nolphin-main-application.c:1115
 #, c-format
 msgid ""
 "Sie haben sich entschieden, das Hauptmenü auszublenden. Sie können es "
@@ -3481,7 +3509,7 @@ msgid ""
 "im Ansicht-Menü auswählen."
 msgstr ""
 
-#: src/nolphin-main-application.c:1121
+#: src/nolphin-main-application.c:1122
 msgid "Diesen Hinweis nicht wieder anzeigen."
 msgstr ""
 
@@ -3528,7 +3556,7 @@ msgid "An_zeigen"
 msgstr ""
 
 #: src/nolphin-mime-actions.c:1063 src/nolphin-mime-actions.c:1758
-#: src/nolphin-view.c:1144
+#: src/nolphin-view.c:1146
 msgid "Sind Sie sicher, dass Sie alle Dateien öffnen wollen?"
 msgstr ""
 
@@ -3540,7 +3568,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/nolphin-mime-actions.c:1168 src/nolphin-open-with-main.c:151
-#: src/nolphin-view.c:1416
+#: src/nolphin-view.c:1418
 msgid "Öffnen mit"
 msgstr ""
 
@@ -3596,11 +3624,11 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/nolphin-mime-actions.c:1837 src/nolphin-mime-actions.c:2111
-#: src/nolphin-view.c:9569
+#: src/nolphin-view.c:9711
 msgid "Einhängen des Ortes nicht möglich"
 msgstr ""
 
-#: src/nolphin-mime-actions.c:2190 src/nolphin-view.c:9716
+#: src/nolphin-mime-actions.c:2190 src/nolphin-view.c:9858
 msgid "Starten des Ortes nicht möglich"
 msgstr ""
 
@@ -3634,7 +3662,7 @@ msgstr ""
 msgid "Geräte"
 msgstr ""
 
-#: src/nolphin-places-sidebar.c:656 src/nolphin-view.c:3516
+#: src/nolphin-places-sidebar.c:656 src/nolphin-view.c:3518
 #, c-format
 msgid "Freier Speicherplatz: %s"
 msgstr ""
@@ -3724,18 +3752,18 @@ msgstr ""
 #. name, stock id
 #. label, accelerator
 #: src/nolphin-places-sidebar.c:2378 src/nolphin-places-sidebar.c:3533
-#: src/nolphin-view.c:10654 src/nolphin-view.c:10678 src/nolphin-view.c:10737
-#: src/nolphin-view.c:11391 src/nolphin-view.c:11395 src/nolphin-view.c:11478
-#: src/nolphin-view.c:11482 src/nolphin-view.c:11582 src/nolphin-view.c:11586
+#: src/nolphin-view.c:10800 src/nolphin-view.c:10824 src/nolphin-view.c:10883
+#: src/nolphin-view.c:11537 src/nolphin-view.c:11541 src/nolphin-view.c:11624
+#: src/nolphin-view.c:11628 src/nolphin-view.c:11728 src/nolphin-view.c:11732
 msgid "_Start"
 msgstr "_Start"
 
 #. name, stock id
 #. label, accelerator
 #: src/nolphin-places-sidebar.c:2379 src/nolphin-places-sidebar.c:3534
-#: src/nolphin-view.c:10658 src/nolphin-view.c:10682 src/nolphin-view.c:10741
-#: src/nolphin-view.c:11420 src/nolphin-view.c:11507 src/nolphin-view.c:11611
-#: src/nolphin-window-menus.c:1936
+#: src/nolphin-view.c:10804 src/nolphin-view.c:10828 src/nolphin-view.c:10887
+#: src/nolphin-view.c:11566 src/nolphin-view.c:11653 src/nolphin-view.c:11757
+#: src/nolphin-window-menus.c:2064
 msgid "_Anhalten"
 msgstr ""
 
@@ -3744,8 +3772,8 @@ msgstr ""
 msgid "_Einschalten"
 msgstr ""
 
-#: src/nolphin-places-sidebar.c:2385 src/nolphin-view.c:11424
-#: src/nolphin-view.c:11511 src/nolphin-view.c:11615
+#: src/nolphin-places-sidebar.c:2385 src/nolphin-view.c:11570
+#: src/nolphin-view.c:11657 src/nolphin-view.c:11761
 msgid "Laufwerk _sicher entfernen"
 msgstr ""
 
@@ -3757,24 +3785,24 @@ msgstr ""
 msgid "Laufwerk _trennen"
 msgstr ""
 
-#: src/nolphin-places-sidebar.c:2392 src/nolphin-view.c:11403
-#: src/nolphin-view.c:11490 src/nolphin-view.c:11594
+#: src/nolphin-places-sidebar.c:2392 src/nolphin-view.c:11549
+#: src/nolphin-view.c:11636 src/nolphin-view.c:11740
 msgid "Multimedienlaufwerk _starten"
 msgstr ""
 
-#: src/nolphin-places-sidebar.c:2393 src/nolphin-view.c:11432
-#: src/nolphin-view.c:11519 src/nolphin-view.c:11623
+#: src/nolphin-places-sidebar.c:2393 src/nolphin-view.c:11578
+#: src/nolphin-view.c:11665 src/nolphin-view.c:11769
 msgid "Multimedienlaufwerk _anhalten"
 msgstr ""
 
 #. stop() for type G_DRIVE_START_STOP_TYPE_PASSWORD is normally not used
-#: src/nolphin-places-sidebar.c:2397 src/nolphin-view.c:11494
-#: src/nolphin-view.c:11598
+#: src/nolphin-places-sidebar.c:2397 src/nolphin-view.c:11640
+#: src/nolphin-view.c:11744
 msgid "Laufwerk _entsperren"
 msgstr ""
 
-#: src/nolphin-places-sidebar.c:2398 src/nolphin-view.c:11436
-#: src/nolphin-view.c:11523 src/nolphin-view.c:11627
+#: src/nolphin-places-sidebar.c:2398 src/nolphin-view.c:11582
+#: src/nolphin-view.c:11669 src/nolphin-view.c:11773
 msgid "Laufwerk _sperren"
 msgstr ""
 
@@ -3802,63 +3830,63 @@ msgstr ""
 #. name, stock id
 #. label, accelerator
 #: src/nolphin-places-sidebar.c:3524 src/nolphin-tree-sidebar.c:1367
-#: src/nolphin-view.c:10370 src/nolphin-view.c:10695 src/nolphin-view.c:11717
-#: src/nolphin-view.c:12088
+#: src/nolphin-view.c:10512 src/nolphin-view.c:10841 src/nolphin-view.c:11863
+#: src/nolphin-view.c:12244
 msgid "In neuem _Reiter öffnen"
 msgstr ""
 
 #: src/nolphin-places-sidebar.c:3525 src/nolphin-tree-sidebar.c:1368
-#: src/nolphin-view.c:11708 src/nolphin-view.c:12068
+#: src/nolphin-view.c:11854 src/nolphin-view.c:12224
 msgid "In neuem _Fenster öffnen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-places-sidebar.c:3526 src/nolphin-window-menus.c:2056
+#: src/nolphin-places-sidebar.c:3526 src/nolphin-window-menus.c:2184
 msgid "Lesezeichen _hinzufügen"
 msgstr ""
 
-#: src/nolphin-places-sidebar.c:3527 src/nolphin-template-config-widget.c:625
+#: src/nolphin-places-sidebar.c:3527 src/nolphin-template-config-widget.c:627
 msgid "Entfernen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-places-sidebar.c:3528 src/nolphin-view.c:10595
+#: src/nolphin-places-sidebar.c:3528 src/nolphin-view.c:10741
 msgid "_Umbenennen …"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-places-sidebar.c:3529 src/nolphin-view.c:10642
-#: src/nolphin-view.c:10666 src/nolphin-view.c:10725
+#: src/nolphin-places-sidebar.c:3529 src/nolphin-view.c:10788
+#: src/nolphin-view.c:10812 src/nolphin-view.c:10871
 msgid "_Einhängen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
 #: src/nolphin-places-sidebar.c:3530 src/nolphin-tree-sidebar.c:1377
-#: src/nolphin-view.c:10646 src/nolphin-view.c:10670 src/nolphin-view.c:10729
+#: src/nolphin-view.c:10792 src/nolphin-view.c:10816 src/nolphin-view.c:10875
 msgid "_Aushängen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
 #: src/nolphin-places-sidebar.c:3531 src/nolphin-tree-sidebar.c:1378
-#: src/nolphin-view.c:10650 src/nolphin-view.c:10674 src/nolphin-view.c:10733
+#: src/nolphin-view.c:10796 src/nolphin-view.c:10820 src/nolphin-view.c:10879
 msgid "_Auswerfen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-places-sidebar.c:3532 src/nolphin-view.c:10662
-#: src/nolphin-view.c:10686 src/nolphin-view.c:10745
+#: src/nolphin-places-sidebar.c:3532 src/nolphin-view.c:10808
+#: src/nolphin-view.c:10832 src/nolphin-view.c:10891
 msgid "Me_dien erkennen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
 #: src/nolphin-places-sidebar.c:3536 src/nolphin-tree-sidebar.c:1379
-#: src/nolphin-view.c:10340 src/nolphin-view.c:10750
+#: src/nolphin-view.c:10482 src/nolphin-view.c:10896
 msgid "_Eigenschaften"
 msgstr ""
 
@@ -3874,7 +3902,8 @@ msgstr ""
 msgid "Anhalten"
 msgstr ""
 
-#: src/nolphin-preview.c:238 src/nolphin-preview.c:319 src/nolphin-view.c:8239
+#: src/nolphin-preview.c:238 src/nolphin-preview.c:319 src/nolphin-view.c:8241
+#: src/nolphin-view.c:9061
 msgid "Unbekannter Fehler"
 msgstr ""
 
@@ -4079,53 +4108,57 @@ msgstr ""
 msgid "Vergrößerungsstufe einstellen"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:161
+#: src/nolphin-template-config-widget.c:162
 msgid "Unbekannte Vorlage"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:234
+#: src/nolphin-template-config-widget.c:235
 msgid ""
 "Keine Vorlagen gefunden. Klicken Sie auf »Neu« oder ziehen Sie eine Datei "
 "hierher, um eine Vorlage zu erstellen."
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:425
+#: src/nolphin-template-config-widget.c:426
 msgid "Wählen Sie ein Dokument, um es als Vorlage zu verwenden"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:430 src/nolphin-view.c:8070
+#: src/nolphin-template-config-widget.c:431 src/nolphin-view.c:8072
 msgid "Auswählen"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:596
+#: src/nolphin-template-config-widget.c:436
+msgid "Dateien mit zugeordneter Anwendung"
+msgstr ""
+
+#: src/nolphin-template-config-widget.c:598
 msgid "Vorlagen"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:616
+#: src/nolphin-template-config-widget.c:618
 msgid "Neu"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:617
+#: src/nolphin-template-config-widget.c:619
 msgid "Eine neue Vorlage erstellen"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:626
+#: src/nolphin-template-config-widget.c:628
 msgid "Die ausgewählten Vorlage löschen"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:635 src/nolphin-window.c:430
+#: src/nolphin-template-config-widget.c:637 src/nolphin-window.c:433
 msgid "Umbenennen"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:636
+#: src/nolphin-template-config-widget.c:638
 msgid "Die ausgewählte Vorlage umbenennen"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:645
+#: src/nolphin-template-config-widget.c:647
 msgid "Inhalt bearbeiten"
 msgstr ""
 
-#: src/nolphin-template-config-widget.c:646
+#: src/nolphin-template-config-widget.c:648
 msgid "Den Inhalt der ausgewählten Vorlage ändern"
 msgstr ""
 
@@ -4167,8 +4200,62 @@ msgstr ""
 msgid "Verwerfen"
 msgstr ""
 
-#: src/nolphin-toolbar.c:215
+#: src/nolphin-toolbar.c:220
 msgid "Erhöhte Berechtigungen"
+msgstr ""
+
+#: src/nolphin-toolbar.c:313
+msgid "2 Spalten"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-toolbar.c:313 src/nolphin-window-menus.c:1971
+msgid "Die Ansicht in zwei Spalten teilen"
+msgstr ""
+
+#: src/nolphin-toolbar.c:314
+msgid "3 Spalten"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-toolbar.c:314 src/nolphin-window-menus.c:1975
+msgid "Die Ansicht in drei Spalten teilen"
+msgstr ""
+
+#: src/nolphin-toolbar.c:315
+msgid "2×2"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-toolbar.c:315 src/nolphin-window-menus.c:1979
+msgid "Die Ansicht in vier Bereiche als Raster teilen"
+msgstr ""
+
+#: src/nolphin-toolbar.c:316
+msgid "1 groß + 2"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-toolbar.c:316 src/nolphin-window-menus.c:1983
+msgid "Links ein großer Bereich, rechts zwei kleine untereinander"
+msgstr ""
+
+#: src/nolphin-toolbar.c:317
+msgid "2 Zeilen"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-toolbar.c:317 src/nolphin-window-menus.c:1987
+msgid "Die Ansicht in zwei Zeilen teilen"
+msgstr ""
+
+#: src/nolphin-toolbar.c:324
+#, fuzzy
+msgid "Layout wählen"
+msgstr "Ansicht"
+
+#: src/nolphin-toolbar.c:359
+msgid "Layout der geteilten Ansicht wählen"
 msgstr ""
 
 #: src/nolphin-trash-bar.c:218
@@ -4179,37 +4266,37 @@ msgstr ""
 msgid "Ausgewählte Objekte an ihrem ursprünglichen Ort wiederherstellen"
 msgstr ""
 
-#: src/nolphin-tree-sidebar.c:984 src/nolphin-view.c:7141
+#: src/nolphin-tree-sidebar.c:984 src/nolphin-view.c:7143
 #, c-format
 msgid "»%s« wird verschoben, sobald Sie »Einfügen« auswählen"
 msgstr ""
 
-#: src/nolphin-tree-sidebar.c:987 src/nolphin-view.c:7144
+#: src/nolphin-tree-sidebar.c:987 src/nolphin-view.c:7146
 #, c-format
 msgid "»%s« wird kopiert, sobald Sie »Einfügen« auswählen"
 msgstr ""
 
-#: src/nolphin-tree-sidebar.c:1025 src/nolphin-view.c:7391
+#: src/nolphin-tree-sidebar.c:1025 src/nolphin-view.c:7393
 msgid "In der Zwischenablage ist nichts zum Einfügen."
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-tree-sidebar.c:1369 src/nolphin-view.c:10348
+#: src/nolphin-tree-sidebar.c:1369 src/nolphin-view.c:10490
 msgid "Neuen _Ordner anlegen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-tree-sidebar.c:1370 src/nolphin-view.c:10543
-#: src/nolphin-view.c:10700
+#: src/nolphin-tree-sidebar.c:1370 src/nolphin-view.c:10689
+#: src/nolphin-view.c:10846
 msgid "_Ausschneiden"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-tree-sidebar.c:1371 src/nolphin-view.c:10547
-#: src/nolphin-view.c:10704
+#: src/nolphin-tree-sidebar.c:1371 src/nolphin-view.c:10693
+#: src/nolphin-view.c:10850
 msgid "_Kopieren"
 msgstr ""
 
@@ -4217,109 +4304,109 @@ msgstr ""
 #. accelerator for paste
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-tree-sidebar.c:1372 src/nolphin-view.c:10557
-#: src/nolphin-view.c:10708
+#: src/nolphin-tree-sidebar.c:1372 src/nolphin-view.c:10703
+#: src/nolphin-view.c:10854
 msgid "In Ordner e_infügen"
 msgstr ""
 
-#: src/nolphin-tree-sidebar.c:1373 src/nolphin-view.c:10785
+#: src/nolphin-tree-sidebar.c:1373 src/nolphin-view.c:10931
 msgid "_Anheften"
 msgstr ""
 
-#: src/nolphin-tree-sidebar.c:1374 src/nolphin-view.c:10789
+#: src/nolphin-tree-sidebar.c:1374 src/nolphin-view.c:10935
 msgid "_Lösen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-tree-sidebar.c:1376 src/nolphin-view.c:10612
-#: src/nolphin-view.c:10717 src/nolphin-view.c:12134
+#: src/nolphin-tree-sidebar.c:1376 src/nolphin-view.c:10758
+#: src/nolphin-view.c:10863 src/nolphin-view.c:12290
 msgid "_Löschen"
 msgstr ""
 
-#: src/nolphin-view.c:1146
+#: src/nolphin-view.c:1148
 #, c-format
 msgid "Dies würde %'d Reiter öffnen."
 msgid_plural "Dies würde %'d Reiter öffnen."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:1149
+#: src/nolphin-view.c:1151
 #, c-format
 msgid "Dies würde %'d Einzelfenster öffnen."
 msgid_plural "Dies würde %'d Einzelfenster öffnen."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:1753
+#: src/nolphin-view.c:1755
 msgid "Beim Anzeigen der Hilfe ist ein Fehler aufgetreten."
 msgstr ""
 
-#: src/nolphin-view.c:1773
+#: src/nolphin-view.c:1775
 msgid "Passende Objekte auswählen"
 msgstr ""
 
-#: src/nolphin-view.c:1788
+#: src/nolphin-view.c:1790
 msgid "_Muster:"
 msgstr ""
 
-#: src/nolphin-view.c:1794
+#: src/nolphin-view.c:1796
 msgid "Beispiele: "
 msgstr ""
 
-#: src/nolphin-view.c:1889
+#: src/nolphin-view.c:1891
 msgid "Nach Dateityp auswählen"
 msgstr ""
 
-#: src/nolphin-view.c:1963
+#: src/nolphin-view.c:1965
 msgid "Keine Objekte ausgewählt."
 msgstr ""
 
-#: src/nolphin-view.c:1986 src/nolphin-view.c:2005
+#: src/nolphin-view.c:1988 src/nolphin-view.c:2007
 msgid "Auswahl speichern"
 msgstr ""
 
-#: src/nolphin-view.c:2015 src/nolphin-view.c:9039
+#: src/nolphin-view.c:2017 src/nolphin-view.c:9103
 msgid "Name:"
 msgstr ""
 
-#: src/nolphin-view.c:2048
+#: src/nolphin-view.c:2050
 msgid "Diese gespeicherte Auswahl konnte nicht gelesen werden."
 msgstr ""
 
-#: src/nolphin-view.c:2101
+#: src/nolphin-view.c:2103
 msgid "Für diesen Ordner ist keine Auswahl gespeichert."
 msgstr ""
 
-#: src/nolphin-view.c:2110
+#: src/nolphin-view.c:2112
 msgid "Gespeicherte Auswahl wiederherstellen"
 msgstr ""
 
-#: src/nolphin-view.c:2120
+#: src/nolphin-view.c:2122
 msgid "Gespeicherte Auswahl:"
 msgstr ""
 
-#: src/nolphin-view.c:3155
+#: src/nolphin-view.c:3157
 msgid "Inhaltsansicht"
 msgstr ""
 
-#: src/nolphin-view.c:3156
+#: src/nolphin-view.c:3158
 msgid "Ansicht des aktuellen Ordners"
 msgstr ""
 
-#: src/nolphin-view.c:3434 src/nolphin-view.c:3475
+#: src/nolphin-view.c:3436 src/nolphin-view.c:3477
 #, c-format
 msgid "»%s« ausgewählt"
 msgstr ""
 
-#: src/nolphin-view.c:3436
+#: src/nolphin-view.c:3438
 #, c-format
 msgid "%'d Ordner markiert"
 msgid_plural "%'d Ordner markiert"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:3446
+#: src/nolphin-view.c:3448
 #, c-format
 msgid " (enthält %'d Objekt)"
 msgid_plural " (enthält %'d Objekte)"
@@ -4327,14 +4414,14 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: this is preceded with a string of form 'N folders' (N more than 1)
-#: src/nolphin-view.c:3457
+#: src/nolphin-view.c:3459
 #, c-format
 msgid " (enthält insgesamt %'d Objekt)"
 msgid_plural " (enthält insgesamt %'d Objekte)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:3478
+#: src/nolphin-view.c:3480
 #, c-format
 msgid "%'d Objekt ausgewählt"
 msgid_plural "%'d Objekte ausgewählt"
@@ -4342,42 +4429,42 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Folders selected also, use "other" terminology
-#: src/nolphin-view.c:3485
+#: src/nolphin-view.c:3487
 #, c-format
 msgid "%'d weiteres Objekt ausgewählt"
 msgid_plural "%'d weitere Objekte ausgewählt"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:3527
+#: src/nolphin-view.c:3529
 #, c-format
 msgid "%s, freier Speicherplatz: %s"
 msgstr ""
 
-#: src/nolphin-view.c:5136
+#: src/nolphin-view.c:5138
 #, c-format
 msgid "Mit %s öffnen"
 msgstr ""
 
-#: src/nolphin-view.c:5138
+#: src/nolphin-view.c:5140
 #, c-format
 msgid "»%s« verwenden, um gewähltes Objekt zu öffnen"
 msgid_plural "»%s« verwenden, um gewählte Objekte zu öffnen"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:6500
+#: src/nolphin-view.c:6502
 #, c-format
 msgid "»%s« mit allen gewählten Objekten starten"
 msgstr ""
 
-#: src/nolphin-view.c:6848
+#: src/nolphin-view.c:6850
 #, c-format
 msgid "Ein neues Dokument aus Vorlage »%s« anlegen"
 msgstr ""
 
 #. translators: this is preceded with a string of form 'N selected items' (N more than 1)
-#: src/nolphin-view.c:7151
+#: src/nolphin-view.c:7153
 #, c-format
 msgid ""
 "Das %'d ausgewählte Objekt wird verschoben, sobald Sie »Einfügen« auswählen"
@@ -4388,7 +4475,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: this is preceded with a string of form 'N selected items' (N more than 1)
-#: src/nolphin-view.c:7157
+#: src/nolphin-view.c:7159
 #, c-format
 msgid ""
 "Das %'d ausgewählte Objekt wird kopiert, sobald Sie »Einfügen« auswählen"
@@ -4398,331 +4485,353 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:7325
+#: src/nolphin-view.c:7327
 msgid "Zielordner zum Verschieben auswählen"
 msgstr ""
 
-#: src/nolphin-view.c:7348
+#: src/nolphin-view.c:7350
 msgid "Zielordner zum Kopieren auswählen"
 msgstr ""
 
-#: src/nolphin-view.c:7674
+#: src/nolphin-view.c:7676
 msgid "Erfolgreich abgeschlossen."
 msgstr ""
 
-#: src/nolphin-view.c:7676 src/nolphin-view.c:8908
+#: src/nolphin-view.c:7678 src/nolphin-view.c:8910
 #, c-format
 msgid "Fehlgeschlagen: %s"
 msgstr ""
 
-#: src/nolphin-view.c:7715 src/nolphin-view.c:7761
+#: src/nolphin-view.c:7717 src/nolphin-view.c:7763
 msgid "Entpacken"
 msgstr ""
 
-#: src/nolphin-view.c:7762
+#: src/nolphin-view.c:7764
 msgid "Zielordner konnte nicht angelegt werden."
 msgstr ""
 
-#: src/nolphin-view.c:7861
+#: src/nolphin-view.c:7863
 msgid "Hardlinks sind nur für Dateien möglich, nicht für Ordner."
 msgstr ""
 
-#: src/nolphin-view.c:7863
+#: src/nolphin-view.c:7865
 msgid "Hardlinks sind nur für lokale Dateien möglich."
 msgstr ""
 
-#: src/nolphin-view.c:7866
+#: src/nolphin-view.c:7868
 #, c-format
 msgid "Hardlink zu %s"
 msgstr ""
 
-#: src/nolphin-view.c:7870
+#: src/nolphin-view.c:7872
 msgid "Es konnte kein freier Name für den Hardlink gefunden werden."
 msgstr ""
 
-#: src/nolphin-view.c:7877
+#: src/nolphin-view.c:7879
 msgid "Hardlinks sind nur innerhalb desselben Dateisystems möglich."
 msgstr ""
 
-#: src/nolphin-view.c:7929
+#: src/nolphin-view.c:7931
 msgid "Zwischenablage.png"
 msgstr ""
 
-#: src/nolphin-view.c:7943
+#: src/nolphin-view.c:7945
 msgid "Zwischenablage.txt"
 msgstr ""
 
-#: src/nolphin-view.c:7950
+#: src/nolphin-view.c:7952
 msgid "Die Zwischenablage enthält weder Text noch ein Bild."
 msgstr ""
 
-#: src/nolphin-view.c:7959
+#: src/nolphin-view.c:7961
 msgid "Es konnte kein freier Dateiname gefunden werden."
 msgstr ""
 
-#: src/nolphin-view.c:7961
+#: src/nolphin-view.c:7963
 msgid "Zwischenablage einfügen"
 msgstr ""
 
-#: src/nolphin-view.c:8058
+#: src/nolphin-view.c:8060
 msgid "Mindestgröße (KiB):"
 msgstr ""
 
-#: src/nolphin-view.c:8062
+#: src/nolphin-view.c:8064
 msgid "Höchstgröße (KiB, 0 = unbegrenzt):"
 msgstr ""
 
-#: src/nolphin-view.c:8066
+#: src/nolphin-view.c:8068
 msgid "Geändert in den letzten (Tage, 0 = beliebig):"
 msgstr ""
 
-#: src/nolphin-view.c:8114
+#: src/nolphin-view.c:8116
 msgid "Entpacken nach …"
 msgstr ""
 
-#: src/nolphin-view.c:8118
+#: src/nolphin-view.c:8120
 msgid "_Entpacken"
 msgstr ""
 
-#: src/nolphin-view.c:8142
+#: src/nolphin-view.c:8144
 msgid "Archiv prüfen"
 msgstr ""
 
-#: src/nolphin-view.c:8208
+#: src/nolphin-view.c:8210
 msgid "Stimmt überein"
 msgstr ""
 
-#: src/nolphin-view.c:8212
+#: src/nolphin-view.c:8214
 msgid "Stimmt nicht überein"
 msgstr ""
 
-#: src/nolphin-view.c:8304
+#: src/nolphin-view.c:8306
 msgid "Prüfsumme berechnen"
 msgstr ""
 
-#: src/nolphin-view.c:8315
+#: src/nolphin-view.c:8317
 msgid "Algorithmus:"
 msgstr ""
 
-#: src/nolphin-view.c:8332
+#: src/nolphin-view.c:8334
 msgid "Berechnen"
 msgstr ""
 
-#: src/nolphin-view.c:8338
+#: src/nolphin-view.c:8340
 msgid "Ergebnis:"
 msgstr ""
 
-#: src/nolphin-view.c:8346
+#: src/nolphin-view.c:8348
 msgid "Vergleichswert:"
 msgstr ""
 
-#: src/nolphin-view.c:8386
+#: src/nolphin-view.c:8388
 msgid "Passwort:"
 msgstr ""
 
-#: src/nolphin-view.c:8397
+#: src/nolphin-view.c:8399
 msgid "Passwort bestätigen:"
 msgstr ""
 
-#: src/nolphin-view.c:8453 src/nolphin-view.c:8532 src/nolphin-view.c:8578
+#: src/nolphin-view.c:8455 src/nolphin-view.c:8534 src/nolphin-view.c:8580
 msgid "Verschlüsseln"
 msgstr ""
 
-#: src/nolphin-view.c:8483 src/nolphin-view.c:8496 src/nolphin-view.c:8557
+#: src/nolphin-view.c:8485 src/nolphin-view.c:8498 src/nolphin-view.c:8559
 msgid "Ordner verschlüsseln"
 msgstr ""
 
-#: src/nolphin-view.c:8558 src/nolphin-view.c:8579 src/nolphin-view.c:8653
+#: src/nolphin-view.c:8560 src/nolphin-view.c:8581 src/nolphin-view.c:8655
 msgid "Konnte keinen eindeutigen Zieldateinamen finden."
 msgstr ""
 
-#: src/nolphin-view.c:8605 src/nolphin-view.c:8638 src/nolphin-view.c:8652
+#: src/nolphin-view.c:8607 src/nolphin-view.c:8640 src/nolphin-view.c:8654
 msgid "Entschlüsseln"
 msgstr ""
 
-#: src/nolphin-view.c:8727
+#: src/nolphin-view.c:8729
 msgid "Für diesen Ort kann kein Git-Repository angelegt werden."
 msgstr ""
 
-#: src/nolphin-view.c:8736
+#: src/nolphin-view.c:8738
 msgid "git init ist fehlgeschlagen."
 msgstr ""
 
-#: src/nolphin-view.c:8766
+#: src/nolphin-view.c:8768
 msgid "Dieser Ort ist noch kein Git-Repository."
 msgstr ""
 
-#: src/nolphin-view.c:8770
+#: src/nolphin-view.c:8772
 msgid ""
 "Soll hier ein neues Repository angelegt werden? Danach kannst du Dateien "
 "hinzufügen, committen und mit „Remote hinzufügen“ zu GitHub hochladen."
 msgstr ""
 
-#: src/nolphin-view.c:8773
+#: src/nolphin-view.c:8775
 msgid "Repository anlegen"
 msgstr ""
 
-#: src/nolphin-view.c:8903
+#: src/nolphin-view.c:8905
 msgid "Git: Synchronisieren"
 msgstr ""
 
-#: src/nolphin-view.c:8903
+#: src/nolphin-view.c:8905
 msgid "Git: Abgleich"
 msgstr ""
 
-#: src/nolphin-view.c:8942
+#: src/nolphin-view.c:8944
 msgid "Git: Repository klonen"
 msgstr ""
 
-#: src/nolphin-view.c:8956
+#: src/nolphin-view.c:8958
 msgid "Repository klonen"
 msgstr ""
 
-#: src/nolphin-view.c:8960
+#: src/nolphin-view.c:8962
 msgid "Klonen"
 msgstr ""
 
-#: src/nolphin-view.c:8967
+#: src/nolphin-view.c:8969
 msgid "Adresse des Repositorys (wird in den aktuellen Ordner heruntergeladen):"
 msgstr ""
 
-#: src/nolphin-view.c:9002
+#: src/nolphin-view.c:9004
 msgid "Git: Remote hinzufügen"
 msgstr ""
 
-#: src/nolphin-view.c:9028
-msgid "Remote hinzufügen"
+#: src/nolphin-view.c:9014
+msgid "Git: Remote-Adresse ändern"
 msgstr ""
 
-#: src/nolphin-view.c:9049
-msgid "URL:"
+#: src/nolphin-view.c:9037
+msgid ""
+"Dieser Remote ist schon eingetragen - beim Bestätigen wird seine Adresse "
+"geändert."
 msgstr ""
 
-#: src/nolphin-view.c:9090
-msgid "Standard"
+#: src/nolphin-view.c:9039
+msgid "Neuer Remote - er wird hinzugefügt."
 msgstr ""
 
-#: src/nolphin-view.c:9091
-msgid "Dokumente"
+#: src/nolphin-view.c:9068
+msgid "Remote hinzufügen oder ändern"
 msgstr ""
 
-#: src/nolphin-view.c:9092
-msgid "Downloads"
+#: src/nolphin-view.c:9088
+msgid "Noch kein Remote eingetragen."
 msgstr ""
 
 #: src/nolphin-view.c:9093
+msgid "Eingetragen:"
+msgstr ""
+
+#: src/nolphin-view.c:9112
+msgid "URL:"
+msgstr ""
+
+#: src/nolphin-view.c:9190
+msgid "Standard"
+msgstr ""
+
+#: src/nolphin-view.c:9191
+msgid "Dokumente"
+msgstr ""
+
+#: src/nolphin-view.c:9192
+msgid "Downloads"
+msgstr ""
+
+#: src/nolphin-view.c:9193
 msgid "Favorit"
 msgstr ""
 
-#: src/nolphin-view.c:9094
+#: src/nolphin-view.c:9194
 msgid "Wichtig"
 msgstr ""
 
-#: src/nolphin-view.c:9095
+#: src/nolphin-view.c:9195
 msgid "E-Mail"
 msgstr ""
 
-#: src/nolphin-view.c:9096
+#: src/nolphin-view.c:9196
 msgid "Fotos"
 msgstr ""
 
-#: src/nolphin-view.c:9097
+#: src/nolphin-view.c:9197
 msgid "Geteilt"
 msgstr ""
 
-#: src/nolphin-view.c:9098
+#: src/nolphin-view.c:9198
 msgid "Synchronisiert"
 msgstr ""
 
-#: src/nolphin-view.c:9099
+#: src/nolphin-view.c:9199
 msgid "System"
 msgstr ""
 
-#: src/nolphin-view.c:9120
+#: src/nolphin-view.c:9220
 msgid "Tags und Emblem bearbeiten"
 msgstr ""
 
-#: src/nolphin-view.c:9132
+#: src/nolphin-view.c:9232
 msgid "Tags (durch Komma getrennt):"
 msgstr ""
 
-#: src/nolphin-view.c:9149
+#: src/nolphin-view.c:9249
 msgid "Emblem (zusätzliches Symbol auf dem Dateisymbol):"
 msgstr ""
 
-#: src/nolphin-view.c:9259
+#: src/nolphin-view.c:9359
 msgid "Kommentar bearbeiten"
 msgstr ""
 
-#: src/nolphin-view.c:9270
+#: src/nolphin-view.c:9370
 msgid "Kommentar:"
 msgstr ""
 
-#: src/nolphin-view.c:9589
+#: src/nolphin-view.c:9731
 msgid "Aushängen des Ortes nicht möglich"
 msgstr ""
 
-#: src/nolphin-view.c:9609
+#: src/nolphin-view.c:9751
 msgid "Auswerfen des Ortes nicht möglich"
 msgstr ""
 
-#: src/nolphin-view.c:9624
+#: src/nolphin-view.c:9766
 msgid "Laufwerk konnte nicht angehalten werden"
 msgstr ""
 
-#: src/nolphin-view.c:10110
+#: src/nolphin-view.c:10252
 #, c-format
 msgid "Mit Server %s verbinden"
 msgstr ""
 
-#: src/nolphin-view.c:10129
+#: src/nolphin-view.c:10271
 msgid "Verknüpfungs_name:"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10336
+#: src/nolphin-view.c:10478
 msgid "Neues _Dokument anlegen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10337
+#: src/nolphin-view.c:10479
 msgid "Öffnen _mit"
 msgstr ""
 
-#: src/nolphin-view.c:10338
+#: src/nolphin-view.c:10480
 msgid ""
 "Ein Programm auswählen, mit dem das gewählte Objekt geöffnet werden soll."
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10341 src/nolphin-view.c:12182
+#: src/nolphin-view.c:10483 src/nolphin-view.c:12338
 msgid "Die Eigenschaften aller gewählten Objekte anzeigen/ändern"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10349
+#: src/nolphin-view.c:10491
 msgid "Einen neuen leeren Ordner in diesem Ordner anlegen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10351
+#: src/nolphin-view.c:10493
 msgid "Keine Vorlagen installiert"
 msgstr ""
 
 #. name, stock id
 #. translators: this is used to indicate that a document doesn't contain anything
 #. label, accelerator
-#: src/nolphin-view.c:10354
+#: src/nolphin-view.c:10496
 msgid "_Leeres Dokument"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10355
+#: src/nolphin-view.c:10497
 msgid "Ein neues leeres Dokument in diesem Ordner anlegen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10359
+#: src/nolphin-view.c:10501
 msgid "Das gewählte Objekt in diesem Fenster öffnen"
 msgstr ""
 
@@ -4731,95 +4840,106 @@ msgstr ""
 #. Location-specific actions
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10366 src/nolphin-view.c:10691
+#: src/nolphin-view.c:10508 src/nolphin-view.c:10837
 msgid "In Navigationsfenster öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10367
+#: src/nolphin-view.c:10509
 msgid "Jedes gewählte Objekt in einem einzelnen Navigationsfenster öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10371
+#: src/nolphin-view.c:10513
 msgid "Jedes gewählte Objekt in einem neuen Reiter öffnen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10374 src/nolphin-window-menus.c:2292
+#: src/nolphin-view.c:10516 src/nolphin-window-menus.c:2420
 msgid "Im Terminal öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10375
+#: src/nolphin-view.c:10517
 msgid "Terminal im gewähltem Ordner öffnen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10378
+#: src/nolphin-view.c:10520
+msgid "Als GID-Projekt hinzufügen"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-view.c:10521
+msgid "Diesen Ordner in der Seitenleiste als GID-Projekt eintragen"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-view.c:10524
 msgid "Als Systemverwalter öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10379
+#: src/nolphin-view.c:10525
 msgid "Ordner mit Administratorrechten öffnen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10383
+#: src/nolphin-view.c:10529
 msgid "Der Verknüpfung zur Originaldatei folgen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10384
+#: src/nolphin-view.c:10530
 msgid ""
 "Zur Originaldatei navigieren, zu welcher diese symbolische Verknüpfung zeigt."
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10387
+#: src/nolphin-view.c:10533
 msgid "Übergeordneten Ordner öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10388
+#: src/nolphin-view.c:10534
 msgid "Den Ordner öffnen, der das ausgewählte Element enthält"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10391
+#: src/nolphin-view.c:10537
 msgid "Kom_primieren …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10392
+#: src/nolphin-view.c:10538
 msgid "Ein ZIP-Archiv der ausgewählten Objekte erstellen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10395
+#: src/nolphin-view.c:10541
 msgid "Hier _entpacken"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10396
+#: src/nolphin-view.c:10542
 msgid "Das Archiv in einen neuen, danebenliegenden Ordner entpacken"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10399
+#: src/nolphin-view.c:10545
 msgid "Archiv _öffnen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10400
+#: src/nolphin-view.c:10546
 msgid ""
 "Inhalt des Archivs anzeigen; Dateien entpacken, hinzufügen, ersetzen und "
 "entfernen"
@@ -4827,28 +4947,28 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10403
+#: src/nolphin-view.c:10549
 msgid "Entpacken _nach …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10404
+#: src/nolphin-view.c:10550
 msgid "Das Archiv in einen frei gewählten Ordner entpacken"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10406
+#: src/nolphin-view.c:10552
 msgid "Kopieren _als"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10408
+#: src/nolphin-view.c:10554
 msgid "_Pfad"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10409
+#: src/nolphin-view.c:10555
 msgid ""
 "Den vollständigen Pfad der ausgewählten Objekte in die Zwischenablage "
 "kopieren"
@@ -4856,34 +4976,34 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10412
+#: src/nolphin-view.c:10558
 msgid "_Dateiname"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10413
+#: src/nolphin-view.c:10559
 msgid "Den Namen der ausgewählten Objekte in die Zwischenablage kopieren"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10416
+#: src/nolphin-view.c:10562
 msgid "_Hardlink anlegen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10417
+#: src/nolphin-view.c:10563
 msgid "Einen Hardlink für jede gewählte Datei im selben Ordner anlegen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10420
+#: src/nolphin-view.c:10566
 msgid "Zwischenablage als _Datei einfügen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10421
+#: src/nolphin-view.c:10567
 msgid ""
 "Text oder Bild aus der Zwischenablage als neue Datei im aktuellen Ordner "
 "anlegen"
@@ -4891,317 +5011,317 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10424
+#: src/nolphin-view.c:10570
 msgid "Nach _Größe und Datum auswählen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10425
+#: src/nolphin-view.c:10571
 msgid "Dateien nach Größe und Änderungsdatum auswählen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10428
+#: src/nolphin-view.c:10574
 msgid "Archiv _prüfen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10429
+#: src/nolphin-view.c:10575
 msgid "Das Archiv auf Fehler prüfen, ohne es zu entpacken"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10432
+#: src/nolphin-view.c:10578
 msgid "Prüfsumme _berechnen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10433
+#: src/nolphin-view.c:10579
 msgid ""
 "Eine Prüfsumme der Datei berechnen und mit einem Vergleichswert abgleichen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10436
+#: src/nolphin-view.c:10582
 msgid "_Verschlüsseln …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10437
+#: src/nolphin-view.c:10583
 msgid "Datei oder Ordner mit einem Passwort verschlüsseln (gpg)"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10440
+#: src/nolphin-view.c:10586
 msgid "En_tschlüsseln …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10441
+#: src/nolphin-view.c:10587
 msgid "Eine mit gpg verschlüsselte Datei entschlüsseln"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10444
+#: src/nolphin-view.c:10590
 msgid "_Zugriffsrechte …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10445
+#: src/nolphin-view.c:10591
 msgid "Zugriffsrechte für weitere Benutzer und Gruppen festlegen (ACL)"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10447
+#: src/nolphin-view.c:10593
 msgid "_Git"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10449
+#: src/nolphin-view.c:10595
 msgid "_Status anzeigen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10450
+#: src/nolphin-view.c:10596
 msgid "Git-Status des Repositorys anzeigen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10453
+#: src/nolphin-view.c:10599
 msgid "_Hinzufügen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10454
+#: src/nolphin-view.c:10600
 msgid "Ausgewähltes Objekt zur Staging-Area hinzufügen (git add)"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10457
+#: src/nolphin-view.c:10603
 msgid "_Commit …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10458
+#: src/nolphin-view.c:10604
 msgid "Bereitgestellte Änderungen committen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10461
+#: src/nolphin-view.c:10607
 msgid "Pu_ll"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10462
+#: src/nolphin-view.c:10608
 msgid "Änderungen vom entfernten Repository holen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10465
+#: src/nolphin-view.c:10611
 msgid "Pus_h"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10466
+#: src/nolphin-view.c:10612
 msgid "Änderungen zum entfernten Repository senden"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10469
+#: src/nolphin-view.c:10615
 msgid "_Log anzeigen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10470
+#: src/nolphin-view.c:10616
 msgid "Commit-Verlauf anzeigen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10473
+#: src/nolphin-view.c:10619
 msgid "_Diff anzeigen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10474
+#: src/nolphin-view.c:10620
 msgid "Nicht committete Änderungen anzeigen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10477
+#: src/nolphin-view.c:10623
 msgid "Mit Server _abgleichen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10478
+#: src/nolphin-view.c:10624
 msgid "Prüfen, was lokal und auf dem Server (z. B. GitHub) unterschiedlich ist"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10481
+#: src/nolphin-view.c:10627
 msgid "_Synchronisieren"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10482
+#: src/nolphin-view.c:10628
 msgid "Änderungen vom Server holen und eigene Änderungen hochladen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10485
+#: src/nolphin-view.c:10631
 msgid "Repository _klonen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10486
+#: src/nolphin-view.c:10632
 msgid "Ein Repository (z. B. von GitHub) in den aktuellen Ordner herunterladen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10489
-msgid "_Remote hinzufügen …"
+#: src/nolphin-view.c:10635
+msgid "_Remote hinzufügen/ändern …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10490
+#: src/nolphin-view.c:10636
 msgid "Ein entferntes Repository (z. B. auf GitHub) für Pull/Push eintragen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10492
+#: src/nolphin-view.c:10638
 msgid "Me_tadaten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10494
+#: src/nolphin-view.c:10640
 msgid "_Tags bearbeiten …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10495
+#: src/nolphin-view.c:10641
 msgid ""
 "Eigene Tags für dieses Objekt vergeben oder entfernen (über GVFS-Metadaten)"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10497
+#: src/nolphin-view.c:10643
 msgid "_Bewertung"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10499
+#: src/nolphin-view.c:10645
 msgid "Keine Bewertung"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10500
+#: src/nolphin-view.c:10646
 msgid "Bewertung entfernen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10503
+#: src/nolphin-view.c:10649
 msgid "★☆☆☆☆"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10504
+#: src/nolphin-view.c:10650
 msgid "Mit 1 Stern bewerten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10507
+#: src/nolphin-view.c:10653
 msgid "★★☆☆☆"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10508
+#: src/nolphin-view.c:10654
 msgid "Mit 2 Sternen bewerten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10511
+#: src/nolphin-view.c:10657
 msgid "★★★☆☆"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10512
+#: src/nolphin-view.c:10658
 msgid "Mit 3 Sternen bewerten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10515
+#: src/nolphin-view.c:10661
 msgid "★★★★☆"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10516
+#: src/nolphin-view.c:10662
 msgid "Mit 4 Sternen bewerten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10519
+#: src/nolphin-view.c:10665
 msgid "★★★★★"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10520
+#: src/nolphin-view.c:10666
 msgid "Mit 5 Sternen bewerten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10523
+#: src/nolphin-view.c:10669
 msgid "_Kommentar …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10524
+#: src/nolphin-view.c:10670
 msgid ""
 "Einen Kommentar für dieses Objekt schreiben oder ändern (über GVFS-Metadaten)"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10527
+#: src/nolphin-view.c:10673
 msgid "_Emblem …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10528
+#: src/nolphin-view.c:10674
 msgid ""
 "Ein Emblem (zusätzliches Symbol auf dem Dateisymbol) zuweisen oder entfernen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10531
+#: src/nolphin-view.c:10677
 msgid "Andere _Anwendung …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10532 src/nolphin-view.c:10536
+#: src/nolphin-view.c:10678 src/nolphin-view.c:10682
 msgid ""
 "Eine andere Anwendung auswählen, mit der das gewählte Objekt geöffnet werden "
 "soll"
@@ -5209,66 +5329,66 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10535
+#: src/nolphin-view.c:10681
 msgid "Mit anderer _Anwendung öffnen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10544
+#: src/nolphin-view.c:10690
 msgid ""
 "Die gewählten Dateien, auf das Verschieben, mit dem Einfügenbefehl, "
 "vorbereiten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10548
+#: src/nolphin-view.c:10694
 msgid ""
 "Die gewählten Dateien, auf das Kopieren, mit dem Einfügenbefehl, vorbereiten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10551
+#: src/nolphin-view.c:10697
 msgid "_Einfügen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10552
+#: src/nolphin-view.c:10698
 msgid ""
 "Zuvor durch »Ausschneiden« oder »Kopieren« ausgewählte Dateien verschieben "
 "oder kopieren"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10558
+#: src/nolphin-view.c:10704
 msgid ""
 "Zuvor durch »Ausschneiden« oder »Kopieren« ausgewählte Dateien in den "
 "gewählten Ordner verschieben oder kopieren"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10560
+#: src/nolphin-view.c:10706
 msgid "Kop_ieren nach"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10561
+#: src/nolphin-view.c:10707
 msgid "Verschieben _nach"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10564
+#: src/nolphin-view.c:10710
 msgid "Alle Objekte in diesem Fenster auswählen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10567
+#: src/nolphin-view.c:10713
 msgid "_Nach Muster auswählen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10568
+#: src/nolphin-view.c:10714
 msgid ""
 "Alle Objekte in diesem Fenster auswählen, die auf ein bestimmtes Muster "
 "passen"
@@ -5276,12 +5396,12 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10571
+#: src/nolphin-view.c:10717
 msgid "Nach _Typ auswählen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10572
+#: src/nolphin-view.c:10718
 msgid ""
 "Objekte in diesem Fenster auswählen, die zu einer bestimmten Dateityp-"
 "Kategorie gehören"
@@ -5289,23 +5409,23 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10575
+#: src/nolphin-view.c:10721
 msgid "Aus_wahl umkehren"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10576
+#: src/nolphin-view.c:10722
 msgid "Alle und nur die Objekte auswählen, die momentan nicht ausgewählt sind"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10579
+#: src/nolphin-view.c:10725
 msgid "Auswahl _speichern …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10580
+#: src/nolphin-view.c:10726
 msgid ""
 "Die aktuelle Auswahl unter einem Namen merken, um sie später in diesem "
 "Ordner wiederherzustellen"
@@ -5313,87 +5433,87 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10583
+#: src/nolphin-view.c:10729
 msgid "Gespeicherte Auswahl _wiederherstellen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10584
+#: src/nolphin-view.c:10730
 msgid "Eine zuvor in diesem Ordner gespeicherte Auswahl wiederherstellen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10588
+#: src/nolphin-view.c:10734
 msgid "Alle gewählten Objekte verdoppeln"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10591 src/nolphin-view.c:12160
+#: src/nolphin-view.c:10737 src/nolphin-view.c:12316
 msgid "_Verknüpfung anlegen"
 msgid_plural "_Verknüpfungen anlegen"
 msgstr[0] ""
 msgstr[1] ""
 
 #. tooltip
-#: src/nolphin-view.c:10592
+#: src/nolphin-view.c:10738
 msgid "Eine symbolische Verknüpfung für jedes gewählte Objekt anlegen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10596
+#: src/nolphin-view.c:10742
 msgid "Ausgewähltes Objekt umbenennen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10603
+#: src/nolphin-view.c:10749
 msgid "_Massenumbenennung …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10604
+#: src/nolphin-view.c:10750
 msgid ""
 "Mehrere ausgewählte Objekte über Suchen/Ersetzen, Nummerierung und Groß-/"
 "Kleinschreibung auf einmal umbenennen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10609 src/nolphin-view.c:12111
+#: src/nolphin-view.c:10755 src/nolphin-view.c:12267
 msgid "Jedes gewählte Objekt in den Papierkorb verschieben"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10613 src/nolphin-view.c:12135
+#: src/nolphin-view.c:10759 src/nolphin-view.c:12291
 msgid "Jedes gewählte Objekt löschen, ohne es in den Papierkorb zu verschieben"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10616 src/nolphin-view.c:10721
+#: src/nolphin-view.c:10762 src/nolphin-view.c:10867
 msgid "Am _ursprünglichen Ort wiederherstellen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
 #. name, stock id, label
-#: src/nolphin-view.c:10620 src/nolphin-window-menus.c:1925
+#: src/nolphin-view.c:10766 src/nolphin-window-menus.c:2053
 msgid "_Rückgängig"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10621
+#: src/nolphin-view.c:10767
 msgid "Letzte Änderung rückgängig machen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10624
+#: src/nolphin-view.c:10770
 msgid "_Wiederholen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10625
+#: src/nolphin-view.c:10771
 msgid "Die zuletzt rückgängig gemachte Aktion wiederherstellen"
 msgstr ""
 
@@ -5405,12 +5525,12 @@ msgstr ""
 #.
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10634
+#: src/nolphin-view.c:10780
 msgid "Ansicht auf _Vorgaben zurücksetzen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10635
+#: src/nolphin-view.c:10781
 msgid ""
 "Sortierreihenfolge und Vergrößerungsstufe auf Vorgaben für diese Ansicht "
 "zurücksetzen"
@@ -5418,400 +5538,400 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10638
+#: src/nolphin-view.c:10784
 msgid "Mit diesem Server verbinden"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10639
+#: src/nolphin-view.c:10785
 msgid "Eine dauerhafte Verbindung mit diesem Server herstellen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10643
+#: src/nolphin-view.c:10789
 msgid "Den gewählten Datenträger einbinden"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10647
+#: src/nolphin-view.c:10793
 msgid "Den gewählten Datenträger aushängen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10651
+#: src/nolphin-view.c:10797
 msgid "Den ausgewählten Datenträger auswerfen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10655
+#: src/nolphin-view.c:10801
 msgid "Den ausgewählten Datenträger starten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10659 src/nolphin-view.c:11612
+#: src/nolphin-view.c:10805 src/nolphin-view.c:11758
 msgid "Den gewählten Datenträger anhalten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10663 src/nolphin-view.c:10687 src/nolphin-view.c:10746
+#: src/nolphin-view.c:10809 src/nolphin-view.c:10833 src/nolphin-view.c:10892
 msgid "Medium im gewählten Datenträger erkennen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10667
+#: src/nolphin-view.c:10813
 msgid "Den zum geöffneten Ordner gehörenden Datenträger einhängen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10671
+#: src/nolphin-view.c:10817
 msgid "Den zum geöffneten Ordner gehörenden Datenträger aushängen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10675
+#: src/nolphin-view.c:10821
 msgid "Den zum geöffneten Ordner gehörenden Datenträger auswerfen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10679
+#: src/nolphin-view.c:10825
 msgid "Den zum geöffneten Ordner gehörenden Datenträger starten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10683
+#: src/nolphin-view.c:10829
 msgid "Den zum geöffneten Ordner gehörenden Datenträger anhalten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10692
+#: src/nolphin-view.c:10838
 msgid "Diesen Ordner in einem einzelnen Navigationsfenster öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10696
+#: src/nolphin-view.c:10842
 msgid "Diesen Ordner in einem neuen Reiter öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10701
+#: src/nolphin-view.c:10847
 msgid "Diesen Ordner auf Verschieben mit »Einfügen« vorbereiten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10705
+#: src/nolphin-view.c:10851
 msgid "Diesen Ordner auf Kopieren mit »Einfügen« vorbereiten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10709
+#: src/nolphin-view.c:10855
 msgid ""
 "Zuvor durch »Ausschneiden« oder »Kopieren« gewählte Dateien in diesen Ordner "
 "verschieben oder kopieren"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10714
+#: src/nolphin-view.c:10860
 msgid "Diesen Ordner in den Papierkorb verschieben"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10718
+#: src/nolphin-view.c:10864
 msgid "Diesen Ordner löschen, ohne ihn in den Papierkorb zu verschieben"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10726
+#: src/nolphin-view.c:10872
 msgid "Den zu diesem Ordner gehörenden Datenträger einhängen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10730
+#: src/nolphin-view.c:10876
 msgid "Den zu diesem Ordner gehörenden Datenträger aushängen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10734
+#: src/nolphin-view.c:10880
 msgid "Den zu diesem Ordner gehörenden Datenträger auswerfen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10738
+#: src/nolphin-view.c:10884
 msgid "Den zu diesem Ordner gehörenden Datenträger starten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10742
+#: src/nolphin-view.c:10888
 msgid "Den zu diesem Ordner gehörenden Datenträger anhalten"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-view.c:10751
+#: src/nolphin-view.c:10897
 msgid "Die Eigenschaften dieses Ordners anzeigen/ändern"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10754 src/nolphin-view.c:10757
+#: src/nolphin-view.c:10900 src/nolphin-view.c:10903
 msgid "_Andere Leiste"
 msgstr ""
 
-#: src/nolphin-view.c:10755
+#: src/nolphin-view.c:10901
 msgid "Die aktuelle Auswahl in die andere Leiste dieses Fensters kopieren"
 msgstr ""
 
-#: src/nolphin-view.c:10758
+#: src/nolphin-view.c:10904
 msgid "Die aktuelle Auswahl in die andere Leiste dieses Fensters verschieben"
 msgstr ""
 
 #. name, stock id, label
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-view.c:10761 src/nolphin-view.c:10765
-#: src/nolphin-window-menus.c:2004 src/nolphin-window-menus.c:2242
-#: src/nolphin-window-menus.c:2508
+#: src/nolphin-view.c:10907 src/nolphin-view.c:10911
+#: src/nolphin-window-menus.c:2132 src/nolphin-window-menus.c:2370
+#: src/nolphin-window-menus.c:2637
 msgid "_Persönlicher Ordner"
 msgstr ""
 
-#: src/nolphin-view.c:10762
+#: src/nolphin-view.c:10908
 msgid "Die aktuelle Auswahl in den persönlichen Ordner kopieren"
 msgstr ""
 
-#: src/nolphin-view.c:10766
+#: src/nolphin-view.c:10912
 msgid "Die aktuelle Auswahl in den persönlichen Ordner verschieben"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-view.c:10769 src/nolphin-view.c:10773
+#: src/nolphin-view.c:10915 src/nolphin-view.c:10919
 msgid "_Schreibtisch"
 msgstr ""
 
-#: src/nolphin-view.c:10770
+#: src/nolphin-view.c:10916
 msgid "Die aktuelle Auswahl auf den Schreibtisch kopieren"
 msgstr ""
 
-#: src/nolphin-view.c:10774
+#: src/nolphin-view.c:10920
 msgid "Die aktuelle Auswahl auf den Schreibtisch verschieben"
 msgstr ""
 
-#: src/nolphin-view.c:10777 src/nolphin-view.c:10781
+#: src/nolphin-view.c:10923 src/nolphin-view.c:10927
 msgid "Durchsuchen …"
 msgstr ""
 
-#: src/nolphin-view.c:10778
+#: src/nolphin-view.c:10924
 msgid "Nach einem Zielordner zum Verschieben der Auswahl suchen"
 msgstr ""
 
-#: src/nolphin-view.c:10782
+#: src/nolphin-view.c:10928
 msgid "Nach einem Zielordner zum Kopieren der Auswahl suchen"
 msgstr ""
 
-#: src/nolphin-view.c:10786
+#: src/nolphin-view.c:10932
 msgid ""
 "Die ausgewählte Datei anheften, so dass sie immer ganz oben in der "
 "Dateiliste dieses Ortes erscheint."
 msgstr ""
 
-#: src/nolphin-view.c:10790
+#: src/nolphin-view.c:10936
 msgid "Die ausgewählte Datei vom Anfang der Dateiliste dieses Ortes lösen."
 msgstr ""
 
-#: src/nolphin-view.c:10793
+#: src/nolphin-view.c:10939
 msgid "Zu Favoriten hinzufügen"
 msgstr ""
 
-#: src/nolphin-view.c:10794
+#: src/nolphin-view.c:10940
 msgid "Die ausgewählte Datei zu Ihren Favoriten hinzufügen"
 msgstr ""
 
-#: src/nolphin-view.c:10797
+#: src/nolphin-view.c:10943
 msgid "Aus Favoriten entfernen"
 msgstr ""
 
-#: src/nolphin-view.c:10798
+#: src/nolphin-view.c:10944
 msgid "Die ausgewählte Datei aus Ihren Favoriten entfernen"
 msgstr ""
 
-#: src/nolphin-view.c:10873
+#: src/nolphin-view.c:11019
 #, c-format
 msgid "Skripte ausführen"
 msgstr ""
 
 #. Create a script action here specially because its tooltip is dynamic
-#: src/nolphin-view.c:10875
+#: src/nolphin-view.c:11021
 msgid "_Skripte"
 msgstr ""
 
-#: src/nolphin-view.c:11248
+#: src/nolphin-view.c:11394
 #, c-format
 msgid "Den geöffneten Ordner aus dem Papierkorb nach »%s« verschieben"
 msgstr ""
 
-#: src/nolphin-view.c:11251
+#: src/nolphin-view.c:11397
 #, c-format
 msgid "Den gewählten Ordner aus dem Papierkorb nach »%s« verschieben"
 msgid_plural "Die gewählten Ordner aus dem Papierkorb nach »%s« verschieben"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:11255
+#: src/nolphin-view.c:11401
 #, c-format
 msgid "Den gewählten Ordner aus dem Papierkorb verschieben"
 msgid_plural "Die gewählten Ordner aus dem Papierkorb verschieben"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:11261
+#: src/nolphin-view.c:11407
 #, c-format
 msgid "Die gewählte Datei aus dem Papierkorb nach »%s« verschieben"
 msgid_plural "Die gewählten Dateien aus dem Papierkorb nach »%s« verschieben"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:11265
+#: src/nolphin-view.c:11411
 #, c-format
 msgid "Die gewählte Datei aus dem Papierkorb entfernen"
 msgid_plural "Die gewählten Dateien aus dem Papierkorb entfernen"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:11271
+#: src/nolphin-view.c:11417
 #, c-format
 msgid "Das gewählte Objekt aus dem Papierkorb nach »%s« verschieben"
 msgid_plural "Die gewählten Objekte aus dem Papierkorb nach »%s« verschieben"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:11275
+#: src/nolphin-view.c:11421
 #, c-format
 msgid "Das gewählte Objekt aus dem Papierkorb entfernen"
 msgid_plural "Die gewählten Objekte aus dem Papierkorb entfernen"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:11392 src/nolphin-view.c:11396 src/nolphin-view.c:11583
-#: src/nolphin-view.c:11587
+#: src/nolphin-view.c:11538 src/nolphin-view.c:11542 src/nolphin-view.c:11729
+#: src/nolphin-view.c:11733
 msgid "Gewähltes Laufwerk starten"
 msgstr ""
 
-#: src/nolphin-view.c:11400 src/nolphin-view.c:11591
+#: src/nolphin-view.c:11546 src/nolphin-view.c:11737
 msgid "Mit gewähltem Laufwerk verbinden"
 msgstr ""
 
-#: src/nolphin-view.c:11404 src/nolphin-view.c:11595
+#: src/nolphin-view.c:11550 src/nolphin-view.c:11741
 msgid "Das ausgewählte Multimedienlaufwerk _starten"
 msgstr ""
 
-#: src/nolphin-view.c:11407
+#: src/nolphin-view.c:11553
 msgid "Laufwerk en_tsperren"
 msgstr ""
 
-#: src/nolphin-view.c:11408 src/nolphin-view.c:11599
+#: src/nolphin-view.c:11554 src/nolphin-view.c:11745
 msgid "Gewähltes Laufwerk entsperren"
 msgstr ""
 
-#: src/nolphin-view.c:11421
+#: src/nolphin-view.c:11567
 msgid "Gewähltes Laufwerk anhalten"
 msgstr ""
 
-#: src/nolphin-view.c:11425 src/nolphin-view.c:11616
+#: src/nolphin-view.c:11571 src/nolphin-view.c:11762
 msgid "Gewähltes Laufwerk sicher entfernen"
 msgstr ""
 
-#: src/nolphin-view.c:11428 src/nolphin-view.c:11515 src/nolphin-view.c:11619
+#: src/nolphin-view.c:11574 src/nolphin-view.c:11661 src/nolphin-view.c:11765
 msgid "_Trennen"
 msgstr ""
 
-#: src/nolphin-view.c:11429 src/nolphin-view.c:11620
+#: src/nolphin-view.c:11575 src/nolphin-view.c:11766
 msgid "Gewähltes Laufwerk trennen"
 msgstr ""
 
-#: src/nolphin-view.c:11433 src/nolphin-view.c:11624
+#: src/nolphin-view.c:11579 src/nolphin-view.c:11770
 msgid "Das ausgewählte Multimedienlaufwerk anhalten"
 msgstr ""
 
-#: src/nolphin-view.c:11437 src/nolphin-view.c:11628
+#: src/nolphin-view.c:11583 src/nolphin-view.c:11774
 msgid "Gewähltes Laufwerk sperren"
 msgstr ""
 
-#: src/nolphin-view.c:11479 src/nolphin-view.c:11483
+#: src/nolphin-view.c:11625 src/nolphin-view.c:11629
 msgid "Das zum geöffneten Ordner gehörende Laufwerk starten"
 msgstr ""
 
-#: src/nolphin-view.c:11487
+#: src/nolphin-view.c:11633
 msgid "Verbinden mit dem zum geöffneten Ordner gehörenden Laufwerk"
 msgstr ""
 
-#: src/nolphin-view.c:11491
+#: src/nolphin-view.c:11637
 msgid "Das zum geöffneten Ordner gehörende Multimedienlaufwerk starten"
 msgstr ""
 
-#: src/nolphin-view.c:11495
+#: src/nolphin-view.c:11641
 msgid "Das zum geöffneten Ordner gehörende Laufwerk entsperren"
 msgstr ""
 
-#: src/nolphin-view.c:11508
+#: src/nolphin-view.c:11654
 msgid "Das zum geöffneten Ordner gehörende Laufwerk _anhalten"
 msgstr ""
 
-#: src/nolphin-view.c:11512
+#: src/nolphin-view.c:11658
 msgid "Das zum geöffneten Ordner gehörende Laufwerk sicher entfernen"
 msgstr ""
 
-#: src/nolphin-view.c:11516
+#: src/nolphin-view.c:11662
 msgid "Das zum geöffneten Ordner gehörende Laufwerk trennen"
 msgstr ""
 
-#: src/nolphin-view.c:11520
+#: src/nolphin-view.c:11666
 msgid "Das zum geöffneten Ordner gehörende Multimedienlaufwerk anhalten"
 msgstr ""
 
-#: src/nolphin-view.c:11524
+#: src/nolphin-view.c:11670
 msgid "Das zum geöffneten Ordner gehörende Laufwerk sperren"
 msgstr ""
 
-#: src/nolphin-view.c:11766 src/nolphin-view.c:12106
+#: src/nolphin-view.c:11912 src/nolphin-view.c:12262
 msgid "_Dauerhaft löschen"
 msgstr ""
 
-#: src/nolphin-view.c:11767
+#: src/nolphin-view.c:11913
 msgid "Den geöffneten Ordner dauerhaft löschen"
 msgstr ""
 
-#: src/nolphin-view.c:11771
+#: src/nolphin-view.c:11917
 msgid "Den geöffneten Ordner in den Papierkorb verschieben"
 msgstr ""
 
-#: src/nolphin-view.c:12021
+#: src/nolphin-view.c:12177
 #, c-format
 msgid "_Öffnen mit %s"
 msgstr ""
 
-#: src/nolphin-view.c:12070
+#: src/nolphin-view.c:12226
 #, c-format
 msgid "In %'d neuem _Fenster öffnen"
 msgid_plural "In %'d neuen _Fenstern öffnen"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:12090
+#: src/nolphin-view.c:12246
 #, c-format
 msgid "In %'d neuem _Reiter öffnen"
 msgid_plural "In %'d neuen _Reitern öffnen"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/nolphin-view.c:12107
+#: src/nolphin-view.c:12263
 msgid "Alle gewählten Objekte dauerhaft löschen"
 msgstr ""
 
-#: src/nolphin-view.c:12131
+#: src/nolphin-view.c:12287
 msgid "Aus »Kürzlich« _entfernen"
 msgstr ""
 
-#: src/nolphin-view.c:12132
+#: src/nolphin-view.c:12288
 msgid "Jedes gewählte Objekt von der Liste zuletzt verwendeter entfernen"
 msgstr ""
 
-#: src/nolphin-view.c:12180
+#: src/nolphin-view.c:12336
 msgid "Die Eigenschaften des aktuellen Ordners anzeigen/ändern"
 msgstr ""
 
@@ -5873,37 +5993,42 @@ msgstr ""
 msgid "Zum durch dieses Lesezeichen angegebenen Ort gehen"
 msgstr ""
 
-#: src/nolphin-window.c:308
+#: src/nolphin-window.c:311
 msgid "Reiter ent_sperren"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window.c:308 src/nolphin-window-menus.c:1905
+#: src/nolphin-window.c:311 src/nolphin-window-menus.c:2033
 msgid "Reiter _sperren"
 msgstr ""
 
-#: src/nolphin-window.c:322
+#: src/nolphin-window.c:325
 msgid "Bereich _wiederherstellen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window.c:322 src/nolphin-window-menus.c:1895
+#: src/nolphin-window.c:325 src/nolphin-window-menus.c:2023
 msgid "Bereich _maximieren"
 msgstr ""
 
-#: src/nolphin-window.c:428
+#: src/nolphin-window.c:431
 msgid "Leer lassen für den automatischen Namen"
 msgstr ""
 
-#: src/nolphin-window.c:1834
+#: src/nolphin-window.c:1846
 #, c-format
 msgid "%s - Dateiverwaltung"
 msgstr ""
 
+#: src/nolphin-window.c:1854
+#, c-format
+msgid "%s  [Entwicklung]"
+msgstr ""
+
 #. Set initial window title
-#: src/nolphin-window.c:2489 src/nolphin-window-menus.c:662
+#: src/nolphin-window.c:2507 src/nolphin-window-menus.c:714
 msgid "Nolphin"
 msgstr "Nolphin"
 
@@ -5980,49 +6105,49 @@ msgid ""
 "Bitte wählen Sie einen anderen Betrachter und versuchen Sie es erneut."
 msgstr ""
 
-#: src/nolphin-window-menus.c:182 src/nolphin-window-menus.c:197
+#: src/nolphin-window-menus.c:184 src/nolphin-window-menus.c:199
 msgid "Version speichern"
 msgstr ""
 
-#: src/nolphin-window-menus.c:182
+#: src/nolphin-window-menus.c:184
 msgid "Keine Datei ausgewählt."
 msgstr ""
 
-#: src/nolphin-window-menus.c:196
+#: src/nolphin-window-menus.c:198
 #, c-format
 msgid ""
 "%u Version(en) gespeichert, %u nicht möglich (Ordner oder entfernte Dateien)."
 msgstr ""
 
-#: src/nolphin-window-menus.c:213
+#: src/nolphin-window-menus.c:215
 msgid "Versionen anzeigen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:213
+#: src/nolphin-window-menus.c:215
 msgid "Bitte genau eine Datei auswählen."
 msgstr ""
 
-#: src/nolphin-window-menus.c:250
+#: src/nolphin-window-menus.c:252
 msgid "Stapelverarbeitung"
 msgstr ""
 
-#: src/nolphin-window-menus.c:250
+#: src/nolphin-window-menus.c:252
 msgid "Keine lokalen Dateien ausgewählt."
 msgstr ""
 
-#: src/nolphin-window-menus.c:382
+#: src/nolphin-window-menus.c:434
 msgid "Ein Bild"
 msgstr ""
 
-#: src/nolphin-window-menus.c:387
+#: src/nolphin-window-menus.c:439
 msgid "Die Zwischenablage ist leer."
 msgstr ""
 
-#: src/nolphin-window-menus.c:394
+#: src/nolphin-window-menus.c:446
 msgid "Inhalt der Zwischenablage"
 msgstr ""
 
-#: src/nolphin-window-menus.c:649
+#: src/nolphin-window-menus.c:701
 msgid ""
 "Nolphin ist freie Software und kann, unter den Bedingungen der GNU General "
 "Public License wie durch die Freie Software Stiftung veröffentlicht, als "
@@ -6031,7 +6156,7 @@ msgid ""
 "späteren Version."
 msgstr ""
 
-#: src/nolphin-window-menus.c:650
+#: src/nolphin-window-menus.c:702
 msgid ""
 "Nolphin wird verteilt in der Hoffnung dass es Brauchbar sein möge, aber OHNE "
 "JEGLICHE GEWÄHRLEISTUNG; selbst ohne die ausdrückliche Gewährleistung der "
@@ -6039,20 +6164,20 @@ msgid ""
 "General Public License für Einzelheiten."
 msgstr ""
 
-#: src/nolphin-window-menus.c:651
+#: src/nolphin-window-menus.c:703
 msgid ""
 "Mit Nolphin sollten Sie eine Kopie der GNU General Public License erhalen "
 "haben; falls nicht, schreiben Sie an die  Free Software Foundation, Inc., 51 "
 "Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA"
 msgstr ""
 
-#: src/nolphin-window-menus.c:664
+#: src/nolphin-window-menus.c:716
 msgid ""
 "Mit Nolphin können Ordner und Dateien verwaltet werden, sowohl auf Ihrem "
 "Rechner als auch im Internet."
 msgstr ""
 
-#: src/nolphin-window-menus.c:723
+#: src/nolphin-window-menus.c:781
 #, c-format
 msgid ""
 "Beim Anzeigen der Hilfe ist ein Fehler aufgetreten: \n"
@@ -6060,52 +6185,52 @@ msgid ""
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1805
+#: src/nolphin-window-menus.c:1883
 msgid "_Datei"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1806
+#: src/nolphin-window-menus.c:1884
 msgid "_Bearbeiten"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1807
+#: src/nolphin-window-menus.c:1885
 msgid "_Ansicht"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1808
+#: src/nolphin-window-menus.c:1886
 msgid "_Hilfe"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1810
+#: src/nolphin-window-menus.c:1888
 msgid "_Beenden"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1811
+#: src/nolphin-window-menus.c:1889
 msgid "Diesen Ordner schließen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:1814
+#: src/nolphin-window-menus.c:1892
 msgid "_Einstellungen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:1815
+#: src/nolphin-window-menus.c:1893
 msgid "Nolphin-Einstellungen bearbeiten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1818
+#: src/nolphin-window-menus.c:1896
 msgid "Ansicht _horizontal teilen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1819
+#: src/nolphin-window-menus.c:1897
 msgid ""
 "Eine zusätzliche Ordneransicht darunter öffnen (oder ein bereits geöffnetes "
 "zusätzliches Fenster neu ausrichten)"
@@ -6113,55 +6238,55 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1822
+#: src/nolphin-window-menus.c:1900
 msgid "Reiter _duplizieren"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1823
+#: src/nolphin-window-menus.c:1901
 msgid "Einen neuen Reiter am selben Ort wie diesen öffnen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1826
+#: src/nolphin-window-menus.c:1904
 msgid "_Alle Reiter schließen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1827
+#: src/nolphin-window-menus.c:1905
 msgid "Jeden Reiter in diesem Fenster schließen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1829
+#: src/nolphin-window-menus.c:1907
 msgid "_Werkzeuge"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1830
+#: src/nolphin-window-menus.c:1908
 msgid "_Versionen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1832
+#: src/nolphin-window-menus.c:1910
 msgid "Version _speichern"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1833
+#: src/nolphin-window-menus.c:1911
 msgid "Den aktuellen Stand der gewählten Datei als Version sichern"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1836
+#: src/nolphin-window-menus.c:1914
 msgid "Versionen _anzeigen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1837
+#: src/nolphin-window-menus.c:1915
 msgid ""
 "Gespeicherte Versionen der gewählten Datei anzeigen, wiederherstellen oder "
 "vergleichen"
@@ -6169,12 +6294,12 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1840
+#: src/nolphin-window-menus.c:1918
 msgid "_Regeln anwenden …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1841
+#: src/nolphin-window-menus.c:1919
 msgid ""
 "Wenn Dateityp, Name, Größe oder Datum zutreffen, dann eine Aktion ausführen "
 "(mit Vorschau)"
@@ -6182,100 +6307,100 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1844
+#: src/nolphin-window-menus.c:1922
 msgid "_Stapelverarbeitung …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1845
+#: src/nolphin-window-menus.c:1923
 msgid "Eine Aktion auf die gewählten Dateien anwenden (mit Vorschau)"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1848
+#: src/nolphin-window-menus.c:1926
 msgid "Ordner _vergleichen / synchronisieren …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1849
+#: src/nolphin-window-menus.c:1927
 msgid ""
 "Zwei Ordner vergleichen und einseitig über rsync abgleichen (mit Vorschau)"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1852
+#: src/nolphin-window-menus.c:1930
 msgid "_Duplikate finden …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1853
+#: src/nolphin-window-menus.c:1931
 msgid "Doppelte Dateien in einem Ordner suchen (Name, Größe oder Inhalt)"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1855
+#: src/nolphin-window-menus.c:1933
 msgid "_Diagnose"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1857
+#: src/nolphin-window-menus.c:1935
 msgid "_Protokolle anzeigen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1858
+#: src/nolphin-window-menus.c:1936
 msgid "Das lokale Protokoll von Nolphin anzeigen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1861
+#: src/nolphin-window-menus.c:1939
 msgid "_Fehlerbericht erstellen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1862
+#: src/nolphin-window-menus.c:1940
 msgid "Einen Fehlerbericht als lokale Datei erzeugen (wird nicht gesendet)"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1865
+#: src/nolphin-window-menus.c:1943
 msgid "_Systeminformationen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1866
+#: src/nolphin-window-menus.c:1944
 msgid "Version, GVFS-Backends und gefundene Werkzeuge anzeigen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1869
+#: src/nolphin-window-menus.c:1947
 msgid "P_lugin-Status"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1870
+#: src/nolphin-window-menus.c:1948
 msgid "Geladene und fehlerhafte Erweiterungen anzeigen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1872
+#: src/nolphin-window-menus.c:1950
 msgid "_Arbeitsbereiche"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1874
+#: src/nolphin-window-menus.c:1952
 msgid "_Speichern …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1875
+#: src/nolphin-window-menus.c:1953
 msgid ""
 "Den aktuellen Arbeitsbereich (Reiter, Teilung, Fenstergröße, Panels) unter "
 "einem Namen speichern"
@@ -6283,173 +6408,291 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1878
+#: src/nolphin-window-menus.c:1956
 msgid "_Laden …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1879
+#: src/nolphin-window-menus.c:1957
 msgid "Einen gespeicherten Arbeitsbereich laden"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1882
+#: src/nolphin-window-menus.c:1960
 msgid "_Duplizieren …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1883
+#: src/nolphin-window-menus.c:1961
 msgid "Einen gespeicherten Arbeitsbereich duplizieren"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1886
+#: src/nolphin-window-menus.c:1964
 msgid "_Verwalten …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1887
+#: src/nolphin-window-menus.c:1965
 msgid "Gespeicherte Arbeitsbereiche laden, duplizieren und löschen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1889
+#: src/nolphin-window-menus.c:1967
 msgid "_Geteilte Ansicht"
+msgstr ""
+
+#. name, stock id, label
+#: src/nolphin-window-menus.c:1968
+#, fuzzy
+msgid "_Layout"
+msgstr "Ansicht"
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:1970
+msgid "_Zwei Spalten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1891
+#: src/nolphin-window-menus.c:1974
+msgid "_Drei Spalten"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:1978
+msgid "_Raster 2×2"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:1982
+msgid "_Eine große und zwei kleine"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:1986
+msgid "Zwei Ze_ilen"
+msgstr ""
+
+#. name, stock id, label
+#: src/nolphin-window-menus.c:1989
+msgid "_Zu Bereich springen"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:1991
+msgid "Bereich _1"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-window-menus.c:1992
+msgid "Zum ersten Bereich wechseln"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:1995
+msgid "Bereich _2"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-window-menus.c:1996
+msgid "Zum zweiten Bereich wechseln"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:1999
+msgid "Bereich _3"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-window-menus.c:2000
+msgid "Zum dritten Bereich wechseln"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:2003
+msgid "Bereich _4"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-window-menus.c:2004
+msgid "Zum vierten Bereich wechseln"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:2007
+msgid "_Vorheriger Bereich"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-window-menus.c:2008
+msgid "Zurück zum zuletzt aktiven Bereich"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:2011
+msgid "Bereichs_nummern anzeigen"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-window-menus.c:2012
+msgid "Die Nummern der Bereiche kurz einblenden"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:2015
+msgid "Bereich mit nächstem _tauschen"
+msgstr ""
+
+#. tooltip
+#: src/nolphin-window-menus.c:2016
+msgid "Den aktiven Bereich mit dem nächsten Bereich vertauschen"
+msgstr ""
+
+#. name, stock id
+#. label, accelerator
+#: src/nolphin-window-menus.c:2019
 msgid "Bereich _duplizieren"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1892
+#: src/nolphin-window-menus.c:2020
 msgid "Einen weiteren Bereich (bis zu vier) am Ort des aktiven Bereichs öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1896
+#: src/nolphin-window-menus.c:2024
 msgid "Den aktiven Bereich allein anzeigen oder die anderen wieder einblenden"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1899
+#: src/nolphin-window-menus.c:2027
 msgid "Bereich _schließen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1900
+#: src/nolphin-window-menus.c:2028
 msgid "Den aktiven Bereich schließen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1902 src/nolphin-window-menus.c:2031
+#: src/nolphin-window-menus.c:2030 src/nolphin-window-menus.c:2159
 msgid "_Reiter"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1903
+#: src/nolphin-window-menus.c:2031
 msgid "_Zwischenablage"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1906
+#: src/nolphin-window-menus.c:2034
 msgid "Den Reiter gegen versehentliches Schließen sperren oder entsperren"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1909
+#: src/nolphin-window-menus.c:2037
 msgid "Reiter _umbenennen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1910
+#: src/nolphin-window-menus.c:2038
 msgid "Dem Reiter einen eigenen Namen geben"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1913
+#: src/nolphin-window-menus.c:2041
 msgid "Inhalt _anzeigen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1914
+#: src/nolphin-window-menus.c:2042
 msgid "Anzeigen, was sich in der Zwischenablage befindet"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1917
+#: src/nolphin-window-menus.c:2045
 msgid "_Leeren"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1918
+#: src/nolphin-window-menus.c:2046
 msgid "Die Zwischenablage leeren"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1921
+#: src/nolphin-window-menus.c:2049
 msgid "Geschlossenen _Reiter wiederherstellen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1922
+#: src/nolphin-window-menus.c:2050
 msgid "Den zuletzt geschlossenen Reiter wiederherstellen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:1926
+#: src/nolphin-window-menus.c:2054
 msgid "Die letzte Änderung am Text rückgängig machen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:1929
+#: src/nolphin-window-menus.c:2057
 msgid "_Übergeordneten Ordner öffnen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:1930
+#: src/nolphin-window-menus.c:2058
 msgid "Den übergeordneten Ordner öffnen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1937
+#: src/nolphin-window-menus.c:2065
 msgid "Das Laden des aktuellen Ortes anhalten"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1940 src/nolphin-window-menus.c:2228
+#: src/nolphin-window-menus.c:2068 src/nolphin-window-menus.c:2356
 msgid "_Aktualisieren"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1941 src/nolphin-window-menus.c:2230
+#: src/nolphin-window-menus.c:2069 src/nolphin-window-menus.c:2358
 msgid "Den aktuellen Ort aktualisieren"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1944
+#: src/nolphin-window-menus.c:2072
 msgid "_Alle Themen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1945
+#: src/nolphin-window-menus.c:2073
 msgid "Nolphin-Hilfethemen anzeigen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:1948
+#: src/nolphin-window-menus.c:2076
 msgid "_Tastenkombinationen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:1949
+#: src/nolphin-window-menus.c:2077
 msgid "Tastenkombinationen anzeigen"
 msgstr ""
 
@@ -6471,83 +6714,83 @@ msgstr ""
 #. G_CALLBACK (action_nolphin_manual_callback) }, *
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1968
+#: src/nolphin-window-menus.c:2096
 msgid ".deb-_Paket erstellen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1969
+#: src/nolphin-window-menus.c:2097
 msgid "Aus ausgewählten Dateien ein installierbares .deb-Paket erstellen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1972
+#: src/nolphin-window-menus.c:2100
 msgid "_Über"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1973
+#: src/nolphin-window-menus.c:2101
 msgid "Danksagungen für die Urheber von Nolphin anzeigen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1976
+#: src/nolphin-window-menus.c:2104
 msgid "Ver_größern"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1977
+#: src/nolphin-window-menus.c:2105
 msgid "Ansicht vergrößern"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1988
+#: src/nolphin-window-menus.c:2116
 msgid "Ver_kleinern"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1989
+#: src/nolphin-window-menus.c:2117
 msgid "Ansicht verkleinern"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:1996
+#: src/nolphin-window-menus.c:2124
 msgid "_Normale Größe"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:1997
+#: src/nolphin-window-menus.c:2125
 msgid "Die normale Ansichtsgröße verwenden"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2000
+#: src/nolphin-window-menus.c:2128
 msgid "Mit _Server verbinden …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2001
+#: src/nolphin-window-menus.c:2129
 msgid "Verbinden mit einem entfernten Rechner oder freigegebenen Datenträger"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2005
+#: src/nolphin-window-menus.c:2133
 msgid "Persönlichen Ordner öffnen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2008 src/nolphin-window-menus.c:2256
+#: src/nolphin-window-menus.c:2136 src/nolphin-window-menus.c:2384
 msgid "_Rechner"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2009
+#: src/nolphin-window-menus.c:2137
 msgid ""
 "Alle lokalen und entfernten Laufwerke und Ordner durchsuchen, die von diesem "
 "Rechner aus erreichbar sind"
@@ -6555,429 +6798,429 @@ msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2012
+#: src/nolphin-window-menus.c:2140
 msgid "_Netzwerk"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2013
+#: src/nolphin-window-menus.c:2141
 msgid "Lokale und als Lesezeichen gespeicherte Orte durchsuchen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2016
+#: src/nolphin-window-menus.c:2144
 msgid "_Vorlagen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2017
+#: src/nolphin-window-menus.c:2145
 msgid "Persönlichen Vorlagenordner öffnen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2020
+#: src/nolphin-window-menus.c:2148
 msgid "_Papierkorb"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2021
+#: src/nolphin-window-menus.c:2149
 msgid "Persönlichen Papierkorb öffnen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2023
+#: src/nolphin-window-menus.c:2151
 msgid "_Gehen zu"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2024
+#: src/nolphin-window-menus.c:2152
 msgid "_Lesezeichen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2025
+#: src/nolphin-window-menus.c:2153
 msgid "_Verlauf"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2026
+#: src/nolphin-window-menus.c:2154
 msgid "_Häufig verwendet"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2028
+#: src/nolphin-window-menus.c:2156
 msgid "Verlauf _löschen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2029
+#: src/nolphin-window-menus.c:2157
 msgid "Verlauf und Besuchszähler der Orte löschen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2032
+#: src/nolphin-window-menus.c:2160
 msgid "Neues _Fenster"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2033
+#: src/nolphin-window-menus.c:2161
 msgid "Ein neues Nolphin-Fenster für den angezeigten Ort öffnen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2035 src/nolphin-window-pane.c:520
+#: src/nolphin-window-menus.c:2163 src/nolphin-window-pane.c:520
 msgid "Neuer _Reiter"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2036
+#: src/nolphin-window-menus.c:2164
 msgid "Einen weiteren Reiter für diesen Ort öffnen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2038
+#: src/nolphin-window-menus.c:2166
 msgid "Alle _Fenster schließen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2039
+#: src/nolphin-window-menus.c:2167
 msgid "Alle Navigationsfenster schließen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2041 src/nolphin-window-menus.c:2178
+#: src/nolphin-window-menus.c:2169 src/nolphin-window-menus.c:2306
 msgid "_Zurück"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2042 src/nolphin-window-menus.c:2180
+#: src/nolphin-window-menus.c:2170 src/nolphin-window-menus.c:2308
 msgid "Zum vorher besuchten Ort gehen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2044 src/nolphin-window-menus.c:2194
+#: src/nolphin-window-menus.c:2172 src/nolphin-window-menus.c:2322
 msgid "_Vorwärts"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2045 src/nolphin-window-menus.c:2196
+#: src/nolphin-window-menus.c:2173 src/nolphin-window-menus.c:2324
 msgid "Zum als nächstes besuchten Ort gehen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2047
+#: src/nolphin-window-menus.c:2175
 msgid "_Pfadeingabe ein/aus"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2048
+#: src/nolphin-window-menus.c:2176
 msgid "Zwischen Pfadeingabe und Verlaufsnavigation umschalten"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2050
+#: src/nolphin-window-menus.c:2178
 msgid "Zur anderen Leiste _wechseln"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2051
+#: src/nolphin-window-menus.c:2179
 msgid ""
 "Den Fokus, in einem Fenster mit geteilter Ansicht, an die andere Leiste "
 "übergeben"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2053
+#: src/nolphin-window-menus.c:2181
 msgid "Gleicher Ort wie _andere Leiste"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2054
+#: src/nolphin-window-menus.c:2182
 msgid "Zum selben Ort wie in der zusätzlichen Leiste gehen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2057
+#: src/nolphin-window-menus.c:2185
 msgid "Ein Lesezeichen für den aktuellen Ort zu diesem Menü hinzufügen"
 msgstr ""
 
 #. name, stock id, label
-#: src/nolphin-window-menus.c:2059
+#: src/nolphin-window-menus.c:2187
 msgid "Lesezeichen _bearbeiten …"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2060
+#: src/nolphin-window-menus.c:2188
 msgid ""
 "Ein Fenster anzeigen, dass das Bearbeiten der Lesezeichen in diesem Menü "
 "erlaubt"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2062
+#: src/nolphin-window-menus.c:2190
 msgid "_Vorheriger Reiter"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2063
+#: src/nolphin-window-menus.c:2191
 msgid "Vorherigen Reiter aktivieren"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2065
+#: src/nolphin-window-menus.c:2193
 msgid "_Nächster Reiter"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2066
+#: src/nolphin-window-menus.c:2194
 msgid "Nächsten Reiter aktivieren"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2068 src/nolphin-window-pane.c:537
+#: src/nolphin-window-menus.c:2196 src/nolphin-window-pane.c:537
 msgid "Reiter nach _links verschieben"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2069
+#: src/nolphin-window-menus.c:2197
 msgid "Aktuellen Reiter nach links verschieben"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2071 src/nolphin-window-pane.c:545
+#: src/nolphin-window-menus.c:2199 src/nolphin-window-pane.c:545
 msgid "Reiter nach _rechts verschieben"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2072
+#: src/nolphin-window-menus.c:2200
 msgid "Aktuellen Reiter nach rechts verschieben"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2074
+#: src/nolphin-window-menus.c:2202
 msgid "Seitenleiste"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2075
+#: src/nolphin-window-menus.c:2203
 msgid "Werkzeugleiste"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2080
+#: src/nolphin-window-menus.c:2208
 msgid "_Verborgene Dateien anzeigen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2081
+#: src/nolphin-window-menus.c:2209
 msgid "Verborgene Dateien im momentan geöffneten Fenster anzeigen/verbergen"
 msgstr ""
 
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2085
+#: src/nolphin-window-menus.c:2213
 msgid "_Hauptwerkzeugleiste"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2086
+#: src/nolphin-window-menus.c:2214
 msgid "Die Sichtbarkeit der Hauptwerkzeugleiste dieses Fensters ändern"
 msgstr ""
 
 #. is_active
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2090
+#: src/nolphin-window-menus.c:2218
 msgid "Seitenleiste _anzeigen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2091
+#: src/nolphin-window-menus.c:2219
 msgid "Die Sichtbarkeit der Seitenleiste dieses Fensters ändern"
 msgstr ""
 
 #. is_active
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2095
+#: src/nolphin-window-menus.c:2223
 msgid "St_atusleiste"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2096
+#: src/nolphin-window-menus.c:2224
 msgid "Die Sichtbarkeit der Statusleiste dieses Fensters ändern"
 msgstr ""
 
 #. is_active
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2100
+#: src/nolphin-window-menus.c:2228
 msgid "_Menüleiste"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2101
+#: src/nolphin-window-menus.c:2229
 msgid "Die Standardsichtbarkeit der Menüleiste ändern"
 msgstr ""
 
 #. is_active
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2105
+#: src/nolphin-window-menus.c:2233
 msgid "Nach Dateien _suchen …"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2106 src/nolphin-window-menus.c:2338
+#: src/nolphin-window-menus.c:2234 src/nolphin-window-menus.c:2466
 msgid "Dokumente und Ordner suchen"
 msgstr ""
 
 #. is_active
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2110
+#: src/nolphin-window-menus.c:2238
 msgid "_Zusätzliche Leiste"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2111 src/nolphin-window-menus.c:2360
+#: src/nolphin-window-menus.c:2239 src/nolphin-window-menus.c:2488
 msgid "Eine weitere Ordneransicht nebeneinander öffnen"
 msgstr ""
 
 #. is_active
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2115
+#: src/nolphin-window-menus.c:2243
 msgid "_Terminal"
 msgstr "_Terminal"
 
 #. tooltip
-#: src/nolphin-window-menus.c:2116
+#: src/nolphin-window-menus.c:2244
 msgid "Ein integriertes Terminal im aktuellen Ordner öffnen"
 msgstr ""
 
 #. is_active
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2120
+#: src/nolphin-window-menus.c:2248
 msgid "Info & _Vorschau"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2121
+#: src/nolphin-window-menus.c:2249
 msgid "Informationen und eine Vorschau der ausgewählten Datei anzeigen"
 msgstr ""
 
 #. is_active
 #. name, stock id
 #. label, accelerator
-#: src/nolphin-window-menus.c:2125
+#: src/nolphin-window-menus.c:2253
 msgid "_Vorschaubilder anzeigen"
 msgstr ""
 
 #. tooltip
-#: src/nolphin-window-menus.c:2126
+#: src/nolphin-window-menus.c:2254
 msgid "Die Anzeige der Vorschaubilder im aktuellen Verzeichnis umschalten"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2133
+#: src/nolphin-window-menus.c:2261
 msgid "Orte"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2133
+#: src/nolphin-window-menus.c:2261
 msgid "»Orte« als Voreinstellung für die Seitenleiste festlegen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2136
+#: src/nolphin-window-menus.c:2264
 msgid "Baumansicht"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2136
+#: src/nolphin-window-menus.c:2264
 msgid "»Baumansicht« als Voreinstellung für die Seitenleiste festlegen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2142
+#: src/nolphin-window-menus.c:2270
 #: gresources/nolphin-file-management-properties.glade:132
 #: gresources/nolphin-file-management-properties.glade:4172
 msgid "Icon View"
 msgstr "Symbolansicht"
 
-#: src/nolphin-window-menus.c:2145
+#: src/nolphin-window-menus.c:2273
 #: gresources/nolphin-file-management-properties.glade:135
 msgid "List View"
 msgstr "Listenansicht"
 
-#: src/nolphin-window-menus.c:2148
+#: src/nolphin-window-menus.c:2276
 #: gresources/nolphin-file-management-properties.glade:138
 msgid "Compact View"
 msgstr "Kompaktansicht"
 
-#: src/nolphin-window-menus.c:2151
+#: src/nolphin-window-menus.c:2279
 msgid "Gallery View"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2157
+#: src/nolphin-window-menus.c:2285
 msgid "Pfadleiste"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2157
+#: src/nolphin-window-menus.c:2285
 msgid "Pfadleiste immer bevorzugen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2160
+#: src/nolphin-window-menus.c:2288
 msgid "Pfadeingabe"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2160
+#: src/nolphin-window-menus.c:2288
 msgid "Pfadeingabe immer bevorzugen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2181
+#: src/nolphin-window-menus.c:2309
 msgid "Im Verlauf zurück bewegen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2197 src/nolphin-window-menus.c:2216
+#: src/nolphin-window-menus.c:2325 src/nolphin-window-menus.c:2344
 msgid "Im Verlauf vorwärts bewegen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2213 src/nolphin-window-menus.c:2505
+#: src/nolphin-window-menus.c:2341 src/nolphin-window-menus.c:2634
 msgid "_Hoch"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2215
+#: src/nolphin-window-menus.c:2343
 msgid "Zum übergeordneten Ordner gehen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2244
+#: src/nolphin-window-menus.c:2372
 msgid "Zum persönlichen Ordner gehen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2258
+#: src/nolphin-window-menus.c:2386
 msgid "Zum Rechner gehen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2270
+#: src/nolphin-window-menus.c:2398
 msgid "Pfadeingabe ein/aus"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2282
+#: src/nolphin-window-menus.c:2410
 msgid "Neuer Ordner"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2283
+#: src/nolphin-window-menus.c:2411
 msgid "Neuen Ordner erstellen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2293
+#: src/nolphin-window-menus.c:2421
 msgid "Terminal im aktiven Ordner öffnen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2303
+#: src/nolphin-window-menus.c:2431
 msgid "Symbole"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2314
+#: src/nolphin-window-menus.c:2442
 msgid "Liste"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2326
+#: src/nolphin-window-menus.c:2454
 msgid "Kompakt"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2347
+#: src/nolphin-window-menus.c:2475
 msgid "Vorschaubilder anzeigen"
 msgstr ""
 
-#: src/nolphin-window-menus.c:2348
+#: src/nolphin-window-menus.c:2476
 #: gresources/nolphin-file-management-properties.glade:3474
 msgid "Show Thumbnails"
 msgstr "Vorschaubilder anzeigen"
 
-#: src/nolphin-window-menus.c:2511
+#: src/nolphin-window-menus.c:2640
 msgid "_Ort"
 msgstr ""
 
@@ -7777,37 +8020,37 @@ msgstr "Dokumentvorlagen"
 msgid "Plugins"
 msgstr "Module"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:116
+#: action-layout-editor/nolphin_action_layout_editor.py:118
 msgid "Unknown"
 msgstr "Unbekannt"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:202
+#: action-layout-editor/nolphin_action_layout_editor.py:204
 msgid "No icon"
 msgstr "Kein Symbol"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:207
+#: action-layout-editor/nolphin_action_layout_editor.py:209
 msgid "Use the original icon (if there is one)"
 msgstr "Das Originalsymbol verwenden (falls vorhanden)"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:211
+#: action-layout-editor/nolphin_action_layout_editor.py:213
 msgid "Choose..."
 msgstr "Auswählen …"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:222
-#: action-layout-editor/nolphin_action_layout_editor.py:833
+#: action-layout-editor/nolphin_action_layout_editor.py:224
+#: action-layout-editor/nolphin_action_layout_editor.py:835
 msgid "New submenu"
 msgstr "Neues Untermenü"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:226
+#: action-layout-editor/nolphin_action_layout_editor.py:228
 msgid "New separator"
 msgstr "Neues Trennzeichen"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:275
-#: action-layout-editor/nolphin_action_layout_editor.py:1045
+#: action-layout-editor/nolphin_action_layout_editor.py:277
+#: action-layout-editor/nolphin_action_layout_editor.py:1047
 msgid "Click to add a shortcut"
 msgstr "Anklicken, um eine Verknüpfung hinzuzufügen"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:941
+#: action-layout-editor/nolphin_action_layout_editor.py:943
 #, fuzzy, python-format
 msgid ""
 "This key combination is already in use by Nolphin (%s). It cannot be changed."
@@ -7815,28 +8058,28 @@ msgstr ""
 "Diese Tastenkombination wird bereits von Nemo (%s) verwendet. Sie kann nicht "
 "geändert werden."
 
-#: action-layout-editor/nolphin_action_layout_editor.py:968
+#: action-layout-editor/nolphin_action_layout_editor.py:970
 msgid "This key combination is already in use by another action:"
 msgstr ""
 "Diese Tastenkombination wird bereits von einer anderen Aktion verwendet:"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:969
+#: action-layout-editor/nolphin_action_layout_editor.py:971
 msgid "Do you want to replace it?"
 msgstr "Möchten Sie es ersetzen?"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:1509
+#: action-layout-editor/nolphin_action_layout_editor.py:1511
 msgid "The layout has changed. Save it?"
 msgstr "Die Anordnung hat sich geändert. Möchten Sie diese speichern?"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:1512
+#: action-layout-editor/nolphin_action_layout_editor.py:1514
 msgid "Unsaved changes"
 msgstr "Nicht gespeicherte Änderungen"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:1539
+#: action-layout-editor/nolphin_action_layout_editor.py:1541
 msgid "Open user actions folder"
 msgstr "Ordner Benutzeraktionen öffnen"
 
-#: action-layout-editor/nolphin_action_layout_editor.py:1543
+#: action-layout-editor/nolphin_action_layout_editor.py:1545
 msgid "Quit"
 msgstr "Beenden"
 
@@ -12126,9 +12369,6 @@ msgstr "Beenden"
 
 #~ msgid "Label"
 #~ msgstr "Beschriftung"
-
-#~ msgid "Layout"
-#~ msgstr "Ansicht"
 
 #~ msgid "Manage workspaces (Expo)"
 #~ msgstr "Arbeitsflächenübersicht"

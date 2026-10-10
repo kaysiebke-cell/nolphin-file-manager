@@ -53,6 +53,7 @@
 #define NOLPHIN_ACTION_SPLIT_PANE_4 "Split Pane 4"
 #define NOLPHIN_ACTION_SPLIT_PANE_PREVIOUS "Split Pane Previous"
 #define NOLPHIN_ACTION_SPLIT_PANE_NUMBERS "Split Pane Numbers"
+#define NOLPHIN_ACTION_SPLIT_PANE_SWAP "Split Pane Swap"
 #define NOLPHIN_ACTION_SPLIT_LAYOUT_TWO_COLUMNS "Split Layout Two Columns"
 #define NOLPHIN_ACTION_SPLIT_LAYOUT_THREE_COLUMNS "Split Layout Three Columns"
 #define NOLPHIN_ACTION_SPLIT_LAYOUT_GRID "Split Layout Grid"
