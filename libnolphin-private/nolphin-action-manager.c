@@ -105,9 +105,11 @@ add_directory_to_actions_directory_list (NolphinActionManager *action_manager,
         file = g_file_new_for_path(path);
         monitor = g_file_monitor_directory (file, G_FILE_MONITOR_WATCH_MOVES, NULL, NULL);
         g_object_unref (file);
-        g_signal_connect (monitor, "changed", G_CALLBACK (actions_changed), action_manager);
-
-        priv->dir_monitors = g_list_prepend (priv->dir_monitors, monitor);
+        /* Fehlt der Ordner oder ist keine Überwachung möglich, gibt es keinen Monitor. */
+        if (monitor != NULL) {
+            g_signal_connect (monitor, "changed", G_CALLBACK (actions_changed), action_manager);
+            priv->dir_monitors = g_list_prepend (priv->dir_monitors, monitor);
+        }
         priv->actions_directory_list = g_list_prepend (priv->actions_directory_list, g_strdup (path));
     }
 }
@@ -387,8 +389,11 @@ monitor_nolphin_config_dir (NolphinActionManager *action_manager)
     file = g_file_new_for_path (path);
     monitor = g_file_monitor_directory (file, G_FILE_MONITOR_WATCH_MOVES, NULL, NULL);
     g_object_unref (file);
-    g_signal_connect (monitor, "changed", G_CALLBACK (nolphin_config_dir_changed), action_manager);
-    priv->dir_monitors = g_list_prepend (priv->dir_monitors, monitor);
+    /* Der Ordner kann (noch) fehlen: dann gibt es keinen Monitor. */
+    if (monitor != NULL) {
+        g_signal_connect (monitor, "changed", G_CALLBACK (nolphin_config_dir_changed), action_manager);
+        priv->dir_monitors = g_list_prepend (priv->dir_monitors, monitor);
+    }
 }
 
 static gint

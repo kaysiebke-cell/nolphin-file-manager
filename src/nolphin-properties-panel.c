@@ -1379,7 +1379,7 @@ build_single (NolphinPropertiesPanel *panel, NolphinFile *file)
 	add_info_row (GTK_GRID (grid), &row, _("Zugegriffen"), text);
 	g_free (text);
 
-	text = nolphin_file_get_symbolic_link_target_path (file);
+	text = nolphin_file_is_symbolic_link (file) ? nolphin_file_get_symbolic_link_target_path (file) : NULL;
 	add_info_row (GTK_GRID (grid), &row, _("Verknüpfungsziel"), text);
 	g_free (text);
 

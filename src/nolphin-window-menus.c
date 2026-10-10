@@ -31,6 +31,7 @@
 
 #include "nolphin-window-menus.h"
 #include "nolphin-actions.h"
+#include "nolphin-gid-menu.h"
 #include "nolphin-location-stats.h"
 #include "nolphin-application.h"
 #include "nolphin-tools.h"
@@ -2689,6 +2690,7 @@ nolphin_window_initialize_menus (NolphinWindow *window)
 			  G_CALLBACK (disconnect_proxy_cb), window);
 
 	/* add the UI */
+	nolphin_gid_menu_register_actions (window);
 	gtk_ui_manager_add_ui_from_resource (ui_manager, "/org/nolphin/nolphin-shell-ui.xml", NULL);
 
     GtkWidget *menuitem, *submenu;

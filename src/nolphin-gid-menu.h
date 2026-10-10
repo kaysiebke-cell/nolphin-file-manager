@@ -13,6 +13,7 @@
 
 G_BEGIN_DECLS
 
+void nolphin_gid_menu_register_actions (NolphinWindow *window);
 void nolphin_gid_menu_initialize (NolphinWindow *window);
 
 G_END_DECLS

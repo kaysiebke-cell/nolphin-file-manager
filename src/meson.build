@@ -136,12 +136,17 @@ if gtk_layer_shell_enabled
   nolphin_deps += wayland_client
 endif
 
+# Bei Installation außerhalb von /usr (z. B. /usr/local) muss das Programm seine
+# eigene libnolphin-extension finden, nicht die eines Systempakets in /lib.
+nolphin_install_rpath = get_option('prefix') == '/usr' ? '' : join_paths(get_option('prefix'), get_option('libdir'))
+
 nolphin = executable('nolphin',
   nolphinCommon_sources + nolphinWindow_sources,
   include_directories: [ rootInclude ],
   c_args: nolphin_definitions,
   dependencies: nolphin_deps,
-  install: true
+  install: true,
+  install_rpath: nolphin_install_rpath
 )
 
 nolphinDesktop = executable('nolphin-desktop',
@@ -149,7 +154,8 @@ nolphinDesktop = executable('nolphin-desktop',
   include_directories: [ rootInclude],
   c_args: nolphin_definitions,
   dependencies: nolphin_deps,
-  install: true
+  install: true,
+  install_rpath: nolphin_install_rpath
 )
 
 nolphin_autorun_software = executable('nolphin-autorun-software',
@@ -157,7 +163,8 @@ nolphin_autorun_software = executable('nolphin-autorun-software',
   include_directories: [ rootInclude, ],
   c_args: nolphin_definitions,
   dependencies: nolphin_deps,
-  install: true
+  install: true,
+  install_rpath: nolphin_install_rpath
 )
 
 nolphin_connect_server = executable('nolphin-connect-server',
@@ -170,7 +177,8 @@ nolphin_connect_server = executable('nolphin-connect-server',
   include_directories: [ rootInclude, ],
   c_args: nolphin_definitions,
   dependencies: nolphin_deps,
-  install: true
+  install: true,
+  install_rpath: nolphin_install_rpath
 )
 
 nolphin_open_with = executable('nolphin-open-with',
@@ -178,7 +186,8 @@ nolphin_open_with = executable('nolphin-open-with',
   include_directories: [ rootInclude, ],
   c_args: nolphin_definitions,
   dependencies: nolphin_deps,
-  install: true
+  install: true,
+  install_rpath: nolphin_install_rpath
 )
 
 # LibExecs
@@ -189,4 +198,5 @@ nolphin_extensions_list = executable('nolphin-extensions-list',
   dependencies: [ nolphin_deps ],
   install: true,
   install_dir: libExecPath,
+  install_rpath: nolphin_install_rpath
 )

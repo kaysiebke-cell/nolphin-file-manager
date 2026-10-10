@@ -629,7 +629,7 @@ display_single_file (NolphinPreview *preview, NolphinFile *file)
     add_info_row (grid, row++, _("Ort:"), text);
     g_free (text);
 
-    text = nolphin_file_get_symbolic_link_target_path (file);
+    text = nolphin_file_is_symbolic_link (file) ? nolphin_file_get_symbolic_link_target_path (file) : NULL;
     if (text != NULL) {
         add_info_row (grid, row++, _("Verknüpfungsziel:"), text);
         g_free (text);

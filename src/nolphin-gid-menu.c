@@ -123,8 +123,11 @@ on_show_setting_changed (GSettings *settings, const gchar *key, gpointer user_da
 	}
 }
 
+/* Registriert die statischen Aktionen. Muss vor dem Zusammenführen des
+ * Menü-XML geschehen, sonst findet der UI-Manager sie beim Aufbau nicht
+ * ("missing action"). */
 void
-nolphin_gid_menu_initialize (NolphinWindow *window)
+nolphin_gid_menu_register_actions (NolphinWindow *window)
 {
 	static const GtkActionEntry entries[] = {
 		{ "GIDProjectsMenu", NULL, N_("_GID-Projekte") },
@@ -133,12 +136,18 @@ nolphin_gid_menu_initialize (NolphinWindow *window)
 		  N_("Einen lokalen Ordner als GID-Projekt hinzufügen"),
 		  G_CALLBACK (on_add_activate) },
 	};
-	GtkUIManager *ui = nolphin_window_get_ui_manager (window);
-	GtkActionGroup *group = gtk_action_group_new ("GIDStaticGroup");
+	GtkUIManager *ui;
+	GtkActionGroup *group;
 	GtkToggleAction *toggle;
 
 	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
 
+	if (g_object_get_data (G_OBJECT (window), "nolphin-gid-static-group") != NULL) {
+		return;
+	}
+
+	ui = nolphin_window_get_ui_manager (window);
+	group = gtk_action_group_new ("GIDStaticGroup");
 	gtk_action_group_add_actions (group, entries, G_N_ELEMENTS (entries), window);
 	toggle = gtk_toggle_action_new (ACTION_TOGGLE, _("GID-_Projekte anzeigen"),
 					_("Den Bereich GID-Projekte in der Seitenleiste anzeigen oder verbergen"), NULL);
@@ -152,6 +161,14 @@ nolphin_gid_menu_initialize (NolphinWindow *window)
 
 	g_signal_connect_object (nolphin_window_state, "changed::" NOLPHIN_WINDOW_STATE_SHOW_GID_PROJECTS,
 				 G_CALLBACK (on_show_setting_changed), window, 0);
+}
+
+void
+nolphin_gid_menu_initialize (NolphinWindow *window)
+{
+	g_return_if_fail (NOLPHIN_IS_WINDOW (window));
+
+	nolphin_gid_menu_register_actions (window);
 
 	refresh_projects_menu (window);
 	g_signal_connect_object (nolphin_preferences, "changed::" NOLPHIN_PREFERENCES_GID_PROJECTS,
