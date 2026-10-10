@@ -337,17 +337,6 @@ Nolphin ist Entwicklungssoftware: Funktionen können sich ändern.
 * [x] Einstellungen exportieren, importieren, zurücksetzen
 * [x] GID-Projekte: lokale Projektliste in der Seitenleiste, README im Arbeitsbereich im Aussehen von GitHub (Tabellen, Aufgabenlisten, lokale Bilder, HTML-Teilmenge)
 
-### Geplant und bekannte Grenzen
-
-* [ ] Erweiterte Suche: weitere Kriterien (Besitzer, Gruppe, Berechtigungen) und Suche in Tags und Kommentaren
-* [ ] Netzwerk: SFTP, FTP, WebDAV mit echten Servern prüfen (die GVfs-Backends sind vorhanden, siehe Diagnose)
-* [ ] PDF und Medien direkt über Poppler-GLib und GStreamer-Bibliotheken statt über Kommandozeilenwerkzeuge (braucht Entwicklungspakete)
-* [ ] Vollständige Übersetzung aller Einstellungstexte prüfen
-* [ ] Tests und Dokumentation für die Werkzeuge (Sync, Regeln, Duplikate, Versionen) und die Fensterfunktionen
-* [ ] GID-Projekte: HTML-`<table>` und `<picture>` mit mehreren Quellen werden nicht gerendert, `<details>` lässt sich noch nicht mit der Tastatur bedienen; Bilder aus dem Netz werden bewusst nie geladen
-
-Regeln werden laut Vertrag nur manuell auf einen gewählten Ordner angewendet; ein automatisches Auslösen ist deshalb nicht vorgesehen. Überlagerungen für SVN und Mercurial stehen nicht im Vertrag und sind nicht geplant.
-
 ### Teststand
 
 `meson test -C build` (Stand: 6. Oktober 2026): **alle 22 Tests bestehen.**
