@@ -63,7 +63,7 @@ final class FromPcScreen implements Screen {
         head.setOrientation(LinearLayout.VERTICAL);
         head.setPadding(p, p, p, Ui.dp(c, 6));
         head.addView(Ui.label(c, "Vom PC", 22, Ui.text(c), true));
-        head.addView(Ui.label(c, "Dateien aus dem Ordner „Zum Handy“ am PC", 13, Ui.dim(c), false));
+        head.addView(Ui.label(c, "Dateien aus dem Ordner „Handy“ am PC", 13, Ui.dim(c), false));
         root.addView(head);
         list = new ListView(c);
         list.setDivider(null);
@@ -76,7 +76,7 @@ final class FromPcScreen implements Screen {
             }
         });
         root.addView(list, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
-        empty = Ui.label(c, "Noch nichts vom PC.\nLege am PC Dateien in „Zum Handy“ oder ziehe sie in Nolphin auf „Handy“.",
+        empty = Ui.label(c, "Noch nichts vom PC.\nLege am PC Dateien in den Ordner „Handy“ oder ziehe sie in Nolphin auf „Handy“.",
                 15, Ui.dim(c), false);
         empty.setGravity(Gravity.CENTER);
         empty.setPadding(p * 2, p * 3, p * 2, p);

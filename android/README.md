@@ -7,7 +7,7 @@ App für den Handy-Austausch von Nolphin, **in beide Richtungen**: Dateien aus �
 Vier Reiter unten, Einstellungen oben rechts; eigenes Design (Karten, Nolphin-Farben, eigenes Symbol, hell und dunkel), ohne Bibliotheken.
 
 * **Start:** großer Status („Verbunden“ / „Nicht verbunden“), Fortschritt einer laufenden Übertragung mit Abbruch, letzte Übertragungen.
-* **Vom PC:** Liste der Dateien aus „Zum Handy“ mit Vorschaubild; Antippen lädt, geladene Dateien lassen sich öffnen und teilen.
+* **Vom PC:** Liste der Dateien aus dem Ordner „Handy“ mit Vorschaubild; Antippen lädt, geladene Dateien lassen sich öffnen und teilen.
 * **Zum PC:** Raster der letzten Fotos (Mehrfachauswahl), „Dateien …“ für andere Dateien, „An den PC senden“ mit Fortschritt. Braucht die Berechtigung „Fotos“ (`READ_MEDIA_IMAGES`, bis Android 12 `READ_EXTERNAL_STORAGE`); ohne sie bleibt die Dateiauswahl.
 * **Verlauf:** alle Übertragungen (bis 200), mit Ergebnis.
 * **Einstellungen:** Verbindung trennen, neue Dateien automatisch laden (aus: erst nach Antippen), Ordner in „Downloads“, Verlauf löschen.
