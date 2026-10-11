@@ -2,7 +2,7 @@
 
 Bilder und Dateien in **beide Richtungen** zwischen Handy und PC austauschen, über das WLAN, ohne App auf dem Handy und ohne Zusatzprogramm. Es gibt nichts einzustellen.
 
-![Seitenleiste mit dem Eintrag Handy, in der Mitte der Ordner Handy mit „Vom Handy“ und „Zum Handy“, rechts das Panel mit QR-Code, Link und der Liste der empfangenen Dateien](bilder/panel-handy.png)
+![Seitenleiste mit dem Eintrag Handy, in der Mitte der Ordner Handy mit dem Unterordner „Vom Handy“, rechts das Panel mit QR-Code, Link und der Liste der empfangenen Dateien](bilder/panel-handy.png)
 
 ## Verbinden
 
@@ -15,7 +15,7 @@ Der Link steht unter dem QR-Code und lässt sich mit dem Knopf daneben kopieren,
 
 ## Mit der App (empfohlen)
 
-Im Browser holt das Handy Dateien nur ab, wenn Sie sie antippen. Die kleine **Nolphin-Handy-App** ist der Empfänger auf dem Handy: Was Sie am PC in „Zum Handy“ legen, kommt von selbst an.
+Im Browser holt das Handy Dateien nur ab, wenn Sie sie antippen. Die kleine **Nolphin-Handy-App** ist der Empfänger auf dem Handy: Was Sie am PC in den Ordner „Handy“ legen, kommt von selbst an.
 
 1. **Erster Scan:** Scannen Sie den QR-Code mit der Kamera des Handys. Die Seite im Handy-Browser bietet die App zum Installieren an. Laden Sie sie und erlauben Sie die Installation (siehe unten, „Warnungen bei der Installation“).
 2. **Verbinden in der App:** Öffnen Sie die Nolphin-Handy-App und tippen Sie auf **QR-Code scannen**. Richten Sie die Kamera auf den QR-Code am PC. Die App liest ihn selbst, es ist keine Eingabe nötig. Danach steht dort „Verbunden“.
@@ -48,7 +48,7 @@ Die Werte stehen in GSettings (`org.nolphin.preferences`) und lassen sich mit `g
 
 | Schlüssel | Bedeutung | Vorgabe |
 | --------- | --------- | ------- |
-| `phone-folder` | Ordner mit „Vom Handy“ und „Zum Handy“ (leer: `~/Handy`) | leer |
+| `phone-folder` | Ordner „Handy“ mit dem Unterordner „Vom Handy“ (leer: `~/Handy`) | leer |
 | `phone-token-hours` | Gültigkeit des Schlüssels in Stunden (1 bis 168) | 12 |
 | `phone-idle-minutes` | Selbstabschaltung ohne Anfrage in Minuten (1 bis 240) | 15 |
 | `phone-max-upload-mb` | größte Datei vom Handy in MiB (1 bis 4096) | 2048 |
@@ -60,7 +60,7 @@ Die Werte gelten beim nächsten Start des Austauschs.
 | Ordner | Richtung | Inhalt |
 | ------ | -------- | ------ |
 | `~/Handy/Vom Handy` | Handy → PC | Hierhin kommen die Dateien, die Sie am Handy auswählen. |
-| `~/Handy/Zum Handy` | PC → Handy | Alles darin kann das Handy laden. |
+| `~/Handy` | PC → Handy | Alle Dateien darin kann das Handy laden (Unterordner nicht). |
 
 Beide Ordner legt Nolphin selbst an.
 

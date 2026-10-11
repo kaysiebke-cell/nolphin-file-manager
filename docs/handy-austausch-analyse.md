@@ -99,7 +99,7 @@ http://192.168.178.20:43913/?t=4d6d1633ec8ca225aaeb5ddfbc5a1b6d&v=1&e=1791769130
 1. In Nolphin auf **Handy** klicken: Der Austausch startet, der QR-Code erscheint.
 2. In der App **QR-Code scannen** (eigener QR-Leser) oder mit der Kamera des Handys scannen. Im zweiten Fall öffnet die Seite die App über einen `intent://`-Link.
 3. Die App prüft den Link (nur private IPv4-Adressen, Port, Schlüsselform, Version, Ablauf) und fragt `GET /info` am PC ab. **Erst wenn das gelingt, wird die Verbindung gespeichert.** Jeder Fehler hat eine eigene Meldung.
-4. Der Hintergrunddienst hält die Verbindung (`GET /wait`) und lädt neue Dateien aus „Zum Handy“. Dateien vom Handy gehen über das Teilen-Menü oder die Dateiauswahl.
+4. Der Hintergrunddienst hält die Verbindung (`GET /wait`) und lädt neue Dateien aus dem Ordner „Handy“. Dateien vom Handy gehen über das Teilen-Menü oder die Dateiauswahl.
 
 ### B. App ist noch nicht installiert
 

@@ -32,8 +32,8 @@ setting_int (const gchar *key, gint fallback)
 enum { COL_TIME, COL_NAME, COL_SIZE, COL_N };
 
 /* --- Feste Ordner ---------------------------------------------------------------------
- * ~/Handy/Vom Handy: hierhin kommen Dateien vom Handy.
- * ~/Handy/Zum Handy: alles darin kann das Handy laden. */
+ * ~/Handy: alle Dateien darin kann das Handy laden.
+ * ~/Handy/Vom Handy: hierhin kommen Dateien vom Handy (Unterordner werden nicht angeboten). */
 
 gchar *
 nolphin_phone_base_path (void)
@@ -62,11 +62,7 @@ nolphin_phone_inbox_path (void)
 gchar *
 nolphin_phone_outbox_path (void)
 {
-	gchar *base = nolphin_phone_base_path ();
-	gchar *path = g_build_filename (base, _("Zum Handy"), NULL);
-
-	g_free (base);
-	return path;
+	return nolphin_phone_base_path ();
 }
 
 gboolean
@@ -603,7 +599,7 @@ nolphin_phone_page_open (GtkWidget *page, gboolean autostart)
 	if (d->server == NULL && gtk_combo_box_get_active (GTK_COMBO_BOX (d->address_combo)) >= 0) {
 		phone_start (d);
 	}
-	/* Die Hauptansicht zeigt ~/Handy mit "Vom Handy" und "Zum Handy". */
+	/* Die Hauptansicht zeigt ~/Handy mit dem Unterordner "Vom Handy". */
 	if (nolphin_phone_ensure_folders ()) {
 		gchar *base = nolphin_phone_base_path ();
 		GFile *folder = g_file_new_for_path (base);

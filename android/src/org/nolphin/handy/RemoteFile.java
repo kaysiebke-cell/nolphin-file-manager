@@ -1,6 +1,6 @@
 package org.nolphin.handy;
 
-/** Eine Datei im Ordner „Zum Handy“ am PC (Name und Größe aus /wait). */
+/** Eine Datei im Ordner „Handy“ am PC (Name und Größe aus /wait). */
 final class RemoteFile {
     final String name;
     final long size;

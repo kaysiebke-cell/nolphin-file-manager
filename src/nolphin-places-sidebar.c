@@ -211,7 +211,7 @@ enum {
     POSITION_LOWER
 };
 
-/* URI des Ausgangsordners "~/Handy/Zum Handy" (legt die Ordner an) oder NULL. */
+/* URI des Ausgangsordners "~/Handy" (legt die Ordner an) oder NULL. */
 static gchar *
 phone_outbox_uri (void)
 {
@@ -940,7 +940,7 @@ update_places (NolphinPlacesSidebar *sidebar)
         sidebar->bottom_bookend_uri = g_strdup (mount_uri);
     }
 
-    /* Handy: Der Eintrag zeigt auf den Ausgangsordner "~/Handy/Zum Handy". Dateien, die
+    /* Handy: Der Eintrag zeigt auf den Ausgangsordner "~/Handy". Dateien, die
      * man darauf zieht, werden dorthin kopiert und kann das Handy laden. Ein Klick öffnet
      * stattdessen den Handy-Austausch (siehe open_selected_bookmark). */
     {

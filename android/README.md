@@ -1,6 +1,6 @@
 # Nolphin Handy (Android-App)
 
-App für den Handy-Austausch von Nolphin, **in beide Richtungen**: Dateien aus „Zum Handy“ am PC kommen aufs Handy, Fotos und Dateien vom Handy gehen an den PC.
+App für den Handy-Austausch von Nolphin, **in beide Richtungen**: Dateien aus dem Ordner „Handy“ am PC kommen aufs Handy, Fotos und Dateien vom Handy gehen an den PC.
 
 ## Aufbau der App
 

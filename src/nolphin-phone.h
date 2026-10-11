@@ -20,7 +20,7 @@ void       nolphin_phone_page_open (GtkWidget *page, gboolean autostart);
 void       nolphin_phone_page_rotate (GtkWidget *page);
 void       nolphin_phone_page_stop   (GtkWidget *page);
 
-/* Ordner: Basis aus GSettings (Vorgabe ~/Handy) mit "Vom Handy" (Eingang) und "Zum Handy" (Ausgang).
+/* Ordner: Basis aus GSettings (Vorgabe ~/Handy) (Ausgang: alle Dateien darin) mit "Vom Handy" (Eingang).
  * Die Pfade sind neu zugewiesen und mit g_free () freizugeben. */
 gchar     *nolphin_phone_base_path    (void);
 gchar     *nolphin_phone_inbox_path   (void);

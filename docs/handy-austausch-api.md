@@ -47,11 +47,11 @@ Prüft Schlüssel und Gegenstelle.
 {"app":"nolphin","api":1,"name":"kaysiebke-ThinkPad","expires":1791769130,"maxUpload":2147483648,"share":true}
 ```
 
-`api` ist die Version der Schnittstelle (hier 1), `expires` die Ablaufzeit des Schlüssels, `maxUpload` die größte erlaubte Datei in Bytes, `share` sagt, ob ein Ausgangsordner („Zum Handy“) vorhanden ist.
+`api` ist die Version der Schnittstelle (hier 1), `expires` die Ablaufzeit des Schlüssels, `maxUpload` die größte erlaubte Datei in Bytes, `share` sagt, ob ein Ausgangsordner (`~/Handy`) vorhanden ist.
 
 ### `GET /ls?t=…`
 
-Dateien im Ausgangsordner „Zum Handy“ als JSON-Liste (höchstens 500, ohne versteckte Dateien, ohne Verknüpfungen, ohne Dateien, die in den letzten 3 Sekunden geändert wurden):
+Dateien im Ausgangsordner `~/Handy` (nur Dateien, keine Unterordner) als JSON-Liste (höchstens 500, ohne versteckte Dateien, ohne Verknüpfungen, ohne Dateien, die in den letzten 3 Sekunden geändert wurden):
 
 ```json
 [{"n":"Größe Übung ä ö ü ß.jpg","s":4096},{"n":"Bericht (Entwurf) #2 & Co 100%.pdf","s":9000}]

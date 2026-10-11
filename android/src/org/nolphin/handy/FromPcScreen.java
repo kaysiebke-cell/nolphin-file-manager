@@ -20,7 +20,7 @@ import android.widget.Toast;
 
 import java.util.Locale;
 
-/** PC → Handy: die Dateien im Ordner „Zum Handy“ am PC; geladene lassen sich öffnen und teilen. */
+/** PC → Handy: die Dateien im Ordner „Handy“ am PC; geladene lassen sich öffnen und teilen. */
 final class FromPcScreen implements Screen {
     private final Context c;
     private final Host host;

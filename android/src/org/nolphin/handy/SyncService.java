@@ -33,7 +33,7 @@ import java.util.Set;
 
 /**
  * Hält die Verbindung zu Nolphin am PC: wartet, bis der PC eine Datei in
- * "Zum Handy" legt, lädt sie nach Downloads/Nolphin und sendet auf Wunsch
+ * "Handy" legt, lädt sie nach Downloads/Nolphin und sendet auf Wunsch
  * Dateien vom Handy an den PC.
  */
 public class SyncService extends Service {
@@ -55,7 +55,7 @@ public class SyncService extends Service {
     static volatile String transferName = "";
     static volatile boolean transferDown;
     static volatile long transferDone, transferTotal;
-    /** Dateien im Ordner „Zum Handy“ am PC (zuletzt von /wait gemeldet). */
+    /** Dateien im Ordner „Handy“ am PC (zuletzt von /wait gemeldet). */
     static volatile RemoteFile[] files = new RemoteFile[0];
     /** Wird gesetzt, wenn der Nutzer die laufende Übertragung abbricht. */
     private static volatile boolean cancelRequested;

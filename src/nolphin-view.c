@@ -10547,7 +10547,7 @@ static const GtkActionEntry directory_view_entries[] = {
 				 G_CALLBACK (action_open_in_terminal_callback) },
   /* name, stock id */         { NOLPHIN_ACTION_PHONE_SEND, "send-to-symbolic",
   /* label, accelerator */       N_("An Handy senden"), NULL,
-  /* tooltip */                  N_("Die gewählten Dateien in den Ordner „Zum Handy“ kopieren; das Handy kann sie dann laden"),
+  /* tooltip */                  N_("Die gewählten Dateien in den Ordner „Handy“ kopieren; das Handy kann sie dann laden"),
 				 G_CALLBACK (action_phone_send_callback) },
   /* name, stock id */         { NOLPHIN_ACTION_GID_ADD_PROJECT, "list-add-symbolic",
   /* label, accelerator */       N_("Als GID-Projekt hinzufügen"), NULL,
