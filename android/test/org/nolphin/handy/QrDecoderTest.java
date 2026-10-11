@@ -157,6 +157,29 @@ public class QrDecoderTest {
                 }
             }
         }
+        // Große Fotos (Kamera-App, 12 Megapixel und mehr): große Module, nur mit Verkleinerung lesbar
+        {
+            String text = "http://192.168.178.20:43913/?t=4d6d1633ec8ca225aaeb5ddfbc5a1b6d&v=1&e=1791769130";
+            boolean[][] m = matrix(driver, text);
+            int[][] sizes = { { 4000, 3000 }, { 3264, 2448 }, { 2560, 1920 } };
+            double[] scalesBig = { 26, 18, 14 };
+            for (int i = 0; i < sizes.length; i++) {
+                for (double angle : new double[] { 0, 15, 100 }) {
+                    int W = sizes[i][0], H = sizes[i][1];
+                    byte[] g = render(m, W, H, scalesBig[i], angle, 0.08, 1.5, 4, 0.3, 7);
+                    runs++;
+                    long t0 = System.nanoTime();
+                    String got = QrDecoder.decodeMultiScale(g, W, H);
+                    long ms = (System.nanoTime() - t0) / 1000000;
+                    if (!text.equals(got)) {
+                        fails++;
+                        System.out.println("FAIL: großes Foto " + W + "x" + H + " Winkel " + angle + " -> " + got);
+                    } else if (angle == 0) {
+                        System.out.println("Foto " + W + "x" + H + " gelesen in " + ms + " ms");
+                    }
+                }
+            }
+        }
         // Falscher Inhalt darf nichts liefern
         {
             byte[] noiseImg = new byte[640 * 480];

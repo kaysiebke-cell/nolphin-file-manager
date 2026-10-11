@@ -4,7 +4,12 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.ContentValues;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
+import android.net.Uri;
+import android.provider.MediaStore;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -13,10 +18,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -30,6 +37,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @SuppressWarnings("deprecation")
 public class ScanActivity extends Activity implements TextureView.SurfaceTextureListener, Camera.PreviewCallback {
     private static final int REQUEST_CAMERA = 11;
+    private static final int REQUEST_PHOTO = 21;
+    private static final int REQUEST_PICK = 22;
+    private Uri photoUri;
 
     private TextureView texture;
     private TextView hint;
@@ -74,18 +84,34 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
         dlp.bottomMargin = 200;
         root.addView(diag, dlp);
 
-        Button cancel = new Button(this);
-        cancel.setText("Abbrechen");
-        cancel.setOnClickListener(new View.OnClickListener() {
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setGravity(Gravity.CENTER);
+        buttons.addView(button("Foto aufnehmen", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                takePhoto();
+            }
+        }));
+        buttons.addView(button("Bild wählen", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType("image/*");
+                startActivityForResult(pick, REQUEST_PICK);
+            }
+        }));
+        buttons.addView(button("Abbrechen", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 finish();
             }
-        });
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        lp.bottomMargin = 64;
-        root.addView(cancel, lp);
+        }));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
+        lp.bottomMargin = 48;
+        root.addView(buttons, lp);
         setContentView(root);
 
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -105,6 +131,117 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
                         Toast.LENGTH_LONG).show();
                 finish();
             }
+        }
+    }
+
+    private Button button(String text, View.OnClickListener l) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setOnClickListener(l);
+        return b;
+    }
+
+    // ---- Foto statt Live-Bild --------------------------------------------------------------
+
+    /** Die Kamera-App des Handys macht ein scharfes Foto; so klappt es auch, wenn die Live-Vorschau nicht reicht. */
+    private void takePhoto() {
+        ContentValues cv = new ContentValues();
+        cv.put(MediaStore.Images.Media.DISPLAY_NAME, "nolphin-scan.jpg");
+        cv.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+        photoUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+        if (photoUri == null) {
+            Toast.makeText(this, "Foto nicht möglich", Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        i.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+        try {
+            startActivityForResult(i, REQUEST_PHOTO);
+        } catch (RuntimeException e) {
+            getContentResolver().delete(photoUri, null, null);
+            photoUri = null;
+            Toast.makeText(this, "Keine Kamera-App gefunden", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        final Uri source;
+        final boolean temporary;
+        if (request == REQUEST_PHOTO) {
+            source = photoUri;
+            temporary = true;
+            photoUri = null;
+            if (result != RESULT_OK && source != null) {
+                getContentResolver().delete(source, null, null);
+                return;
+            }
+        } else if (request == REQUEST_PICK && result == RESULT_OK && data != null) {
+            source = data.getData();
+            temporary = false;
+        } else {
+            return;
+        }
+        if (source == null) {
+            return;
+        }
+        hint.setText("Foto wird gelesen …");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final String text = readImage(source);
+                if (temporary) {
+                    getContentResolver().delete(source, null, null);   // das Foto bleibt nicht liegen
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (text != null) {
+                            accept(text);
+                        } else {
+                            hint.setText("Im Foto wurde kein QR-Code gefunden.\nDen ganzen Code scharf und möglichst gerade aufnehmen.");
+                        }
+                    }
+                });
+            }
+        }, "nolphin-photo").start();
+    }
+
+    /** Liest ein Foto (auf höchstens etwa 2600 Punkte verkleinert) und sucht den QR-Code darin. */
+    private String readImage(Uri uri) {
+        try {
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            try (InputStream in = getContentResolver().openInputStream(uri)) {
+                BitmapFactory.decodeStream(in, null, o);
+            }
+            int max = Math.max(o.outWidth, o.outHeight);
+            int sample = 1;
+            while (max / sample > 2600) {
+                sample *= 2;
+            }
+            o.inJustDecodeBounds = false;
+            o.inSampleSize = sample;
+            Bitmap b;
+            try (InputStream in = getContentResolver().openInputStream(uri)) {
+                b = BitmapFactory.decodeStream(in, null, o);
+            }
+            if (b == null) {
+                return null;
+            }
+            int w = b.getWidth(), h = b.getHeight();
+            int[] px = new int[w * h];
+            b.getPixels(px, 0, w, 0, 0, w, h);
+            b.recycle();
+            byte[] gray = new byte[w * h];
+            for (int i = 0; i < gray.length; i++) {
+                int p = px[i];
+                gray[i] = (byte) ((((p >> 16) & 255) * 3 + ((p >> 8) & 255) * 6 + (p & 255)) / 10);
+            }
+            return QrDecoder.decodeMultiScale(gray, w, h);
+        } catch (Exception | OutOfMemoryError e) {
+            return null;
         }
     }
 
@@ -138,12 +275,12 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
         }
     }
 
-    /** Vorschaugröße nahe 1280x720: genug Auflösung für den Code, noch schnell genug zum Lesen. */
+    /** Vorschaugröße nahe 1920x1080: genug Auflösung auch für einen kleinen Code in größerem Abstand. */
     private static Camera.Size bestSize(List<Camera.Size> sizes) {
         Camera.Size best = sizes.get(0);
         long bestScore = Long.MAX_VALUE;
         for (Camera.Size s : sizes) {
-            long score = Math.abs((long) s.width * s.height - 1280L * 720L);
+            long score = Math.abs((long) s.width * s.height - 1920L * 1080L);
             if (score < bestScore) {
                 bestScore = score;
                 best = s;
@@ -213,7 +350,7 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
             public void run() {
                 try {
                     final long t0 = System.nanoTime();
-                    final String text = QrDecoder.decode(gray, w, h);
+                    final String text = QrDecoder.decodeMultiScale(gray, w, h);
                     final long ms = (System.nanoTime() - t0) / 1000000;
                     final int seen = QrDecoder.lastFinderCount;
                     frames++;

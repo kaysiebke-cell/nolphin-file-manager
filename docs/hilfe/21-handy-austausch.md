@@ -23,6 +23,8 @@ Im Browser holt das Handy Dateien nur ab, wenn Sie sie antippen. Die kleine **No
 4. Neue Dateien landen auf dem Handy im Ordner `Download/Nolphin`, mit einer Benachrichtigung.
 5. Dateien vom Handy schicken Sie über **Teilen ▸ Nolphin (PC)** oder in der App mit **Dateien an den PC senden …**.
 
+Der Scanner hat unten zwei Ausweichwege: **Foto aufnehmen** (die Kamera-App des Handys macht ein scharfes Foto, die App liest den Code darin, das Foto wird danach gelöscht) und **Bild wählen** (ein vorhandenes Bild oder einen Screenshot des Codes). Beide lesen auch große Fotos.
+
 Geht das Scannen nicht, kopieren Sie den Link unter dem QR-Code im Panel und tippen in der App auf **Link aus der Zwischenablage einfügen** (oder tippen Sie ihn in das Feld darunter).
 
 Der Schlüssel im QR-Code gilt, solange der Austausch am PC läuft, höchstens 12 Stunden. Nach einem Neustart von Nolphin oder nach **Neuen QR-Code erzeugen** (Knopf neben dem Link im Panel) ist der alte Code sofort ungültig; scannen Sie dann einfach den neuen. Steht in der App „Schlüssel abgelaufen“, ist das der Grund.

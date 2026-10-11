@@ -16,6 +16,44 @@ final class QrDecoder {
     /** Anzahl der Suchmuster im zuletzt gelesenen Bild; für die Anzeige im Scanner ("Code erkannt"). */
     static volatile int lastFinderCount;
 
+    /**
+     * Wie decode (), versucht es bei Misserfolg mit auf die Hälfte und ein Viertel verkleinertem Bild.
+     * So werden auch sehr große Fotos mit großen Modulen gelesen.
+     */
+    static String decodeMultiScale(byte[] gray, int w, int h) {
+        String text = decode(gray, w, h);
+        int best = lastFinderCount;
+        for (int f = 2; text == null && f <= 4; f *= 2) {
+            int nw = w / f, nh = h / f;
+            if (nw < 80 || nh < 80) {
+                break;
+            }
+            text = decode(downscale(gray, w, h, f), nw, nh);
+            best = Math.max(best, lastFinderCount);
+        }
+        lastFinderCount = best;
+        return text;
+    }
+
+    /** Verkleinert um den ganzzahligen Faktor f, indem f mal f Punkte gemittelt werden. */
+    static byte[] downscale(byte[] gray, int w, int h, int f) {
+        int nw = w / f, nh = h / f;
+        byte[] out = new byte[nw * nh];
+        for (int y = 0; y < nh; y++) {
+            for (int x = 0; x < nw; x++) {
+                int sum = 0;
+                for (int dy = 0; dy < f; dy++) {
+                    int row = (y * f + dy) * w + x * f;
+                    for (int dx = 0; dx < f; dx++) {
+                        sum += gray[row + dx] & 0xFF;
+                    }
+                }
+                out[y * nw + x] = (byte) (sum / (f * f));
+            }
+        }
+        return out;
+    }
+
     // Version 1 bis 6, Stufe M: Codewörter gesamt, Blöcke, Datencodewörter, Fehlerkorrektur je Block
     private static final int[] TOTAL = { 0, 26, 44, 70, 100, 134, 172 };
     private static final int[] BLOCKS = { 0, 1, 1, 1, 2, 2, 4 };

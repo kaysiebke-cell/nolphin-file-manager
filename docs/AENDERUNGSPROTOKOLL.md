@@ -131,6 +131,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Abschnitt 53.4 (keine Passwörter im Klartext) und 50.1 (Werkzeuge nur nach Freigabe).
 - TEST: `libsecret-tools` vom Benutzer installiert. `android/build.sh` übernahm das Passwort in den Schlüsselbund, löschte die Klartextdatei (`handy.keystore.pass` existiert nicht mehr), baute und signierte die APK; `secret-tool lookup` liefert das Passwort. Schlüssel unverändert, die neue APK lässt sich über die alte installieren.
 
+## Handy-App: Scanner mit Ausweichwegen
+- REQUIREMENT: Der Live-Scanner wurde am echten Handy als „funktioniert nicht“ gemeldet; die App darf nicht an einem einzigen Weg hängen (Vertragsabschnitt 61.7, freigegeben).
+- DATEI: `android/src/org/nolphin/handy/QrDecoder.java`, `ScanActivity.java`, `android/test/org/nolphin/handy/QrDecoderTest.java`, `docs/hilfe/21-handy-austausch.md`.
+- ÄNDERUNG: mehrstufiger Leser (`decodeMultiScale`: Originalgröße, halbe, viertel Größe) für große Fotos; Live-Vorschau jetzt nahe 1920×1080; Knöpfe „Foto aufnehmen“ (Kamera-App, Foto wird nach dem Lesen gelöscht) und „Bild wählen“ im Scanner.
+- WARUM: Die Ursache des Live-Problems ist ohne Gerät nicht zu finden; mit einem scharfen Foto der Kamera-App entfällt die Abhängigkeit von der Live-Vorschau.
+- TEST: `android/test.sh`: 163 von 163 (neu: Fotos bis 4000×3000 Punkte, gelesen in 146 bis 440 ms). Emulator: „Bild wählen“ mit einem gedrehten, unscharfen Foto des Codes von einem laufenden Server: Code gelesen, Verbindung geprüft, „Mit dem PC verbunden“. Nicht geprüft: „Foto aufnehmen“ und die Live-Vorschau am echten Handy.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.
