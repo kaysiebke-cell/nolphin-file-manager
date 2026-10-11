@@ -8,7 +8,7 @@ Nolphin ist Entwicklungssoftware. Diese Seite sagt offen, was (noch) nicht geht.
 - **PDF und Medien:** Die Angaben kommen über die Programme `pdfinfo`, `pdftocairo` und `gst-discoverer-1.0`, nicht über Bibliotheken.
 - **Regeln:** werden nur von Hand angewendet und nicht gespeichert.
 - **Versionskontrolle:** Overlays gibt es nur für Git, nicht für SVN oder Mercurial.
-- **Handy-Austausch:** nicht verschlüsselt (nur im eigenen WLAN), keine Ordneransicht des Handys, die Ordner `~/Handy/Vom Handy` und `~/Handy/Zum Handy` sind fest.
+- **Handy-Austausch:** nicht verschlüsselt (nur im eigenen WLAN), keine Ordneransicht des Handys, die Ordner `~/Handy/Vom Handy` und `~/Handy/Zum Handy` sind fest. Die Handy-App gibt es nur für Android (ab 10) und nur, wenn sie beim Bauen von Nolphin mit `android/build.sh` erzeugt wurde; sie ist nicht im Play Store.
 - **Netzwerk:** SFTP, FTP und WebDAV hängen von den GVfs-Diensten Ihres Systems ab und sind nicht mit allen Servern geprüft.
 
 ## Häufige Fragen

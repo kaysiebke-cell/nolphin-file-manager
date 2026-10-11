@@ -13,6 +13,19 @@ Bilder und Dateien in **beide Richtungen** zwischen Handy und PC austauschen, ü
 
 Der Link steht unter dem QR-Code und lässt sich mit dem Knopf daneben kopieren, falls die Kamera den Code nicht erkennt.
 
+## Mit der App (empfohlen)
+
+Im Browser holt das Handy Dateien nur ab, wenn Sie sie antippen. Die kleine **Nolphin-Handy-App** ist der Empfänger auf dem Handy: Was Sie am PC in „Zum Handy“ legen, kommt von selbst an.
+
+1. **Erster Scan:** Scannen Sie den QR-Code. Die Seite im Handy-Browser bietet die App zum Installieren an. Laden Sie sie, erlauben Sie die Installation und scannen Sie den Code noch einmal.
+2. **Jeder weitere Scan** öffnet die App und verbindet sie mit dem PC. Es ist keine Eingabe nötig.
+3. Neue Dateien landen auf dem Handy im Ordner `Download/Nolphin`, mit einer Benachrichtigung.
+4. Dateien vom Handy schicken Sie über **Teilen ▸ Nolphin (PC)** oder in der App mit **Dateien an den PC senden …**.
+
+Der Schlüssel im QR-Code gilt, solange der Austausch am PC läuft. Nach einem Neustart von Nolphin scannen Sie den Code einfach erneut. Steht in der App „Schlüssel abgelaufen“, ist das der Grund.
+
+Die App gibt es nur, wenn sie beim Installieren von Nolphin gebaut wurde (siehe `android/README.md`). Sonst funktioniert der Austausch weiter im Browser.
+
 ## Die beiden Ordner
 
 | Ordner | Richtung | Inhalt |
@@ -35,7 +48,7 @@ Es gibt zwei Wege:
 
 ![Kontextmenü einer Datei mit dem Eintrag „An Handy senden“](bilder/kontextmenue-handy.png)
 
-Beide Wege **kopieren**. Das Original bleibt, wo es ist. Auf der Seite im Handy-Browser erscheint die Datei unter **Vom PC laden** und lässt sich dort laden. Die Liste aktualisiert sich alle paar Sekunden von selbst.
+Beide Wege **kopieren**. Das Original bleibt, wo es ist. Mit der App kommt die Datei von selbst aufs Handy. Im Browser erscheint sie unter **Vom PC laden** und lässt sich dort laden; die Liste aktualisiert sich alle paar Sekunden. Eine Datei erscheint erst, wenn sie fertig kopiert ist (nach etwa drei Sekunden).
 
 ## Sicherheit
 
@@ -57,4 +70,4 @@ Beide Wege **kopieren**. Das Original bleibt, wo es ist. Auf der Seite im Handy-
 
 ## Grenzen
 
-Das Handy kann **nicht** vom PC aus durchsucht werden. Der Austausch läuft nur über die Seite im Handy-Browser. Wer die Ordner des Handys wie einen normalen Ordner öffnen möchte, schließt es per USB-Kabel an (Android, Übertragungsmodus „Dateien“).
+Das Handy kann **nicht** vom PC aus durchsucht werden. Der Austausch läuft über die App oder die Seite im Handy-Browser. Ohne die App kann der PC nichts aufs Handy schieben: Der Browser holt Dateien nur nach einem Tipp. Wer die Ordner des Handys wie einen normalen Ordner öffnen möchte, schließt es per USB-Kabel an (Android, Übertragungsmodus „Dateien“).

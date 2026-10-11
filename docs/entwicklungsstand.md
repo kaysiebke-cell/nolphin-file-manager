@@ -26,7 +26,7 @@ Nolphin ist Entwicklungssoftware: Funktionen können sich ändern.
 * [x] Diagnose mit Protokoll, Systeminformationen, Plugin-Status und Fehlerbericht
 * [x] Einstellungen exportieren, importieren, zurücksetzen
 * [x] Lauffähig unter XFCE und MATE: Cinnamon-Bibliotheken und -Schemas sind optional (siehe [Andere Desktops](andere-desktops.md))
-* [x] Handy-Austausch in beide Richtungen: Eintrag „Handy“ in der Seitenleiste, eigener Server und QR-Code, feste Ordner `~/Handy/Vom Handy` und `~/Handy/Zum Handy`, Ziehen auf „Handy“ und „An Handy senden“ (ohne App, ohne Fremdabhängigkeit; echter Handy-Upload geprüft, Download und Senden nur mit `curl` und der Testinstanz, nicht am echten Handy)
+* [x] Handy-Austausch in beide Richtungen: Eintrag „Handy“ in der Seitenleiste, eigener Server und QR-Code, feste Ordner `~/Handy/Vom Handy` und `~/Handy/Zum Handy`, Ziehen auf „Handy“ und „An Handy senden“ plus Handy-App für Android (`android/`, ohne Bibliotheken): lädt Dateien vom PC von selbst und sendet über „Teilen“; im Emulator geprüft (Verbinden per Link, PC → Handy, Handy → PC), am echten Handy nur der Upload über den Browser
 * [x] GID-Projekte: lokale Projektliste in der Seitenleiste, README im Arbeitsbereich im Aussehen von GitHub (Tabellen, Aufgabenlisten, lokale Bilder, HTML-Teilmenge)
 
 ## Teststand

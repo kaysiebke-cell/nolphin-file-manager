@@ -95,6 +95,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Kein KDE Connect und keine Handy-App; der QR-Code ersetzt die Adresseingabe. Auf Rückmeldung des Benutzers: Einstieg in der Seitenleiste, Dateien in beide Richtungen ohne Umwege, die frei wählbaren Ordner waren unnötig und zeigten keine Wirkung.
 - TEST: Meson-Test `Phone exchange test`, QR-Abgleich mit `qrcode`, isolierte Instanz: Klick auf „Handy“ (Ordner `~/Handy`), „An Handy senden“ (Datei kopiert, Original bleibt, Handy-Seite listet und lädt sie, Inhalt identisch), Ziehen auf „Handy“ (kopiert, Original bleibt). Echter Upload von einem Handy (Bild kam an). Nicht getestet: Download und Senden am echten Handy, Kamera-Scan mit anderen Geräten, mehrere Netzwerkschnittstellen, dunkles Theme.
 
+## Handy-App (Android)
+- REQUIREMENT: Ein Empfänger auf dem Handy, damit der PC Dateien aufs Handy schicken kann (der Browser holt nur nach einem Tipp). Der erste Scan des QR-Codes installiert die App, weitere Scans verbinden sie (Spezifikation 2.6, Abschnitt 61.7).
+- DATEI: `android/` (AndroidManifest.xml, `src/org/nolphin/handy/*.java`, `build.sh`, README), `src/nolphin-phone-server.c` (Wartepunkt `/wait`, `/apk`, Dateien im Schreiben ausblenden, App-Abschnitt und automatischer App-Link in der Seite), `docs/meson.build`, `test/test-nolphin-phone-server.c`, Hilfe und Doku.
+- ÄNDERUNG: App nur mit dem Android-Framework (Java, kein Gradle, keine Bibliothek), gebaut mit `aapt2`, `d8`, `apksigner`. Hintergrunddienst wartet am Server, lädt neue Dateien nach `Download/Nolphin`; Teilen-Menü und Dateiauswahl senden an den PC. Die Seite hinter dem QR-Code öffnet die App über einen `intent://`-Link und fällt auf den APK-Download zurück.
+- WARUM: Auf Wunsch des Benutzers; ohne Empfänger auf dem Handy ist „PC → Handy“ nur eine Einbahnstraße.
+- TEST: Meson-Test (Wartepunkt, `/apk`, frische Dateien); Android-Emulator (Android 14): Installation, Verbinden per `nolphin://`-Link, Datei am PC ablegen kommt von selbst an (Inhalt identisch), Alt-Bestand wird nicht geladen, Senden über das Teilen-Menü kommt am PC an (identisch), Intent-Link der Seite öffnet die App. Nicht geprüft: Chrome auf einem echten Handy (Installation der APK, automatisches Öffnen), Verhalten im Standby, Android-Versionen außer 14.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

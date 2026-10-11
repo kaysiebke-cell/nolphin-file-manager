@@ -372,6 +372,8 @@ send_error (GOutputStream *out, gint status, const gchar *reason, const gchar *m
 	send_text (out, status, reason, "text/plain; charset=utf-8", message, NULL);
 }
 
+static gchar *find_apk (void);
+
 /* --- Seite ------------------------------------------------------------------------ */
 
 #define PAGE_HTML \
@@ -385,11 +387,12 @@ send_error (GOutputStream *out, gint status, const gchar *reason, const gchar *m
 "ul{list-style:none;padding:0}li{padding:8px 0;border-bottom:1px solid #8884;word-break:break-all}" \
 ".ok{color:#2a9d3f}.err{color:#d33}" \
 "</style></head>" \
-"<body data-done=\"@@DONE@@\" data-failed=\"@@FAILED@@\" data-nofiles=\"@@NOFILES@@\" data-share=\"@@SHARE@@\">" \
+"<body data-done=\"@@DONE@@\" data-failed=\"@@FAILED@@\" data-nofiles=\"@@NOFILES@@\" data-share=\"@@SHARE@@\" data-apk=\"@@APK@@\">" \
 "<h1>Nolphin</h1>" \
 "<h2>@@UPLOAD@@</h2>" \
 "<p><label class=\"btn\">@@CHOOSE@@<input id=\"f\" type=\"file\" multiple hidden></label></p>" \
 "<ul id=\"up\"></ul>" \
+"<div id=\"appbox\" hidden><h2>@@APPTITLE@@</h2><p><a id=\"appc\">@@APPCONNECT@@</a></p><p><a id=\"appg\">@@APPGET@@</a></p><p><a id=\"appstay\" href=\"#\">@@APPSTAY@@</a></p></div>" \
 "<div id=\"dlbox\"><h2>@@DOWNLOAD@@</h2><ul id=\"dl\"></ul></div>" \
 "<script>" \
 "(function(){" \
@@ -404,6 +407,15 @@ send_error (GOutputStream *out, gint status, const gchar *reason, const gchar *m
 "else{row.textContent=file.name+' – '+d.failed+' ('+x.status+')';row.className='err';}done();};" \
 "x.onerror=function(){row.textContent=file.name+' – '+d.failed;row.className='err';done();};" \
 "x.send(file);}" \
+"if(d.apk==='1'){var box=document.getElementById('appbox');box.hidden=false;" \
+"var apk=location.protocol+'//'+location.host+'/apk?t='+q;" \
+"var go='intent://connect?host='+encodeURIComponent(location.host)+'&t='+q+" \
+"'#Intent;scheme=nolphin;package=org.nolphin.handy;S.browser_fallback_url='+encodeURIComponent(apk)+';end';" \
+"document.getElementById('appc').href=go;document.getElementById('appg').href=apk;" \
+"var stay=false;try{stay=localStorage.getItem('nolphin-browser')==='1';}catch(e){}" \
+"document.getElementById('appstay').onclick=function(){try{localStorage.setItem('nolphin-browser','1');}catch(e){}" \
+"box.hidden=true;return false;};" \
+"if(!stay)setTimeout(function(){location.href=go;},400);}" \
 "function list(){if(d.share!=='1'){document.getElementById('dlbox').hidden=true;return;}" \
 "fetch('/ls?t='+q).then(function(r){return r.json();}).then(function(items){" \
 "var ul=document.getElementById('dl'),sig=JSON.stringify(items);if(ul.dataset.sig===sig)return;ul.dataset.sig=sig;ul.textContent='';" \
@@ -443,6 +455,16 @@ handle_index (NolphinPhoneServer *s, GOutputStream *out)
 	html = replace_all (html, "@@UPLOAD@@", _("An den PC senden"));
 	html = replace_all (html, "@@CHOOSE@@", _("Dateien auswählen …"));
 	html = replace_all (html, "@@DOWNLOAD@@", _("Vom PC laden"));
+	{
+		gchar *apk = find_apk ();
+
+		html = replace_all (html, "@@APK@@", apk != NULL ? "1" : "0");
+		g_free (apk);
+	}
+	html = replace_all (html, "@@APPTITLE@@", _("Nolphin-Handy-App (optional)"));
+	html = replace_all (html, "@@APPCONNECT@@", _("Mit der App verbinden"));
+	html = replace_all (html, "@@APPGET@@", _("App herunterladen"));
+	html = replace_all (html, "@@APPSTAY@@", _("Im Browser bleiben"));
 	send_text (out, 200, "OK", "text/html; charset=utf-8", html, csp);
 	g_free (html);
 }
@@ -455,13 +477,19 @@ compare_names (gconstpointer a, gconstpointer b)
 	return g_utf8_collate (*(const gchar * const *) a, *(const gchar * const *) b);
 }
 
-static void
-handle_list (NolphinPhoneServer *s, GOutputStream *out)
+/* Eine Datei, die sich in den letzten Sekunden geändert hat, wird noch geschrieben
+ * (zum Beispiel beim Kopieren aus der Dateiansicht) und erscheint erst danach. */
+#define BUSY_SECONDS 3
+
+/* Baut die Liste der Dateien im Ausgangsordner als JSON-Array. */
+static GString *
+build_listing (NolphinPhoneServer *s)
 {
 	GString *json = g_string_new ("[");
 	GPtrArray *names = g_ptr_array_new_with_free_func (g_free);
 	GDir *dir;
 	const gchar *name;
+	gint64 now = g_get_real_time () / G_USEC_PER_SEC;
 	guint i;
 
 	dir = s->share_path != NULL ? g_dir_open (s->share_path, 0, NULL) : NULL;
@@ -478,8 +506,9 @@ handle_list (NolphinPhoneServer *s, GOutputStream *out)
 		gchar *path = g_build_filename (s->share_path, g_ptr_array_index (names, i), NULL);
 		GStatBuf st;
 
-		/* nur normale Dateien, keine symbolischen Verknüpfungen */
-		if (g_lstat (path, &st) == 0 && S_ISREG (st.st_mode)) {
+		/* nur normale Dateien, keine symbolischen Verknüpfungen, keine Dateien im Schreiben */
+		if (g_lstat (path, &st) == 0 && S_ISREG (st.st_mode) &&
+		    now - (gint64) MAX (st.st_mtime, st.st_ctime) >= BUSY_SECONDS) {
 			if (json->len > 1) {
 				g_string_append_c (json, ',');
 			}
@@ -490,9 +519,136 @@ handle_list (NolphinPhoneServer *s, GOutputStream *out)
 		g_free (path);
 	}
 	g_string_append_c (json, ']');
+	g_ptr_array_free (names, TRUE);
+	return json;
+}
+
+static void
+handle_list (NolphinPhoneServer *s, GOutputStream *out)
+{
+	GString *json = build_listing (s);
+
 	send_text (out, 200, "OK", "application/json; charset=utf-8", json->str, NULL);
 	g_string_free (json, TRUE);
-	g_ptr_array_free (names, TRUE);
+}
+
+/* Wartepunkt für die App: antwortet, sobald sich die Liste gegenüber dem
+ * Stand "v" ändert, spätestens nach WAIT_SECONDS. Antwort: {"v":"<Stand>","files":[…]}. */
+#define WAIT_SECONDS 20
+
+static void
+handle_wait (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
+{
+	const gchar *known = g_hash_table_lookup (r->query, "v");
+	GString *json = NULL;
+	gchar *version = NULL;
+	gint i;
+
+	for (i = 0; i < WAIT_SECONDS * 2 && !is_stopped (s); i++) {
+		if (json != NULL) {
+			g_string_free (json, TRUE);
+			g_free (version);
+		}
+		json = build_listing (s);
+		version = g_compute_checksum_for_string (G_CHECKSUM_MD5, json->str, -1);
+		if (known == NULL || strcmp (known, version) != 0) {
+			break;
+		}
+		touch_activity (s);   /* eine verbundene App zählt als Aktivität */
+		g_usleep (500 * 1000);
+	}
+	if (json == NULL) {
+		return;
+	}
+	{
+		GString *body = g_string_new ("{\"v\":\"");
+
+		g_string_append (body, version);
+		g_string_append (body, "\",\"files\":");
+		g_string_append (body, json->str);
+		g_string_append_c (body, '}');
+		send_text (out, 200, "OK", "application/json; charset=utf-8", body->str, NULL);
+		g_string_free (body, TRUE);
+	}
+	g_string_free (json, TRUE);
+	g_free (version);
+}
+
+/* Sendet die geöffnete Datei @fd (Größe aus @st) und schließt sie. */
+static void
+stream_fd (NolphinPhoneServer *s, GOutputStream *out, gint fd, const GStatBuf *st,
+	   const gchar *content_type, const gchar *extra)
+{
+	gchar *buf;
+
+	send_head (out, 200, "OK", content_type, (goffset) st->st_size, extra);
+	buf = g_malloc (IO_BUFFER);
+	while (!is_stopped (s)) {
+		gssize n = read (fd, buf, IO_BUFFER);
+
+		if (n < 0 && errno == EINTR) {
+			continue;
+		}
+		if (n <= 0 || !g_output_stream_write_all (out, buf, (gsize) n, NULL, NULL, NULL)) {
+			break;
+		}
+		touch_activity (s);
+	}
+	g_free (buf);
+	close (fd);
+}
+
+/* Ort der Handy-App (APK): NOLPHIN_PHONE_APK (Tests) oder ein Datenverzeichnis des Systems. */
+static gchar *
+find_apk (void)
+{
+	const gchar *env = g_getenv ("NOLPHIN_PHONE_APK");
+	const gchar * const *dirs;
+	gchar *path;
+
+	if (env != NULL && g_file_test (env, G_FILE_TEST_IS_REGULAR)) {
+		return g_strdup (env);
+	}
+	path = g_build_filename (g_get_user_data_dir (), "nolphin", "phone", "nolphin-handy.apk", NULL);
+	if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
+		return path;
+	}
+	g_free (path);
+#ifdef NOLPHIN_DATADIR
+	path = g_build_filename (NOLPHIN_DATADIR, "phone", "nolphin-handy.apk", NULL);
+	if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
+		return path;
+	}
+	g_free (path);
+#endif
+	for (dirs = g_get_system_data_dirs (); *dirs != NULL; dirs++) {
+		path = g_build_filename (*dirs, "nolphin", "phone", "nolphin-handy.apk", NULL);
+		if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
+			return path;
+		}
+		g_free (path);
+	}
+	return NULL;
+}
+
+static void
+handle_apk (NolphinPhoneServer *s, GOutputStream *out)
+{
+	gchar *path = find_apk ();
+	GStatBuf st;
+	gint fd;
+
+	fd = path != NULL ? g_open (path, O_RDONLY | O_CLOEXEC, 0) : -1;
+	g_free (path);
+	if (fd < 0 || fstat (fd, &st) != 0 || !S_ISREG (st.st_mode)) {
+		if (fd >= 0) {
+			close (fd);
+		}
+		send_error (out, 404, "Not Found", "404");
+		return;
+	}
+	stream_fd (s, out, fd, &st, "application/vnd.android.package-archive",
+		   "Content-Disposition: attachment; filename=\"nolphin-handy.apk\"\r\n");
 }
 
 static void
@@ -502,7 +658,6 @@ handle_download (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 	gchar *safe, *path, *escaped, *extra;
 	GStatBuf st;
 	gint fd;
-	gchar *buf;
 
 	if (s->share_path == NULL || name == NULL) {
 		send_error (out, 404, "Not Found", "404");
@@ -528,24 +683,9 @@ handle_download (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 	}
 	escaped = g_uri_escape_string (name, NULL, FALSE);
 	extra = g_strdup_printf ("Content-Disposition: attachment; filename=\"download\"; filename*=UTF-8''%s\r\n", escaped);
-	send_head (out, 200, "OK", "application/octet-stream", (goffset) st.st_size, extra);
+	stream_fd (s, out, fd, &st, "application/octet-stream", extra);
 	g_free (escaped);
 	g_free (extra);
-
-	buf = g_malloc (IO_BUFFER);
-	while (!is_stopped (s)) {
-		gssize n = read (fd, buf, IO_BUFFER);
-
-		if (n < 0 && errno == EINTR) {
-			continue;
-		}
-		if (n <= 0 || !g_output_stream_write_all (out, buf, (gsize) n, NULL, NULL, NULL)) {
-			break;
-		}
-		touch_activity (s);
-	}
-	g_free (buf);
-	close (fd);
 }
 
 /* --- Upload ----------------------------------------------------------------------- */
@@ -753,6 +893,10 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 		handle_index (s, out);
 	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/ls") == 0) {
 		handle_list (s, out);
+	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/wait") == 0) {
+		handle_wait (s, &req, out);
+	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/apk") == 0) {
+		handle_apk (s, out);
 	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/dl") == 0) {
 		handle_download (s, &req, out);
 	} else if (strcmp (req.method, "POST") == 0 && strcmp (req.path, "/up") == 0) {

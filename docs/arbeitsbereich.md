@@ -44,7 +44,7 @@
 | Versionen | Bearbeiten ▸ Werkzeuge ▸ Versionen | Versionen einer Datei speichern, vergleichen, wiederherstellen |
 | Synchronisation | Bearbeiten ▸ Werkzeuge | Zwei Ordner vergleichen und abgleichen |
 | Regeln | Bearbeiten ▸ Werkzeuge | Bedingung und Aktion mit Vorschau auf einen Ordner anwenden |
-| Handy-Austausch | Seitenleiste „Handy“, Datei ▸ Handy-Austausch | QR-Code, Link und Liste der vom Handy empfangenen Dateien; Dateien aufs Handy per Ziehen auf „Handy“ oder Rechtsklick ▸ An Handy senden |
+| Handy-Austausch | Seitenleiste „Handy“, Datei ▸ Handy-Austausch | QR-Code, Link und Liste der vom Handy empfangenen Dateien; Dateien aufs Handy per Ziehen auf „Handy“ oder Rechtsklick ▸ An Handy senden; mit der Handy-App kommen sie dort von selbst an |
 | GID-Projekt | Seitenleiste „GID-Projekte“, Gehe zu ▸ GID-Projekte | `README.md` des gewählten Projekts im Aussehen von GitHub |
 
 Ein Panel wird im Arbeitsbereich wiederverwendet und öffnet kein zusätzliches Fenster. Klassische Dialoge gibt es weiterhin für Dateiauswahl, Lösch- und Überschreibbestätigungen, Fehlermeldungen, Mount-Zugangsdaten und „Über Nolphin“.

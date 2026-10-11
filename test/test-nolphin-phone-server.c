@@ -113,6 +113,18 @@ dir_is_empty (const gchar *path)
 	return empty;
 }
 
+/* legt kurz nach dem Aufruf eine Datei im Freigabeordner an */
+static gpointer
+write_later (gpointer share_dir)
+{
+	gchar *path = g_build_filename ((const gchar *) share_dir, "spaeter.txt", NULL);
+
+	g_usleep (300 * 1000);
+	g_file_set_contents (path, "spaeter", -1, NULL);
+	g_free (path);
+	return NULL;
+}
+
 static void
 test_sanitize (void)
 {
@@ -371,10 +383,24 @@ run_tests (gpointer unused)
 		}
 	}
 
+	/* Dateien im Schreiben (frisch geändert) erscheinen erst nach ein paar Sekunden */
+	{
+		gchar *fresh = g_build_filename (share, "frisch.txt", NULL);
+
+		g_file_set_contents (fresh, "x", -1, NULL);
+		g_free (fresh);
+	}
+	target = g_strdup_printf ("/ls?%s", token_q);
+	r = get (port, target);
+	check (status_of (r) == 200 && strstr (r, "frisch.txt") == NULL, "frisch geschriebene Datei ist noch nicht in der Liste");
+	g_free (r);
+	g_free (target);
+	g_usleep (3500 * 1000);
+
 	/* Freigabeordner */
 	target = g_strdup_printf ("/ls?%s", token_q);
 	r = get (port, target);
-	check (status_of (r) == 200 && strstr (r, "a.txt") != NULL, "Liste enthält a.txt");
+	check (status_of (r) == 200 && strstr (r, "a.txt") != NULL && strstr (r, "frisch.txt") != NULL, "Liste enthält a.txt und die gealterte Datei");
 	check (strstr (r, "link") == NULL && strstr (r, "versteckt") == NULL, "Liste ohne Symlink und versteckte Datei");
 	g_free (r);
 	g_free (target);
@@ -397,6 +423,58 @@ run_tests (gpointer unused)
 			g_free (target);
 			g_free (msg);
 		}
+	}
+
+	/* Wartepunkt der App: sofort mit Stand, bei bekanntem Stand erst bei Änderung */
+	{
+		gchar *version, *q;
+		gint64 t0;
+		GThread *writer;
+
+		target = g_strdup_printf ("/wait?%s", token_q);
+		r = get (port, target);
+		check (status_of (r) == 200 && strstr (r, "\"v\":\"") != NULL && strstr (r, "a.txt") != NULL, "wait ohne Stand antwortet sofort mit Stand und Liste");
+		q = r != NULL ? strstr (r, "\"v\":\"") : NULL;
+		version = q != NULL ? g_strndup (q + 5, 32) : g_strdup ("");
+		g_free (r);
+		g_free (target);
+
+		target = g_strdup_printf ("/wait?%s&v=%s", token_q, version);
+		writer = g_thread_new ("writer", write_later, share);
+		t0 = g_get_monotonic_time ();
+		r = get (port, target);
+		check (status_of (r) == 200 && strstr (r, "spaeter.txt") != NULL, "wait mit Stand antwortet, sobald eine neue Datei da ist");
+		check (g_get_monotonic_time () - t0 < 15 * G_USEC_PER_SEC, "wait wartet nicht bis zum Ablauf");
+		g_thread_join (writer);
+		g_free (r);
+		g_free (target);
+		g_free (version);
+	}
+
+	/* App-Datei (APK) */
+	target = g_strdup_printf ("/apk?%s", token_q);
+	g_unsetenv ("NOLPHIN_PHONE_APK");
+	r = get (port, target);
+	check (status_of (r) == 404 || status_of (r) == 200, "apk ohne Datei: 404 (oder vorhandene App)");
+	g_free (r);
+	{
+		gchar *apk = g_build_filename (root, "test.apk", NULL);
+
+		g_file_set_contents (apk, "PK-test-apk", -1, NULL);
+		g_setenv ("NOLPHIN_PHONE_APK", apk, TRUE);
+		r = get (port, target);
+		check (status_of (r) == 200 && strstr (r, "application/vnd.android.package-archive") != NULL &&
+		       g_str_has_suffix (r, "PK-test-apk"), "apk mit Datei: Inhalt und Typ");
+		g_free (r);
+		g_free (apk);
+		g_unsetenv ("NOLPHIN_PHONE_APK");
+	}
+	g_free (target);
+	{
+		gchar *noauth = get (port, "/apk");
+
+		check (status_of (noauth) == 403, "apk ohne Schlüssel: 403");
+		g_free (noauth);
 	}
 
 	/* Meldungen über empfangene Dateien */
