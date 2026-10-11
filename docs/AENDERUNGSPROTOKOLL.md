@@ -145,6 +145,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Der Benutzer will mit einem Handgriff verbinden; die zusätzlichen Knöpfe waren nicht verlangt.
 - TEST: `android/test.sh` 163 von 163; Emulator: Startseite (ein Knopf), Scanner (keine Knöpfe, Hinweis oben), verbunden (Status und zwei Knöpfe), kein Absturz. **Nicht geprüft: der Fokus am echten Handy** (im Emulator nicht nachstellbar).
 
+## Handy-App 2.0: eigene Oberfläche mit fünf Funktionen
+- REQUIREMENT: Richtige App statt Browser, Dateien in beide Richtungen (Benutzer, 11. Oktober 2026; Variante „ohne Bibliotheken, eigenes Design“ freigegeben).
+- DATEI: `android/src/org/nolphin/handy/` (`MainActivity`, `Host`, `Screen`, `HomeScreen`, `FromPcScreen`, `ToPcScreen`, `HistoryScreen`, `SettingsScreen`, `Ui`, `Thumbs`, `Store`, `RemoteFile`, `SyncService`, `Conn`), `android/res/`, `AndroidManifest.xml`, `android/build.sh`, `android/README.md`.
+- ÄNDERUNG: Start, Vom PC (mit Vorschau), Zum PC (Fotoraster, Fortschritt), Verlauf, Einstellungen; Symbol, hell/dunkel; neue Berechtigung Fotos (`READ_MEDIA_IMAGES`); Version 2.0.
+- WARUM: Wunsch des Benutzers nach einer richtigen App.
+- TEST: `android/test.sh` 163 von 163; Emulator (Android 14) gegen den echten Server: Startseite getrennt und verbunden, Liste, Laden einer Datei, Fotoraster, Senden eines Fotos (liegt im Eingangsordner), Verlauf, Einstellungen, Dunkelmodus, kein Absturz. Nicht geprüft: neue Oberfläche am echten Handy, Berechtigungsdialog, Vorschaubilder echter Dateien, Scanner-Optik (unverändert).
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.
