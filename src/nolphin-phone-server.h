@@ -58,6 +58,8 @@ gboolean     nolphin_phone_server_rotate_token      (NolphinPhoneServer *server,
 						     GError            **error);
 /* g_get_monotonic_time () der letzten gültigen Anfrage (oder des Starts). */
 gint64       nolphin_phone_server_get_last_activity (NolphinPhoneServer *server);
+/* g_get_monotonic_time () der letzten Anfrage der Handy-App am Wartepunkt (/wait) oder 0, wenn noch keine kam. */
+gint64       nolphin_phone_server_get_last_app      (NolphinPhoneServer *server);
 /* Beendet den Server; @received wird danach nicht mehr aufgerufen. */
 void         nolphin_phone_server_stop              (NolphinPhoneServer *server);
 

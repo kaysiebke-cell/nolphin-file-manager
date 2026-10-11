@@ -32,6 +32,28 @@ setting_int (const gchar *key, gint fallback)
 
 enum { COL_TIME, COL_NAME, COL_SIZE, COL_N };
 
+/* Laufende Austausch-Server (einer je Fenster); nur im Hauptthread verwendet. */
+static GSList *live_servers = NULL;
+
+/* Die App fragt am Wartepunkt alle 20 Sekunden an; bleibt das länger als 45 Sekunden aus, gilt sie als getrennt. */
+#define APP_CONNECTED_SECONDS 45
+
+gboolean
+nolphin_phone_is_connected (void)
+{
+	GSList *l;
+	gint64 now = g_get_monotonic_time ();
+
+	for (l = live_servers; l != NULL; l = l->next) {
+		gint64 seen = nolphin_phone_server_get_last_app (l->data);
+
+		if (seen != 0 && (now - seen) / G_USEC_PER_SEC <= APP_CONNECTED_SECONDS) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 /* --- Feste Ordner ---------------------------------------------------------------------
  * ~/Handy: alle Dateien darin kann das Handy laden.
  * ~/Handy/Vom Handy: hierhin kommen Dateien vom Handy (Unterordner werden nicht angeboten). */
@@ -337,6 +359,7 @@ phone_stop (PhonePage *d, const gchar *status)
 		d->timeout_id = 0;
 	}
 	if (d->server != NULL) {
+		live_servers = g_slist_remove (live_servers, d->server);
 		nolphin_phone_server_stop (d->server);
 		d->server = NULL;
 	}
@@ -491,6 +514,7 @@ phone_start (PhonePage *d)
 	}
 	g_free (d->address);
 	d->address = address;
+	live_servers = g_slist_prepend (live_servers, d->server);
 	session_save (d->address, d->server);
 	phone_refresh_url (d);
 	gtk_label_set_text (GTK_LABEL (d->status),
@@ -553,6 +577,7 @@ phone_page_free (gpointer data)
 		g_source_remove (d->timeout_id);
 	}
 	if (d->server != NULL) {
+		live_servers = g_slist_remove (live_servers, d->server);
 		nolphin_phone_server_stop (d->server);
 	}
 	d->shared->page = NULL;

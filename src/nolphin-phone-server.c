@@ -45,6 +45,7 @@ struct _NolphinPhoneServer {
 	GDestroyNotify           user_data_free;
 	gint                     stopped;       /* atomar */
 	gint                     last_activity; /* atomar, g_get_monotonic_time () / 1e6 */
+	gint                     last_app;      /* atomar, wie last_activity, aber nur vom Wartepunkt der App (0 = nie) */
 };
 
 typedef struct {
@@ -77,6 +78,12 @@ static void
 touch_activity (NolphinPhoneServer *s)
 {
 	g_atomic_int_set (&s->last_activity, (gint) (g_get_monotonic_time () / G_USEC_PER_SEC));
+}
+
+static void
+touch_app (NolphinPhoneServer *s)
+{
+	g_atomic_int_set (&s->last_app, (gint) (g_get_monotonic_time () / G_USEC_PER_SEC));
 }
 
 static gboolean
@@ -734,6 +741,7 @@ handle_wait (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 			break;
 		}
 		touch_activity (s);   /* eine verbundene App zählt als Aktivität */
+		touch_app (s);
 		g_usleep (500 * 1000);
 	}
 	if (json == NULL) {
@@ -1248,6 +1256,14 @@ nolphin_phone_server_rotate_token (NolphinPhoneServer *server, GError **error)
 	server->expires = g_get_real_time () / G_USEC_PER_SEC + server->lifetime;
 	g_mutex_unlock (&server->lock);
 	return TRUE;
+}
+
+gint64
+nolphin_phone_server_get_last_app (NolphinPhoneServer *server)
+{
+	gint v = g_atomic_int_get (&server->last_app);
+
+	return v == 0 ? 0 : (gint64) v * G_USEC_PER_SEC;
 }
 
 gint64

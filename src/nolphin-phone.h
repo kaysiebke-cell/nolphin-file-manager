@@ -28,6 +28,9 @@ gchar     *nolphin_phone_outbox_path  (void);
 /* Legt beide Ordner an, falls sie fehlen. */
 gboolean   nolphin_phone_ensure_folders (void);
 
+/* TRUE, solange eine Handy-App am laufenden Austausch angemeldet ist (Anfrage in den letzten Sekunden). */
+gboolean   nolphin_phone_is_connected (void);
+
 G_END_DECLS
 
 #endif /* NOLPHIN_PHONE_H */
