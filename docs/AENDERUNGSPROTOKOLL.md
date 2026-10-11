@@ -124,6 +124,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Verstöße gegen die Abschnitte 11.1 und 31.
 - TEST: `meson test` (26 von 26, darunter neue Prüfungen für eigene Gültigkeit und Dateigrenze). Echte Anwendung (Xephyr, eigener D-Bus): Menü zeigt alle vier Einträge; ohne laufenden Austausch sind die letzten drei ausgegraut; Öffnen, Neuer QR-Code (Statusmeldung) und Beenden (Knopf wieder „Starten“, Einträge wieder ausgegraut) über das Menü; „An Handy senden“ bei gewähltem Objekt aktiv. Nicht geprüft: Änderung der GSettings-Werte in der laufenden Anwendung, kein Einstellungsdialog für die vier Schlüssel (nur gsettings/dconf).
 
+## Freigaben und Signaturpasswort (Entscheidung des Benutzers vom 11. Oktober 2026)
+- REQUIREMENT: Abschnitte 3, 50.1 und 53.4.
+- DATEI: `android/build.sh`, `android/README.md`, `docs/DEPENDENCIES.md`, Vertragsabschnitte 61.7 und 61.8.
+- ÄNDERUNG: Freigegeben: Android-Werkzeuge (JDK, Android SDK, `secret-tool`), Vertragsabschnitte 61.7 und 61.8, Verzeichnis `android/`, Handy-Panel. Das Passwort des Signaturschlüssels wird im Systemschlüsselbund abgelegt (`secret-tool`); die frühere Klartextdatei wird übernommen und mit `shred` gelöscht; Passwörter laufen über Umgebungsvariablen, nie über die Kommandozeile.
+- WARUM: Abschnitt 53.4 (keine Passwörter im Klartext) und 50.1 (Werkzeuge nur nach Freigabe).
+- TEST: Skript mit `bash -n` geprüft; der Lauf mit `secret-tool` steht aus, weil das Paket `libsecret-tools` noch nicht installiert ist.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.
