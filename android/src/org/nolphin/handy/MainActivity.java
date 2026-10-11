@@ -26,6 +26,7 @@ public class MainActivity extends Activity {
     private TextView statusView;
     private TextView logView;
     private EditText linkField;
+    private Button scanButton, sendButton, allButton, disconnectButton, pasteButton, linkButton;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable refresh = new Runnable() {
         @Override
@@ -113,42 +114,16 @@ public class MainActivity extends Activity {
         statusView.setPadding(0, dp(12), 0, dp(12));
         box.addView(statusView);
 
-        box.addView(button("QR-Code scannen", new View.OnClickListener() {
+        scanButton = button("QR-Code scannen", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startActivity(new Intent(MainActivity.this, ScanActivity.class));
             }
-        }));
-        box.addView(button("Dateien an den PC senden …", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!Conn.connected(MainActivity.this)) {
-                    Toast.makeText(MainActivity.this, "Erst den QR-Code vom PC scannen", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                pick.addCategory(Intent.CATEGORY_OPENABLE);
-                pick.setType("*/*");
-                pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                startActivityForResult(pick, PICK_FILES);
-            }
-        }));
-        box.addView(button("Alle Dateien vom PC laden", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startSync(SyncService.ACTION_ALL);
-            }
-        }));
-        box.addView(button("Verbindung trennen", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Conn.clear(MainActivity.this);
-                startSync(SyncService.ACTION_STOP);
-                update();
-            }
-        }));
+        });
+        box.addView(scanButton);
 
-        box.addView(button("Link aus der Zwischenablage einfügen", new View.OnClickListener() {
+        // Nur wenn nicht verbunden: der Link als Ersatz für den QR-Code
+        pasteButton = button("Link aus der Zwischenablage einfügen", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 ClipboardManager cm = getSystemService(ClipboardManager.class);
@@ -162,13 +137,13 @@ public class MainActivity extends Activity {
                     Toast.makeText(MainActivity.this, "In der Zwischenablage ist kein Nolphin-Link", Toast.LENGTH_LONG).show();
                 }
             }
-        }));
-
+        });
+        box.addView(pasteButton);
         linkField = new EditText(this);
         linkField.setHint("oder Link hier eintippen");
         linkField.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
         box.addView(linkField);
-        box.addView(button("Mit Link verbinden", new View.OnClickListener() {
+        linkButton = button("Mit Link verbinden", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (Conn.parse(MainActivity.this, linkField.getText().toString())) {
@@ -178,7 +153,37 @@ public class MainActivity extends Activity {
                     Toast.makeText(MainActivity.this, "Ungültiger Link", Toast.LENGTH_LONG).show();
                 }
             }
-        }));
+        });
+        box.addView(linkButton);
+
+        // Nur wenn verbunden
+        sendButton = button("Dateien an den PC senden …", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType("*/*");
+                pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                startActivityForResult(pick, PICK_FILES);
+            }
+        });
+        box.addView(sendButton);
+        allButton = button("Alle Dateien vom PC laden", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startSync(SyncService.ACTION_ALL);
+            }
+        });
+        box.addView(allButton);
+        disconnectButton = button("Verbindung trennen", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Conn.clear(MainActivity.this);
+                startSync(SyncService.ACTION_STOP);
+                update();
+            }
+        });
+        box.addView(disconnectButton);
 
         logView = new TextView(this);
         logView.setTextSize(13);
@@ -190,11 +195,31 @@ public class MainActivity extends Activity {
         setContentView(scroll);
     }
 
+    /** Zeigt nur, was im jeweiligen Zustand Sinn ergibt. */
     private void update() {
-        String host = Conn.host(this);
-        statusView.setText(host == null
-                ? "Nicht verbunden.\nTippe auf „QR-Code scannen“ und richte die Kamera auf den QR-Code am PC (Nolphin, Seitenleiste „Handy“)."
-                : SyncService.status + "\nPC: " + host);
+        boolean connected = Conn.connected(this);
+        if (connected) {
+            String st = SyncService.status;
+            // "Nicht verbunden" gilt kurz nach dem Verbinden, bevor der Dienst läuft
+            if (st.startsWith("Nicht verbunden")) {
+                st = "Verbinde mit dem PC …";
+            }
+            statusView.setText(st.contains(Conn.host(this)) ? st : st + "\nPC: " + Conn.host(this));
+        } else {
+            statusView.setText("Nicht mit einem PC verbunden.\n"
+                    + "Öffne am PC in Nolphin die Seitenleiste „Handy“, tippe hier auf „QR-Code scannen“ "
+                    + "und richte die Kamera auf den Code.");
+        }
+        scanButton.setText(connected ? "Neu verbinden (QR-Code scannen)" : "QR-Code scannen");
+        int whenConnected = connected ? View.VISIBLE : View.GONE;
+        int whenNot = connected ? View.GONE : View.VISIBLE;
+        sendButton.setVisibility(whenConnected);
+        allButton.setVisibility(whenConnected);
+        disconnectButton.setVisibility(whenConnected);
+        logView.setVisibility(whenConnected);
+        pasteButton.setVisibility(whenNot);
+        linkField.setVisibility(whenNot);
+        linkButton.setVisibility(whenNot);
         logView.setText(SyncService.eventsText());
     }
 

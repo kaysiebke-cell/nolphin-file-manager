@@ -33,6 +33,8 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
 
     private TextureView texture;
     private TextView hint;
+    private TextView diag;
+    private int frames;
     private Camera camera;
     private Camera.Size previewSize;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
@@ -60,6 +62,15 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
         hint.setPadding(24, 24, 24, 24);
         root.addView(hint, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
+
+        diag = new TextView(this);
+        diag.setTextColor(0xFFAAAAAA);
+        diag.setTextSize(12);
+        diag.setGravity(Gravity.CENTER);
+        FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
+        dlp.bottomMargin = 200;
+        root.addView(diag, dlp);
 
         Button cancel = new Button(this);
         cancel.setText("Abbrechen");
@@ -110,7 +121,9 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
             if (focus != null && focus.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
                 p.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
             }
+            p.setPreviewFormat(android.graphics.ImageFormat.NV21);
             camera.setParameters(p);
+            previewSize = camera.getParameters().getPreviewSize();   // was die Kamera wirklich liefert
             camera.setDisplayOrientation(displayOrientation());
             camera.setPreviewTexture(surface);
             camera.setPreviewCallback(this);
@@ -187,14 +200,28 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
             return;   // läuft noch ein Lesevorgang: dieses Bild überspringen
         }
         final int w = previewSize.width, h = previewSize.height;
+        if (data.length < w * h) {
+            busy.set(false);
+            return;
+        }
         // NV21: die ersten w*h Bytes sind die Helligkeit, also schon ein Graustufenbild
         final byte[] gray = Arrays.copyOf(data, w * h);
         worker.execute(new Runnable() {
             @Override
             public void run() {
                 try {
+                    final long t0 = System.nanoTime();
                     final String text = QrDecoder.decode(gray, w, h);
+                    final long ms = (System.nanoTime() - t0) / 1000000;
                     final int seen = QrDecoder.lastFinderCount;
+                    frames++;
+                    final int count = frames;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            diag.setText("Kamerabild " + w + "×" + h + " · gelesen: " + count + " · Suchmuster: " + seen + " · " + ms + " ms");
+                        }
+                    });
                     if (text == null) {
                         runOnUiThread(new Runnable() {
                             @Override

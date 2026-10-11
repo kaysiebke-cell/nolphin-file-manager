@@ -284,30 +284,55 @@ public class SyncService extends Service {
         }
         for (Uri u : uris) {
             String name = displayName(u);
-            long size = sizeOf(u);
+            java.io.File temp = null;
             try {
+                // Immer erst zwischenspeichern: Anbieter nennen die Größe oft falsch oder gar nicht
+                // (zum Beispiel die Galerie von MIUI), der Server braucht aber die genaue Länge.
+                temp = java.io.File.createTempFile("senden", ".tmp", getCacheDir());
+                try (InputStream src = getContentResolver().openInputStream(u); OutputStream dst = new java.io.FileOutputStream(temp)) {
+                    if (src == null) {
+                        throw new IOException("Datei nicht lesbar");
+                    }
+                    copy(src, dst);
+                }
+                long size = temp.length();
+                InputStream in = new java.io.FileInputStream(temp);
                 URL url = new URL("http://" + host + "/up?t=" + Uri.encode(token) + "&n=" + Uri.encode(name));
                 HttpURLConnection c = (HttpURLConnection) url.openConnection();
                 c.setConnectTimeout(8000);
-                c.setReadTimeout(60000);
+                c.setReadTimeout(120000);
                 c.setRequestMethod("POST");
                 c.setDoOutput(true);
-                if (size < 0) {
-                    throw new IOException("Größe unbekannt");
-                }
                 c.setFixedLengthStreamingMode(size);
-                try (InputStream in = getContentResolver().openInputStream(u); OutputStream out = c.getOutputStream()) {
-                    copy(in, out);
+                long sent = 0;
+                try (InputStream src = in; OutputStream out = c.getOutputStream()) {
+                    byte[] buf = new byte[64 * 1024];
+                    int n;
+                    while ((n = src.read(buf)) > 0) {
+                        out.write(buf, 0, n);
+                        sent += n;
+                    }
+                }
+                if (sent != size) {
+                    throw new IOException("Größe stimmt nicht (" + sent + " statt " + size + " Bytes)");
                 }
                 int code = c.getResponseCode();
                 c.disconnect();
                 if (code == 200) {
                     notifyFile("An den PC gesendet", name);
+                } else if (code == 403) {
+                    notifyFile("Senden fehlgeschlagen", name + ": Schlüssel abgelaufen, QR-Code neu scannen");
                 } else {
-                    notifyFile("Senden fehlgeschlagen (" + code + ")", name);
+                    notifyFile("Senden fehlgeschlagen", name + ": PC antwortet mit Fehler " + code);
                 }
             } catch (Exception e) {
-                notifyFile("Senden fehlgeschlagen", name);
+                // Den Grund nennen, damit sich der Fehler eingrenzen lässt
+                notifyFile("Senden fehlgeschlagen", name + ": " + e.getClass().getSimpleName()
+                        + (e.getMessage() != null ? " (" + e.getMessage() + ")" : ""));
+            } finally {
+                if (temp != null) {
+                    temp.delete();
+                }
             }
         }
     }
@@ -324,16 +349,6 @@ public class SyncService extends Service {
             name = u.getLastPathSegment();
         }
         return name != null ? name : "Datei";
-    }
-
-    private long sizeOf(Uri u) {
-        try (Cursor cur = getContentResolver().query(u, new String[] { OpenableColumns.SIZE }, null, null, null)) {
-            if (cur != null && cur.moveToFirst() && !cur.isNull(0)) {
-                return cur.getLong(0);
-            }
-        } catch (Exception ignored) {
-        }
-        return -1;
     }
 
     // ---- Hilfen ----------------------------------------------------------------------------

@@ -68,6 +68,8 @@ Beide Wege **kopieren**. Das Original bleibt, wo es ist. Mit der App kommt die D
 | „Kein lokales Netzwerk gefunden“ | Der PC ist mit keinem WLAN oder LAN verbunden. Verbinden Sie ihn und klicken Sie erneut auf **Handy**. |
 | Die Seite öffnet sich am Handy nicht | Eine Firewall am PC blockiert die Verbindung, oder das WLAN trennt die Geräte voneinander (zum Beispiel ein Gast-WLAN). |
 | Die Kamera erkennt den Code nicht | Link kopieren und im Browser des Handys eintippen. |
+| Der Scanner liest den Code nicht | Unten im Scanner steht eine Zeile mit der Kameragröße, der Zahl der gelesenen Bilder und der Zahl der gefundenen Suchmuster. „Suchmuster: 3“ heißt, der Scanner sieht den Code, kann ihn aber nicht lesen: etwas näher oder weiter weg gehen und ruhig halten. Bei 0 bis 2 sieht er den Code nicht: den ganzen Code ins Bild nehmen, Spiegelungen auf dem Bildschirm vermeiden. Als Ausweg den Link kopieren und in der App einfügen. |
+| Das Senden vom Handy schlägt fehl | Die App nennt den Grund in ihrem Protokoll („Schlüssel abgelaufen“, „PC antwortet mit Fehler …“ oder die Art des Fehlers). Nach einem Neustart von Nolphin am PC den QR-Code neu scannen. |
 | Der Upload bricht ab | Prüfen Sie, ob Platz im Ordner `Vom Handy` ist. Einzelne Dateien dürfen höchstens 2 GiB groß sein. |
 | Der PC hat mehrere Netzwerke | Dann erscheint im Panel eine Auswahl der Netzwerkadresse. Wählen Sie die des WLANs, in dem das Handy ist. |
 
