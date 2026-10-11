@@ -406,14 +406,14 @@ send_error (GOutputStream *out, gint status, const gchar *reason, const gchar *m
 "x.send(file);}" \
 "function list(){if(d.share!=='1'){document.getElementById('dlbox').hidden=true;return;}" \
 "fetch('/ls?t='+q).then(function(r){return r.json();}).then(function(items){" \
-"var ul=document.getElementById('dl');ul.textContent='';" \
+"var ul=document.getElementById('dl'),sig=JSON.stringify(items);if(ul.dataset.sig===sig)return;ul.dataset.sig=sig;ul.textContent='';" \
 "if(!items.length)add(ul,d.nofiles);" \
 "items.forEach(function(f){var e=add(ul,'');var a=document.createElement('a');" \
 "a.href='/dl?t='+q+'&n='+encodeURIComponent(f.n);a.textContent=f.n+' ('+size(f.s)+')';e.appendChild(a);});" \
 "}).catch(function(){});}" \
 "document.getElementById('f').onchange=function(){var files=Array.prototype.slice.call(this.files),i=0;this.value='';" \
 "(function next(){if(i<files.length)send(files[i++],next);})();};" \
-"list();})();" \
+"list();setInterval(list,4000);})();" \
 "</script></body></html>"
 
 static gchar *

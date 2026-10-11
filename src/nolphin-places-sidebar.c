@@ -62,6 +62,7 @@
 #include "nolphin-places-sidebar.h"
 #include "nolphin-window.h"
 #include "nolphin-workspace-panel.h"
+#include "nolphin-phone.h"
 #include "nolphin-window-slot.h"
 #include "nolphin-workspace-panel.h"
 
@@ -188,10 +189,7 @@ enum {
 	PLACES_SIDEBAR_COLUMN_COUNT
 };
 
-typedef /* Kennung des Seitenleisten-Eintrags "Handy" (kein echter Ort) */
-#define NOLPHIN_PHONE_URI "x-nolphin-phone:///"
-
-enum {
+typedef enum {
 	PLACES_BUILT_IN,
 	PLACES_XDG_DIR,
 	PLACES_MOUNTED_VOLUME,
@@ -212,6 +210,32 @@ enum {
     POSITION_MIDDLE,
     POSITION_LOWER
 };
+
+/* URI des Ausgangsordners "~/Handy/Zum Handy" (legt die Ordner an) oder NULL. */
+static gchar *
+phone_outbox_uri (void)
+{
+    gchar *path, *uri = NULL;
+
+    if (!nolphin_phone_ensure_folders ()) {
+        return NULL;
+    }
+    path = nolphin_phone_outbox_path ();
+    uri = g_filename_to_uri (path, NULL, NULL);
+    g_free (path);
+    return uri;
+}
+
+static gboolean
+is_phone_uri (const gchar *uri)
+{
+    gchar *phone = uri != NULL ? phone_outbox_uri () : NULL;
+    gboolean same = phone != NULL && strcmp (uri, phone) == 0;
+
+    g_free (phone);
+    return same;
+}
+
 
 static void  open_selected_bookmark                    (NolphinPlacesSidebar        *sidebar,
 							GtkTreeModel                 *model,
@@ -916,19 +940,25 @@ update_places (NolphinPlacesSidebar *sidebar)
         sidebar->bottom_bookend_uri = g_strdup (mount_uri);
     }
 
-    /* Handy-Austausch: kein Ordner, öffnet das Panel (siehe open_selected_bookmark) */
+    /* Handy: Der Eintrag zeigt auf den Ausgangsordner "~/Handy/Zum Handy". Dateien, die
+     * man darauf zieht, werden dorthin kopiert und kann das Handy laden. Ein Klick öffnet
+     * stattdessen den Handy-Austausch (siehe open_selected_bookmark). */
     {
         GtkIconTheme *theme = gtk_icon_theme_get_default ();
         const gchar *phone_icon = gtk_icon_theme_has_icon (theme, "phone-symbolic") ? "phone-symbolic" :
                                   gtk_icon_theme_has_icon (theme, "smartphone-symbolic") ? "smartphone-symbolic" :
                                   "network-wireless-symbolic";
+        gchar *phone_uri = phone_outbox_uri ();
 
-        cat_iter = add_place (sidebar, PLACES_BUILT_IN,
-                               SECTION_COMPUTER,
-                               _("Handy"), phone_icon,
-                               NOLPHIN_PHONE_URI, NULL, NULL, NULL, 0,
-                               _("Bilder und Dateien mit dem Handy über das WLAN austauschen"), 0, FALSE,
-                               cat_iter);
+        if (phone_uri != NULL) {
+            cat_iter = add_place (sidebar, PLACES_BUILT_IN,
+                                   SECTION_COMPUTER,
+                                   _("Handy"), phone_icon,
+                                   phone_uri, NULL, NULL, NULL, 0,
+                                   _("Bilder und Dateien mit dem Handy austauschen. Dateien hierher ziehen, um sie aufs Handy zu schicken."), 0, FALSE,
+                                   cat_iter);
+            g_free (phone_uri);
+        }
     }
 
     if (eel_vfs_supports_uri_scheme("trash")) {
@@ -1860,6 +1890,10 @@ drag_motion_callback (GtkTreeView *tree_view,
                                                      &action,
                                                      &sidebar->desktop_dnd_source_fs,
                                                      &sidebar->desktop_dnd_can_delete_source);
+            if (is_phone_uri (uri) && action != 0) {
+                /* aufs Handy wird immer kopiert, nie verschoben */
+                action = GDK_ACTION_COPY;
+            }
             g_free (uri);
 		}
 	}
@@ -2519,7 +2553,7 @@ open_selected_bookmark (NolphinPlacesSidebar *sidebar,
 
 	gtk_tree_model_get (model, iter, PLACES_SIDEBAR_COLUMN_URI, &uri, -1);
 
-	if (uri != NULL && strcmp (uri, NOLPHIN_PHONE_URI) == 0) {
+	if (uri != NULL && is_phone_uri (uri)) {
 		/* kein Ordner: Handy-Austausch im rechten Arbeitsbereich öffnen und starten */
 		nolphin_workspace_panel_show_phone (nolphin_window_get_workspace_panel (sidebar->window),
 						    sidebar->window, TRUE);

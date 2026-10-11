@@ -22,7 +22,7 @@ Der Arbeitsbereich zeigt in Ruhe die **Vorschau** der gewählten Datei. Öffnen 
 - **Git:** Status-Symbole an den Dateien und ein Panel zum Speichern und Abgleichen
 - **Archive:** erstellen, entpacken und im Archiv-Manager direkt ändern
 - **Werkzeuge:** Ordner synchronisieren, Regeln anwenden, Duplikate finden, Versionen sichern, Massenumbenennung
-- **Handy-Austausch:** Bilder und Dateien über das WLAN tauschen, ein Klick auf „Handy“ und ein QR-Code, ohne App
+- **Handy-Austausch:** Bilder und Dateien in beide Richtungen über das WLAN tauschen, ein Klick auf „Handy“ und ein QR-Code, ohne App
 - **Suche** mit UND, ODER, NICHT und exakten Treffern
 - **Mehrere Bereiche** nebeneinander und speicherbare **Arbeitsbereiche**
 - **Diagnose** mit Fehlerbericht

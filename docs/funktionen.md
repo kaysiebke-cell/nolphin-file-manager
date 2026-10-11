@@ -55,9 +55,9 @@ Die Schlüsselwörter gelten unabhängig von der Groß-/Kleinschreibung; ein Beg
 
 ## Handy-Austausch
 
-* **Einstieg:** Klick auf **Handy** in der Seitenleiste unter „Mein Rechner“ oder Datei ▸ Handy-Austausch. Nolphin startet den Austausch, zeigt den **QR-Code** im Arbeitsbereich und öffnet den Eingangsordner `~/Handy-Eingang` in der Hauptansicht.
-* **Ablauf:** Das Handy scannt den Code und lädt Bilder und Dateien im Browser hoch. Eine App ist nicht nötig; es gibt keine Fremdabhängigkeit.
-* **Downloads:** Dateien eines optionalen Freigabeordners lassen sich im Handy-Browser laden. Eingangs- und Freigabeordner und die Netzwerkadresse stehen eingeklappt unter „Einstellungen“.
+* **Einstieg:** Klick auf **Handy** in der Seitenleiste unter „Mein Rechner“ oder Datei ▸ Handy-Austausch. Nolphin startet den Austausch, zeigt den **QR-Code** im Arbeitsbereich und öffnet den Ordner `~/Handy` in der Hauptansicht. Es gibt nichts einzustellen.
+* **Handy → PC:** Das Handy scannt den Code und lädt Bilder und Dateien im Browser hoch. Sie landen in `~/Handy/Vom Handy`. Eine App ist nicht nötig; es gibt keine Fremdabhängigkeit.
+* **PC → Handy:** Dateien auf **Handy** in der Seitenleiste ziehen oder Rechtsklick ▸ **An Handy senden**. Beides kopiert nach `~/Handy/Zum Handy`; das Handy lädt sie auf der Seite im Browser.
 * **Sicherheit:** Schlüssel im Link, nur Verbindungen aus privaten Netzen, nie überschreiben, Selbstabschaltung nach 15 Minuten ohne Anfrage. Die Verbindung ist nicht verschlüsselt, nur im eigenen WLAN verwenden.
 
 ## GID-Projekte

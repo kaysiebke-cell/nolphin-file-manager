@@ -25,6 +25,48 @@
 
 enum { COL_TIME, COL_NAME, COL_SIZE, COL_N };
 
+/* --- Feste Ordner ---------------------------------------------------------------------
+ * ~/Handy/Vom Handy: hierhin kommen Dateien vom Handy.
+ * ~/Handy/Zum Handy: alles darin kann das Handy laden. */
+
+gchar *
+nolphin_phone_base_path (void)
+{
+	return g_build_filename (g_get_home_dir (), _("Handy"), NULL);
+}
+
+gchar *
+nolphin_phone_inbox_path (void)
+{
+	gchar *base = nolphin_phone_base_path ();
+	gchar *path = g_build_filename (base, _("Vom Handy"), NULL);
+
+	g_free (base);
+	return path;
+}
+
+gchar *
+nolphin_phone_outbox_path (void)
+{
+	gchar *base = nolphin_phone_base_path ();
+	gchar *path = g_build_filename (base, _("Zum Handy"), NULL);
+
+	g_free (base);
+	return path;
+}
+
+gboolean
+nolphin_phone_ensure_folders (void)
+{
+	gchar *in = nolphin_phone_inbox_path ();
+	gchar *out = nolphin_phone_outbox_path ();
+	gboolean ok = g_mkdir_with_parents (in, 0755) == 0 && g_mkdir_with_parents (out, 0755) == 0;
+
+	g_free (in);
+	g_free (out);
+	return ok;
+}
+
 /* Gemeinsamer Zustand zwischen Panel (Hauptthread) und Server (Arbeitsthreads).
  * @page wird nur im Hauptthread gelesen und gesetzt. */
 typedef struct {
@@ -45,11 +87,7 @@ typedef struct {
 	GtkWidget *status;
 	GtkWidget *address_combo;
 	GtkWidget *start_button;
-	GtkWidget *inbox_label;
-	GtkWidget *inbox_button;
-	GtkWidget *share_label;
-	GtkWidget *share_button;
-	GtkWidget *share_clear_button;
+	GtkWidget *address_box;   /* nur sichtbar, wenn der PC mehrere Netzwerkadressen hat */
 	GtkWidget *qr_area;
 	GtkWidget *url_entry;
 	GtkWidget *copy_button;
@@ -150,6 +188,7 @@ phone_refresh_addresses (PhonePage *d)
 		gtk_label_set_text (GTK_LABEL (d->status), _("Gestoppt."));
 	}
 	gtk_widget_set_sensitive (d->start_button, list->len > 0);
+	gtk_widget_set_visible (d->address_box, list->len > 1);
 	g_ptr_array_free (list, TRUE);
 	g_free (previous);
 }
@@ -163,27 +202,8 @@ phone_update_ui (PhonePage *d)
 
 	gtk_button_set_label (GTK_BUTTON (d->start_button), running ? _("Beenden") : _("Starten"));
 	gtk_widget_set_sensitive (d->address_combo, !running);
-	gtk_widget_set_sensitive (d->inbox_button, !running);
-	gtk_widget_set_sensitive (d->share_button, !running);
-	gtk_widget_set_sensitive (d->share_clear_button, !running && d->share != NULL);
 	gtk_widget_set_sensitive (d->copy_button, running);
 	gtk_widget_queue_draw (d->qr_area);
-}
-
-static void
-phone_set_labels (PhonePage *d)
-{
-	gchar *path = g_file_get_path (d->inbox);
-
-	gtk_label_set_text (GTK_LABEL (d->inbox_label), path != NULL ? path : "");
-	g_free (path);
-	if (d->share != NULL) {
-		path = g_file_get_path (d->share);
-		gtk_label_set_text (GTK_LABEL (d->share_label), path != NULL ? path : "");
-		g_free (path);
-	} else {
-		gtk_label_set_text (GTK_LABEL (d->share_label), _("(nichts freigegeben)"));
-	}
 }
 
 static gboolean
@@ -329,6 +349,11 @@ phone_start (PhonePage *d)
 		gtk_label_set_text (GTK_LABEL (d->status), _("Keine Netzwerkadresse ausgewählt."));
 		return;
 	}
+	if (!nolphin_phone_ensure_folders ()) {
+		gtk_label_set_text (GTK_LABEL (d->status), _("Der Ordner „Handy“ im persönlichen Ordner kann nicht angelegt werden."));
+		g_free (address);
+		return;
+	}
 	d->server = nolphin_phone_server_start (address, d->inbox, d->share, on_file_received,
 						shared_ref (d->shared), shared_unref, &error);
 	if (d->server == NULL) {
@@ -365,66 +390,6 @@ on_start_clicked (GtkButton *button, gpointer data)
 	}
 }
 
-static GFile *
-choose_folder (GtkWidget *parent_widget, const gchar *title, GFile *current)
-{
-	GtkWidget *toplevel = gtk_widget_get_toplevel (parent_widget);
-	GtkWidget *chooser = gtk_file_chooser_dialog_new (title, GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
-							  GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-							  _("_Abbrechen"), GTK_RESPONSE_CANCEL,
-							  _("_Auswählen"), GTK_RESPONSE_ACCEPT, NULL);
-	GFile *result = NULL;
-
-	if (current != NULL && g_file_query_exists (current, NULL)) {
-		gtk_file_chooser_set_file (GTK_FILE_CHOOSER (chooser), current, NULL);
-	}
-	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
-		result = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (chooser));
-	}
-	gtk_widget_destroy (chooser);
-	if (result != NULL && g_file_get_path (result) == NULL) {
-		g_clear_object (&result);   /* nur lokale Ordner */
-	}
-	return result;
-}
-
-static void
-on_inbox_choose (GtkButton *button, gpointer data)
-{
-	PhonePage *d = data;
-	GFile *f = choose_folder (GTK_WIDGET (button), _("Eingangsordner wählen"), d->inbox);
-
-	if (f != NULL) {
-		g_object_unref (d->inbox);
-		d->inbox = f;
-		phone_set_labels (d);
-	}
-}
-
-static void
-on_share_choose (GtkButton *button, gpointer data)
-{
-	PhonePage *d = data;
-	GFile *f = choose_folder (GTK_WIDGET (button), _("Freigabeordner wählen"), d->share);
-
-	if (f != NULL) {
-		g_clear_object (&d->share);
-		d->share = f;
-		phone_set_labels (d);
-		phone_update_ui (d);
-	}
-}
-
-static void
-on_share_clear (GtkButton *button, gpointer data)
-{
-	PhonePage *d = data;
-
-	g_clear_object (&d->share);
-	phone_set_labels (d);
-	phone_update_ui (d);
-}
-
 static void
 on_copy_clicked (GtkButton *button, gpointer data)
 {
@@ -452,68 +417,31 @@ phone_page_free (gpointer data)
 	g_free (d);
 }
 
-static GtkWidget *
-folder_row (const gchar *caption, GtkWidget **out_label, GtkWidget **out_button, GtkWidget **out_extra,
-	    GCallback choose_cb, GCallback extra_cb, PhonePage *d)
-{
-	GtkWidget *row = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
-	GtkWidget *line = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-	GtkWidget *cap = gtk_label_new (caption);
-	GtkWidget *label = gtk_label_new ("");
-	GtkWidget *b = gtk_button_new_with_label (_("Wählen …"));
-
-	gtk_widget_set_halign (cap, GTK_ALIGN_START);
-	gtk_label_set_line_wrap (GTK_LABEL (cap), TRUE);
-	gtk_label_set_xalign (GTK_LABEL (cap), 0.0);
-	gtk_style_context_add_class (gtk_widget_get_style_context (cap), "dim-label");
-	gtk_label_set_ellipsize (GTK_LABEL (label), PANGO_ELLIPSIZE_MIDDLE);
-	gtk_label_set_width_chars (GTK_LABEL (label), 8);
-	gtk_widget_set_halign (label, GTK_ALIGN_START);
-	g_signal_connect (b, "clicked", choose_cb, d);
-	gtk_box_pack_start (GTK_BOX (line), label, TRUE, TRUE, 0);
-	gtk_box_pack_start (GTK_BOX (line), b, FALSE, FALSE, 0);
-	if (extra_cb != NULL) {
-		GtkWidget *x = gtk_button_new_from_icon_name ("edit-clear-symbolic", GTK_ICON_SIZE_BUTTON);
-
-		gtk_widget_set_tooltip_text (x, _("Freigabe entfernen"));
-		g_signal_connect (x, "clicked", extra_cb, d);
-		gtk_box_pack_start (GTK_BOX (line), x, FALSE, FALSE, 0);
-		*out_extra = x;
-	}
-	gtk_box_pack_start (GTK_BOX (row), cap, FALSE, FALSE, 0);
-	gtk_box_pack_start (GTK_BOX (row), line, FALSE, FALSE, 0);
-	*out_label = label;
-	*out_button = b;
-	return row;
-}
-
 GtkWidget *
 nolphin_phone_page_new (NolphinWindow *window)
 {
 	PhonePage *d = g_new0 (PhonePage, 1);
-	GtkWidget *outer, *scroller, *intro, *row, *tree, *tree_scroller, *label, *settings, *expander;
+	GtkWidget *outer, *scroller, *row, *tree, *tree_scroller, *label, *hint;
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
-	gchar *default_inbox;
+	gchar *path;
 
 	d->window = window;
 	d->shared = g_new0 (PhoneShared, 1);
 	d->shared->ref_count = 1;
 	d->shared->page = d;
-	default_inbox = g_build_filename (g_get_home_dir (), _("Handy-Eingang"), NULL);
-	d->inbox = g_file_new_for_path (default_inbox);
-	g_free (default_inbox);
+	path = nolphin_phone_inbox_path ();
+	d->inbox = g_file_new_for_path (path);
+	g_free (path);
+	path = nolphin_phone_outbox_path ();
+	d->share = g_file_new_for_path (path);
+	g_free (path);
 	d->store = gtk_list_store_new (COL_N, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
 
 	outer = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
 	gtk_container_set_border_width (GTK_CONTAINER (outer), 12);
 	gtk_box_pack_start (GTK_BOX (outer), nolphin_tools_back_button_new (window), FALSE, FALSE, 0);
 	gtk_box_pack_start (GTK_BOX (outer), nolphin_tools_heading_new (_("Handy-Austausch")), FALSE, FALSE, 0);
-
-	intro = gtk_label_new (_("Der Link enthält einen Schlüssel. Die Verbindung ist nicht verschlüsselt: nur im eigenen WLAN verwenden."));
-	gtk_label_set_line_wrap (GTK_LABEL (intro), TRUE);
-	gtk_label_set_xalign (GTK_LABEL (intro), 0.0);
-	gtk_style_context_add_class (gtk_widget_get_style_context (intro), "dim-label");
 
 	d->status = gtk_label_new ("");
 	gtk_label_set_line_wrap (GTK_LABEL (d->status), TRUE);
@@ -525,20 +453,17 @@ nolphin_phone_page_new (NolphinWindow *window)
 	g_signal_connect (d->start_button, "clicked", G_CALLBACK (on_start_clicked), d);
 	gtk_box_pack_start (GTK_BOX (outer), d->start_button, FALSE, FALSE, 0);
 
-	settings = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
-	gtk_box_pack_start (GTK_BOX (settings),
-			    folder_row (_("Eingangsordner (hierhin kommen Dateien vom Handy)"), &d->inbox_label, &d->inbox_button,
-					NULL, G_CALLBACK (on_inbox_choose), NULL, d), FALSE, FALSE, 0);
-	gtk_box_pack_start (GTK_BOX (settings),
-			    folder_row (_("Freigabeordner (optional, Dateien zum Laden aufs Handy)"), &d->share_label, &d->share_button,
-					&d->share_clear_button, G_CALLBACK (on_share_choose), G_CALLBACK (on_share_clear), d), FALSE, FALSE, 0);
+	/* Netzwerkadresse: nur sichtbar, wenn der PC in mehreren Netzen hängt */
+	d->address_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
+	gtk_widget_set_no_show_all (d->address_box, TRUE);
 	label = gtk_label_new (_("Netzwerkadresse des PCs"));
 	gtk_widget_set_halign (label, GTK_ALIGN_START);
 	gtk_style_context_add_class (gtk_widget_get_style_context (label), "dim-label");
-	gtk_box_pack_start (GTK_BOX (settings), label, FALSE, FALSE, 0);
 	d->address_combo = gtk_combo_box_text_new ();
-	gtk_box_pack_start (GTK_BOX (settings), d->address_combo, FALSE, FALSE, 0);
-	gtk_box_pack_start (GTK_BOX (settings), intro, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (d->address_box), label, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (d->address_box), d->address_combo, FALSE, FALSE, 0);
+	gtk_widget_show_all (d->address_box);
+	gtk_box_pack_start (GTK_BOX (outer), d->address_box, FALSE, FALSE, 0);
 
 	d->qr_area = gtk_drawing_area_new ();
 	gtk_widget_set_size_request (d->qr_area, 240, 240);
@@ -573,21 +498,22 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_tree_view_append_column (GTK_TREE_VIEW (tree), column);
 	tree_scroller = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (tree_scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_widget_set_size_request (tree_scroller, -1, 140);
+	gtk_widget_set_size_request (tree_scroller, -1, 120);
 	gtk_container_add (GTK_CONTAINER (tree_scroller), tree);
 	gtk_box_pack_start (GTK_BOX (outer), tree_scroller, TRUE, TRUE, 0);
 
-	expander = gtk_expander_new (_("Einstellungen"));
-	gtk_expander_set_expanded (GTK_EXPANDER (expander), FALSE);
-	gtk_container_add (GTK_CONTAINER (expander), settings);
-	gtk_box_pack_start (GTK_BOX (outer), expander, FALSE, FALSE, 0);
+	hint = gtk_label_new (_("Aufs Handy: Dateien auf „Handy“ in der Seitenleiste ziehen oder Rechtsklick ▸ An Handy senden. "
+				"Nur im eigenen WLAN, nicht verschlüsselt."));
+	gtk_label_set_line_wrap (GTK_LABEL (hint), TRUE);
+	gtk_label_set_xalign (GTK_LABEL (hint), 0.0);
+	gtk_style_context_add_class (gtk_widget_get_style_context (hint), "dim-label");
+	gtk_box_pack_start (GTK_BOX (outer), hint, FALSE, FALSE, 0);
 
 	scroller = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_container_add (GTK_CONTAINER (scroller), outer);
 	g_object_set_data_full (G_OBJECT (scroller), "phone-data", d, phone_page_free);
 
-	phone_set_labels (d);
 	phone_refresh_addresses (d);
 	phone_update_ui (d);
 	return scroller;
@@ -608,8 +534,13 @@ nolphin_phone_page_open (GtkWidget *page, gboolean autostart)
 	if (d->server == NULL && gtk_combo_box_get_active (GTK_COMBO_BOX (d->address_combo)) >= 0) {
 		phone_start (d);
 	}
-	/* Die Hauptansicht zeigt den Eingangsordner: dort landen die Dateien vom Handy. */
-	if (g_file_query_exists (d->inbox, NULL)) {
-		nolphin_window_go_to (d->window, d->inbox);
+	/* Die Hauptansicht zeigt ~/Handy mit "Vom Handy" und "Zum Handy". */
+	if (nolphin_phone_ensure_folders ()) {
+		gchar *base = nolphin_phone_base_path ();
+		GFile *folder = g_file_new_for_path (base);
+
+		nolphin_window_go_to (d->window, folder);
+		g_object_unref (folder);
+		g_free (base);
 	}
 }

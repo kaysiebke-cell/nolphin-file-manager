@@ -16,6 +16,14 @@ GtkWidget *nolphin_phone_page_new  (NolphinWindow *window);
  * startet bei @autostart den Austausch, falls er noch nicht läuft. */
 void       nolphin_phone_page_open (GtkWidget *page, gboolean autostart);
 
+/* Feste Ordner: ~/Handy mit "Vom Handy" (Eingang) und "Zum Handy" (Ausgang).
+ * Die Pfade sind neu zugewiesen und mit g_free () freizugeben. */
+gchar     *nolphin_phone_base_path    (void);
+gchar     *nolphin_phone_inbox_path   (void);
+gchar     *nolphin_phone_outbox_path  (void);
+/* Legt beide Ordner an, falls sie fehlen. */
+gboolean   nolphin_phone_ensure_folders (void);
+
 G_END_DECLS
 
 #endif /* NOLPHIN_PHONE_H */
