@@ -694,7 +694,7 @@ handle_apk (NolphinPhoneServer *s, GOutputStream *out)
 		if (fd >= 0) {
 			close (fd);
 		}
-		send_error (out, 404, "Not Found", "404");
+		send_error (out, 404, "Not Found", _("Nicht gefunden."));
 		return;
 	}
 	stream_fd (s, out, fd, &st, "application/vnd.android.package-archive",
@@ -710,14 +710,14 @@ handle_download (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 	gint fd;
 
 	if (s->share_path == NULL || name == NULL) {
-		send_error (out, 404, "Not Found", "404");
+		send_error (out, 404, "Not Found", _("Nicht gefunden."));
 		return;
 	}
 	safe = nolphin_phone_sanitize_name (name);
 	/* Der Name muss genau so im Ordner stehen: keine Pfade, keine Änderung durch die Bereinigung. */
 	if (strcmp (safe, name) != 0 || name[0] == '.') {
 		g_free (safe);
-		send_error (out, 404, "Not Found", "404");
+		send_error (out, 404, "Not Found", _("Nicht gefunden."));
 		return;
 	}
 	g_free (safe);
@@ -728,7 +728,7 @@ handle_download (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 		if (fd >= 0) {
 			close (fd);
 		}
-		send_error (out, 404, "Not Found", "404");
+		send_error (out, 404, "Not Found", _("Nicht gefunden."));
 		return;
 	}
 	escaped = g_uri_escape_string (name, NULL, FALSE);
@@ -783,22 +783,22 @@ handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutpu
 	gint err = 0;
 
 	if (r->chunked) {
-		send_error (out, 501, "Not Implemented", "chunked upload is not supported");
+		send_error (out, 501, "Not Implemented", _("Dieser Upload wird nicht unterstützt (Transfer-Encoding chunked)."));
 		return;
 	}
 	if (r->content_length < 0) {
-		send_error (out, 411, "Length Required", "Content-Length required");
+		send_error (out, 411, "Length Required", _("Die Dateigröße fehlt (Content-Length)."));
 		return;
 	}
 	if (r->content_length > NOLPHIN_PHONE_MAX_UPLOAD) {
-		send_error (out, 413, "Payload Too Large", "file too large");
+		send_error (out, 413, "Payload Too Large", _("Die Datei ist zu groß (höchstens 2 GiB)."));
 		return;
 	}
 	name = nolphin_phone_sanitize_name (raw_name);
 	tmpl = g_build_filename (s->inbox_path, ".nolphin-XXXXXX", NULL);
 	fd = g_mkstemp_full (tmpl, O_WRONLY | O_CLOEXEC, 0644);
 	if (fd < 0) {
-		send_error (out, 500, "Internal Server Error", "cannot create file");
+		send_error (out, 500, "Internal Server Error", _("Die Datei kann am PC nicht angelegt werden."));
 		g_free (tmpl);
 		g_free (name);
 		return;
@@ -857,9 +857,9 @@ handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutpu
 	if (failed || remaining > 0) {
 		g_unlink (tmpl);
 		if (err == ENOSPC || err == EDQUOT) {
-			send_error (out, 507, "Insufficient Storage", "no space left");
+			send_error (out, 507, "Insufficient Storage", _("Am PC ist kein Speicherplatz mehr frei."));
 		} else if (err != 0) {
-			send_error (out, 500, "Internal Server Error", "write error");
+			send_error (out, 500, "Internal Server Error", _("Schreibfehler am PC."));
 		}
 		/* bei abgebrochener Verbindung gibt es niemanden mehr, der antwortet */
 		g_free (tmpl);
@@ -870,7 +870,7 @@ handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutpu
 	g_unlink (tmpl);
 	g_free (tmpl);
 	if (final_name == NULL) {
-		send_error (out, 500, "Internal Server Error", "cannot store file");
+		send_error (out, 500, "Internal Server Error", _("Die Datei kann am PC nicht abgelegt werden."));
 		g_free (name);
 		return;
 	}
@@ -929,16 +929,16 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 
 	buf = g_malloc (HEADER_MAX + 1);
 	if (!read_head (in, buf, &have, &head_len) || !parse_request (buf, head_len, &req)) {
-		send_error (out, 400, "Bad Request", "400");
+		send_error (out, 400, "Bad Request", _("Ungültige Anfrage."));
 		goto done;
 	}
 	token = g_hash_table_lookup (req.query, "t");
 	switch (check_token (s, token)) {
 	case TOKEN_EXPIRED:
-		send_error (out, 403, "Forbidden", "expired");
+		send_error (out, 403, "Forbidden", _("Der Link ist abgelaufen."));
 		goto done;
 	case TOKEN_INVALID:
-		send_error (out, 403, "Forbidden", _("Ungültiger oder abgelaufener Link."));
+		send_error (out, 403, "Forbidden", _("Der Link ist ungültig oder wurde widerrufen."));
 		goto done;
 	default:
 		break;
@@ -960,7 +960,7 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 	} else if (strcmp (req.method, "POST") == 0 && strcmp (req.path, "/up") == 0) {
 		handle_upload (s, &req, in, out, buf + head_len, have - head_len);
 	} else {
-		send_error (out, 404, "Not Found", "404");
+		send_error (out, 404, "Not Found", _("Nicht gefunden."));
 	}
 done:
 	request_clear (&req);

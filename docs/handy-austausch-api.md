@@ -94,7 +94,7 @@ Die Seite für den Browser des Handys (Hochladen, Liste zum Herunterladen, App-A
 | Code | Wo | Bedeutung |
 | ---- | -- | --------- |
 | 400 | alle | kaputte Anfrage, Kopfzeilen über 16 KiB |
-| 403 | alle | Schlüssel fehlt, falsch oder widerrufen (Text „Ungültiger oder abgelaufener Link.“) oder **abgelaufen** (Text genau `expired`) |
+| 403 | alle | Schlüssel fehlt, falsch oder widerrufen (Text „Der Link ist ungültig oder wurde widerrufen.“) oder **abgelaufen** (Text „Der Link ist abgelaufen.“) |
 | 404 | `/dl`, `/apk`, sonstige | Datei nicht vorhanden oder nicht erlaubt, unbekannter Weg |
 | 411 | `/up` | `Content-Length` fehlt |
 | 413 | `/up` | Datei größer als 2 GiB |

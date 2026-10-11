@@ -31,7 +31,7 @@ final class PcCheck {
             int code = c.getResponseCode();
             if (code == 403) {
                 String body = read(c.getErrorStream());
-                return new Result(false, body.contains("expired")
+                return new Result(false, body.contains("abgelaufen")
                         ? "Der Schlüssel ist abgelaufen. Am PC in Nolphin einen neuen QR-Code erzeugen"
                         : "Der PC lehnt den Schlüssel ab. Wahrscheinlich wurde Nolphin neu gestartet oder ein neuer Code erzeugt: den neuen QR-Code scannen");
             }

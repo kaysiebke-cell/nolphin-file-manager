@@ -539,7 +539,7 @@ run_tests (gpointer unused)
 			g_free (r);
 			g_usleep (3200 * 1000);
 			r = get (sp, tq);
-			check (status_of (r) == 403 && g_str_has_suffix (r, "expired"), "abgelaufener Schlüssel: 403 mit Hinweis expired");
+			check (status_of (r) == 403 && g_str_has_suffix (r, "Der Link ist abgelaufen."), "abgelaufener Schlüssel: 403 mit deutschem Hinweis");
 			g_free (r);
 			nolphin_phone_server_stop (shortlived);
 			g_free (tk);

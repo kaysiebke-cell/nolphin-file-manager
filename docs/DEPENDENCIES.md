@@ -93,3 +93,22 @@ Nicht in Meson gelistete, aber vorgesehene Komponenten:
 Diese drei Punkte sind keine neuen Erkenntnisse dieser Änderung, sondern eine ehrliche
 Bestandsaufnahme beim Erstellen dieser Datei (keine Funktion wird als
 implementiert behauptet, die nicht geprüft wurde).
+
+---
+
+## Handy-App für Android (nur zum Bauen der App, **nicht freigegeben**)
+
+Die App im Verzeichnis `android/` wird nur gebaut, wenn der Entwickler `android/build.sh` aufruft. Nolphin selbst braucht nichts davon; liegt die APK nicht vor, läuft der Handy-Austausch über den Browser des Handys. Die Werkzeuge wurden bisher auf dem Entwicklungsrechner **ohne vorherige Freigabe** verwendet (Verstoß gegen Abschnitt 50.1 und 3); der Antrag steht aus.
+
+NEUE ABHÄNGIGKEIT: JDK (`javac`, `keytool`), Android SDK (`android.jar`, `aapt2`, `d8`, `zipalign`, `apksigner`)
+WOFÜR: Bau der Handy-App (APK) und Tests des QR-Lesers der App (`android/test.sh`)
+PFLICHT ODER OPTIONAL: optional, nur für den Bau der App; nicht Teil von Nolphin
+OHNE SIE: Nolphin baut, startet und läuft unverändert; der Handy-Austausch funktioniert im Browser des Handys, nur ohne App
+ALTERNATIVE OHNE NEUE ABHÄNGIGKEIT: nur der Weg über den Browser des Handys (ohne App)
+
+| Werkzeug | Paket | Bemerkung |
+|---|---|---|
+| JDK | `openjdk-17-jdk-headless` (oder neuer) | `javac`, `keytool` |
+| Android SDK | kein Mint-Paket (vom Entwickler selbst installiert, `ANDROID_HOME`, Standard `~/Android/Sdk`) | `platforms/android-34/android.jar`, `build-tools` mit `aapt2`, `d8`, `zipalign`, `apksigner` |
+| Testwerkzeuge | `gcc`, `libglib2.0-dev` | `android/test.sh` übersetzt den C-Encoder für die Testcodes |
+

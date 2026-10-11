@@ -82,7 +82,7 @@ Die vorhandene Schnittstelle genügt für Dateiübertragungen in beide Richtunge
 | Ablaufzeit des Schlüssels (12 Stunden) | Zeitliche Begrenzung. |
 | Schlüsselwechsel (`rotate_token`, Knopf „Neuen QR-Code erzeugen“) | Widerruf: Der alte Schlüssel ist sofort ungültig. |
 | QR-Format Version 1 mit `v` und `e` | Versionierung und Ablaufzeit im Code. |
-| `403` mit Text `expired` | Die App kann „abgelaufen“ von „falscher Schlüssel“ unterscheiden. |
+| `403` mit dem Text „Der Link ist abgelaufen.“ | Die App kann „abgelaufen“ von „falscher Schlüssel“ unterscheiden. Alle Meldungen des Servers sind deutsch (Spezifikation, Abschnitt 49). |
 
 ### Warum der QR-Code ein Link und kein JSON ist
 
