@@ -1,0 +1,5 @@
+[Nolphin Search Helper]
+TryExec=unzip;html2text;nolphin-epub2text;
+Exec=nolphin-epub2text %s
+MimeType=application/epub+zip;
+Priority=100

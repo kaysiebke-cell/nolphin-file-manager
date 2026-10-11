@@ -1,0 +1,1076 @@
+/* nolphin-desktop-manager.c */
+
+#include <config.h>
+
+#define DEBUG_FLAG NOLPHIN_DEBUG_DESKTOP
+#include <libnolphin-private/nolphin-debug.h>
+
+#include "nolphin-desktop-manager.h"
+#include "nolphin-blank-desktop-window.h"
+#include "nolphin-desktop-window.h"
+#include "nolphin-application.h"
+#include "nolphin-cinnamon-dbus.h"
+#include "nolphin-desktop-overlay.h"
+
+#include <gdk/gdkx.h>
+#include <stdio.h>
+
+#include "libnolphin-private/nolphin-action-manager.h"
+#include <libnolphin-private/nolphin-global-preferences.h>
+#include <libnolphin-private/nolphin-desktop-utils.h>
+#include <eel/eel-gtk-extensions.h>
+
+static gboolean layout_changed (NolphinDesktopManager *manager);
+
+#define DESKTOPS_ON_PRIMARY "true::false"
+#define DESKTOPS_ON_ALL "true::true"
+#define DESKTOPS_ON_NON_PRIMARY "false::true"
+#define DESKTOPS_ON_NONE "false::false"
+#define DESKTOPS_DEFAULT DESKTOPS_ON_PRIMARY
+#define PRIMARY_MONITOR 0
+
+typedef enum {
+    RUN_STATE_INIT = 0,
+    RUN_STATE_STARTUP,
+    RUN_STATE_RUNNING,
+    RUN_STATE_FALLBACK
+} RunState;
+
+typedef struct {
+    NolphinCinnamon *proxy;
+    NolphinActionManager *action_manager;
+    NolphinDesktopOverlay *overlay;
+
+    GdkScreen *fallback_screen;
+
+    GList *desktops;
+
+    RunState current_run_state;
+
+    guint desktop_on_primary_only : 1;
+    guint other_desktop : 1;
+    guint proxy_owned : 1;
+    guint startup_complete : 1;
+
+    guint update_layout_idle_id;
+    guint failsafe_timeout_id;
+
+    gulong name_owner_changed_id;
+    gulong proxy_signals_id;
+    gulong fallback_size_changed_id;
+    gulong monitor_added_id;
+    gulong monitor_removed_id;
+
+    gboolean has_wayland_app_hold;
+} NolphinDesktopManagerPrivate;
+
+struct _NolphinDesktopManager
+{
+    GtkWindow parent_object;
+
+    NolphinDesktopManagerPrivate *priv;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NolphinDesktopManager, nolphin_desktop_manager, G_TYPE_OBJECT);
+
+#define FETCH_PRIV(m) NolphinDesktopManagerPrivate *priv = NOLPHIN_DESKTOP_MANAGER (m)->priv;
+
+typedef struct {
+    GtkWidget *window;
+
+    gint monitor_num;
+    gboolean shows_desktop;
+    gboolean is_primary;
+} DesktopInfo;
+
+static const gchar *
+run_state_str (RunState state)
+{
+    switch (state) {
+        case RUN_STATE_INIT:
+            return "RunState.INIT";
+        case RUN_STATE_STARTUP:
+            return "RunState.STARTUP";
+        case RUN_STATE_RUNNING:
+            return "RunState.RUNNING";
+        case RUN_STATE_FALLBACK:
+            return "RunState.FALLBACK";
+        default:
+            g_assert_not_reached ();
+    }
+}
+
+static void
+free_info (DesktopInfo *info)
+{
+    g_return_if_fail (info != NULL);
+
+    g_clear_pointer (&info->window, gtk_widget_destroy);
+    g_free (info);
+}
+
+static RunState
+get_run_state (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+    gint ret;
+    GError *error;
+
+    if (priv->other_desktop || eel_check_is_wayland ()) {
+        ret = RUN_STATE_FALLBACK;
+        goto out;
+    }
+
+    if (priv->proxy == NULL || !priv->proxy_owned) {
+        if (priv->failsafe_timeout_id > 0) {
+            ret = RUN_STATE_INIT;
+        } else {
+            ret = RUN_STATE_FALLBACK;
+        }
+        
+        goto out;
+    }
+
+    error = NULL;
+
+    if (!nolphin_cinnamon_call_get_run_state_sync (priv->proxy,
+                                                &ret,
+                                                NULL,
+                                                &error)) {
+
+        DEBUG ("Attempting proxy call 'GetRunState' failed, resorting to fallback mode: %s",
+               error ? error->message : NULL);
+
+        g_clear_error (&error);
+
+        ret = RUN_STATE_FALLBACK;
+        goto out;
+    }
+
+out:
+    DEBUG ("Run state is %s", run_state_str (ret));
+
+    return (RunState) ret;
+}
+
+static gint
+get_n_monitors (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+    gsize n_monitors, i;
+    const gint *indices G_GNUC_UNUSED;
+    GVariant *monitors;
+    GError *error;
+
+    if (priv->current_run_state == RUN_STATE_FALLBACK) {
+        DEBUG ("Currently in fallback mode, retrieving n_monitors via GdkScreen");
+
+        n_monitors = nolphin_desktop_utils_get_num_monitors ();
+
+        goto out;
+    }
+
+    error = NULL;
+
+    if (!nolphin_cinnamon_call_get_monitors_sync (priv->proxy,
+                                               &monitors,
+                                               NULL,
+                                               &error)) {
+
+        DEBUG ("Attempting proxy call 'GetMonitors' failed, retrieving n_monitors via GdkScreen: %s",
+               error ? error->message : NULL);
+
+        g_clear_error (&error);
+        n_monitors = nolphin_desktop_utils_get_num_monitors ();
+
+        goto out;
+    }
+
+    DEBUG ("Proxy call to 'GetMonitors' succeeded");
+
+    indices = g_variant_get_fixed_array (monitors, &n_monitors, sizeof(gint));
+    g_variant_unref (monitors);
+
+out:
+    if (DEBUGGING) {
+        GString *string = g_string_new (NULL);
+
+        for (i = 0; i < n_monitors; i++) {
+            gchar *m = g_strdup_printf (" %lu", i);
+
+            string = g_string_append (string, m);
+            g_free (m);
+        }
+
+        DEBUG ("Found %lu monitor(s):%s", n_monitors, string->str);
+
+        g_string_free (string, TRUE);
+    }
+
+    return n_monitors;
+}
+
+static void
+get_window_rect_for_monitor (NolphinDesktopManager *manager,
+                             gint                monitor,
+                             GdkRectangle       *rect)
+{
+    FETCH_PRIV (manager);
+    GVariant *out_rect_var;
+    GdkRectangle out_rect;
+    gsize n_elem;
+    gint scale_factor;
+    GError *error;
+
+    error = NULL;
+    out_rect_var = NULL;
+
+    if (priv->current_run_state == RUN_STATE_FALLBACK) {
+        DEBUG ("Currently in fallback/wayland mode, retrieving n_monitors via GdkScreen");
+
+        nolphin_desktop_utils_get_monitor_geometry (monitor, &out_rect);
+
+        goto out;
+    }
+
+    if (!nolphin_cinnamon_call_get_monitor_work_rect_sync (priv->proxy,
+                                                        monitor,
+                                                        &out_rect_var,
+                                                        NULL,
+                                                        &error)) {
+
+        DEBUG ("Attempting proxy call 'GetMonitorWorkRect' failed, retrieving n_monitors via GdkScreen: %s",
+               error ? error->message : NULL);
+
+        g_clear_error (&error);
+        nolphin_desktop_utils_get_monitor_geometry (monitor, &out_rect);
+
+        goto out;
+    }
+
+    out_rect = *( (GdkRectangle *) g_variant_get_fixed_array (out_rect_var, &n_elem, sizeof(gint)) );
+
+    /* GdkScreen sizes are scaled for hidpi already.  But if we've gotten this far, we're using
+     * Cinnamon-provided numbers, which aren't scaled. */
+
+    scale_factor = nolphin_desktop_utils_get_scale_factor ();
+
+    out_rect.x /= scale_factor;
+    out_rect.y /= scale_factor;
+    out_rect.width /= scale_factor;
+    out_rect.height /= scale_factor;
+
+out:
+
+    rect->x = out_rect.x;
+    rect->y = out_rect.y;
+    rect->width = out_rect.width;
+    rect->height = out_rect.height;
+
+    if (out_rect_var != NULL) {
+        g_variant_unref (out_rect_var);
+    }
+}
+
+static void
+close_all_windows (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+
+    g_list_foreach (priv->desktops, (GFunc) free_info, NULL);
+    g_clear_pointer (&priv->desktops, g_list_free);
+}
+
+static void
+queue_update_layout (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+
+    if (priv->update_layout_idle_id > 0) {
+        g_source_remove (priv->update_layout_idle_id);
+        priv->update_layout_idle_id = 0;
+    }
+
+    priv->update_layout_idle_id = g_timeout_add (250, (GSourceFunc) layout_changed, manager);
+}
+
+static void
+global_scale_changed (NolphinDesktopManager *manager)
+{
+    g_return_if_fail (NOLPHIN_IS_DESKTOP_MANAGER (manager));
+
+    DEBUG ("Monitor scaling changed");
+
+    if (eel_check_is_wayland ()) {
+        DEBUG ("Ignoring scale change - compositor handles sizing with layer-shell");
+        return;
+    }
+
+    queue_update_layout (manager);
+}
+
+static void
+create_new_desktop_window (NolphinDesktopManager *manager,
+                                         gint  monitor,
+                                     gboolean  primary,
+                                     gboolean  show_desktop)
+{
+    FETCH_PRIV (manager);
+    GtkWidget *window;
+
+    DesktopInfo *info = g_new0 (DesktopInfo, 1);
+
+    info->monitor_num = monitor;
+    info->shows_desktop = show_desktop;
+    info->is_primary = primary;
+
+    if (show_desktop) {
+        window = GTK_WIDGET (nolphin_desktop_window_new (monitor));
+    } else {
+        window = GTK_WIDGET (nolphin_blank_desktop_window_new (monitor));
+    }
+
+    info->window = window;
+
+    if (primary) {
+        g_signal_connect_swapped (window,
+                                  "notify::scale-factor",
+                                  G_CALLBACK (global_scale_changed),
+                                  manager);
+    }
+
+    gtk_application_add_window (GTK_APPLICATION (nolphin_application_get_singleton ()),
+                                GTK_WINDOW (window));
+
+    priv->desktops = g_list_append (priv->desktops, info);
+}
+
+static gboolean
+update_overlay_in_idle (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+
+    if (manager->priv->overlay) {
+        nolphin_desktop_overlay_update_in_place (priv->overlay);
+    }
+
+    return G_SOURCE_REMOVE;
+}
+
+static gboolean
+layout_changed (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+    gint n_monitors = 0;
+    gint x_primary = 0;
+    gboolean show_desktop_on_primary = FALSE;
+    gboolean show_desktop_on_remaining = FALSE;
+
+    priv->update_layout_idle_id = 0;
+
+    close_all_windows (manager);
+
+    gchar *pref = g_settings_get_string (nolphin_desktop_preferences, NOLPHIN_PREFERENCES_DESKTOP_LAYOUT);
+
+    if (g_strcmp0 (pref, "") == 0) {
+        g_settings_set_string (nolphin_desktop_preferences, NOLPHIN_PREFERENCES_DESKTOP_LAYOUT, DESKTOPS_DEFAULT);
+        g_free (pref);
+        layout_changed (manager);
+        return G_SOURCE_REMOVE;
+    }
+
+    gchar **pref_split = g_strsplit (pref, "::", 2);
+
+    if (g_strv_length (pref_split) != 2) {
+        g_settings_set_string (nolphin_desktop_preferences, NOLPHIN_PREFERENCES_DESKTOP_LAYOUT, DESKTOPS_DEFAULT);
+        g_free (pref);
+        g_strfreev (pref_split);
+        layout_changed (manager);
+        return G_SOURCE_REMOVE;
+    }
+
+    n_monitors = get_n_monitors (manager);
+    x_primary = 0; /* always */
+
+    show_desktop_on_primary = g_strcmp0 (pref_split[0], "true") == 0;
+    show_desktop_on_remaining = g_strcmp0 (pref_split[1], "true") == 0;
+
+    priv->desktop_on_primary_only = show_desktop_on_primary && !show_desktop_on_remaining;
+
+    gint i = 0;
+    gboolean primary_set = FALSE;
+
+    for (i = 0; i < n_monitors; i++) {
+        if (i == x_primary) {
+            create_new_desktop_window (manager, i, show_desktop_on_primary, show_desktop_on_primary);
+            primary_set = primary_set || show_desktop_on_primary;
+        } else if (!nolphin_desktop_utils_get_monitor_cloned (i, x_primary)) {
+            gboolean set_layout_primary = !primary_set && !show_desktop_on_primary && show_desktop_on_remaining;
+            create_new_desktop_window (manager, i, set_layout_primary, show_desktop_on_remaining);
+            primary_set = primary_set || set_layout_primary;
+        }
+    }
+
+    g_free (pref);
+    g_strfreev (pref_split);
+
+    /* This is hacky - it takes time for the actual view to load, even though the window is created
+     * immediately.  We need to force it to wait here, or else we'd need to monitor when the view is
+     * created and run then. */
+    g_timeout_add (300, (GSourceFunc) update_overlay_in_idle, manager);
+
+    return G_SOURCE_REMOVE;
+}
+
+static void
+on_bus_name_owner_changed (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+    gchar *name_owner;
+
+    g_return_if_fail (priv->proxy != NULL);
+
+    name_owner = g_dbus_proxy_get_name_owner (G_DBUS_PROXY (priv->proxy));
+
+    priv->proxy_owned = name_owner != NULL;
+
+    if (priv->proxy_owned) {
+        if (priv->failsafe_timeout_id > 0) {
+            g_source_remove (priv->failsafe_timeout_id);
+            priv->failsafe_timeout_id = 0;
+        }
+    }
+
+    DEBUG ("New name owner: %s", name_owner ? name_owner : "unowned");
+
+    g_free (name_owner);
+}
+
+static void
+on_run_state_changed (NolphinDesktopManager *manager)
+{
+    g_return_if_fail (NOLPHIN_IS_DESKTOP_MANAGER (manager));
+
+    FETCH_PRIV (manager);
+    RunState new_state;
+
+    DEBUG ("New run state...");
+
+    /* If we're already running (showing icons,) there's no
+     * change in behavior, we just keep showing. */
+    if (priv->current_run_state == RUN_STATE_RUNNING) {
+        return;
+    }
+
+    new_state = get_run_state (manager);
+
+    /* If our state is INIT, we're waiting for the proxy to
+     * get picked up (cinnamon starting) and still within our
+     * failsafe timeout, so we just return */
+    if (new_state == RUN_STATE_INIT) {
+        priv->current_run_state = new_state;
+        return;
+    }
+
+    /* If our state is STARTUP, RUNNING, or FAILSAFE, we can
+     * cancel our failsafe timer.  We've either gotten a proxy
+     * owner, given up waiting, or are now running */
+    if (new_state > RUN_STATE_INIT) {
+        if (priv->failsafe_timeout_id > 0) {
+            g_source_remove (priv->failsafe_timeout_id);
+            priv->failsafe_timeout_id = 0;
+        }
+    }
+
+    /* RUNNING or FALLBACK is the final endpoint of the desktop startup
+     * sequence.  Either way we trigger the desktop to start and release
+     * our hold on the GApplication (the windows created in layout_changed
+     * will keep the application alive from here on out.) */
+    if (new_state == RUN_STATE_RUNNING || new_state == RUN_STATE_FALLBACK) {
+        priv->current_run_state = new_state;
+        layout_changed (manager);
+        g_application_release (G_APPLICATION (nolphin_application_get_singleton ()));
+    }
+}
+
+static void
+on_monitors_changed (NolphinDesktopManager *manager)
+{
+    g_return_if_fail (NOLPHIN_IS_DESKTOP_MANAGER (manager));
+
+    FETCH_PRIV (manager);
+    GList *l;
+
+    DEBUG ("Monitors or workarea changed");
+
+    if (get_run_state (manager) < RUN_STATE_RUNNING) {
+        DEBUG ("...ignoring possibly bogus MonitorsChanged - we're not RUNNING or FALLBACK");
+        return;
+    }
+
+    if (((guint) get_n_monitors (manager)) != g_list_length (priv->desktops)) {
+        queue_update_layout (manager);
+        return;
+    }
+
+    for (l = priv->desktops; l != NULL; l = l->next) {
+        DesktopInfo *info = (DesktopInfo *) l->data;
+
+        if (NOLPHIN_IS_DESKTOP_WINDOW (info->window)) {
+            nolphin_desktop_window_update_geometry (NOLPHIN_DESKTOP_WINDOW (info->window));
+        }
+        else
+        if (NOLPHIN_IS_BLANK_DESKTOP_WINDOW (info->window)) {
+            nolphin_blank_desktop_window_update_geometry (NOLPHIN_BLANK_DESKTOP_WINDOW (info->window));
+        }
+    }
+}
+
+static void
+on_overlay_adjustments_changed (NolphinDesktopOverlay      *overlay,
+                                NolphinWindow              *window,
+                                gint                     h_percent,
+                                gint                     v_percent,
+                                NolphinDesktopManager      *manager)
+{
+    g_return_if_fail (NOLPHIN_IS_DESKTOP_WINDOW (window));
+
+    nolphin_desktop_window_set_grid_adjusts (NOLPHIN_DESKTOP_WINDOW (window),
+                                          h_percent,
+                                          v_percent);
+}
+
+static void
+on_proxy_signal (GDBusProxy *proxy,
+                 gchar      *sender,
+                 gchar      *signal_name,
+                 GVariant   *params,
+                 gpointer   *user_data)
+{
+    if (g_strcmp0 (signal_name, "RunStateChanged") == 0) {
+        on_run_state_changed (NOLPHIN_DESKTOP_MANAGER (user_data));
+    } 
+    else
+    if (g_strcmp0 (signal_name, "MonitorsChanged") == 0) {
+        on_monitors_changed (NOLPHIN_DESKTOP_MANAGER (user_data));
+    }
+}
+
+static gboolean
+on_failsafe_timeout (NolphinDesktopManager *manager)
+{
+    g_return_val_if_fail (NOLPHIN_IS_DESKTOP_MANAGER (manager), FALSE);
+
+    FETCH_PRIV (manager);
+
+    /* Our failsafe timeout is up, we'll zero out out id and trigger
+     * on_run_state_changed.  A combination of no proxy, no owner and
+     * no timeout id will put us in FALLBACK mode */
+
+    g_warning ("nolphin-desktop: Desktop failsafe timeout reached, applying fallback behavior");
+
+    priv->failsafe_timeout_id = 0;
+
+    on_run_state_changed (manager);
+
+    return G_SOURCE_REMOVE;
+}
+
+static void
+on_monitor_removed_wayland (GdkDisplay         *display,
+                            GdkMonitor         *monitor,
+                            NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+
+    if (priv->current_run_state < RUN_STATE_RUNNING) {
+        return;
+    }
+
+    /* The compositor sent zwlr_layer_surface_v1.closed for the layer surface
+     * associated with the removed output. gtk-layer-shell will destroy the
+     * backing wl_surface in response. We must destroy our GtkWindow first,
+     * before that happens, or a pending frame clock event will call
+     * gdk_window_begin_draw_frame() on the dead wl_surface and crash. */
+    DEBUG ("Wayland output removed - closing desktop windows immediately");
+
+    close_all_windows (manager);
+    queue_update_layout (manager);
+}
+
+static void
+on_monitor_added_wayland (GdkDisplay         *display,
+                          GdkMonitor         *monitor,
+                          NolphinDesktopManager *manager)
+{
+    DEBUG ("Wayland output added - queuing layout update");
+    queue_update_layout (manager);
+}
+
+static void
+connect_fallback_signals (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+
+    priv->fallback_screen = gdk_screen_get_default ();
+
+    priv->fallback_size_changed_id = g_signal_connect_swapped (priv->fallback_screen,
+                                                               "size_changed",
+                                                               G_CALLBACK (queue_update_layout),
+                                                               manager);
+
+    if (eel_check_is_wayland ()) {
+        GdkDisplay *display = gdk_display_get_default ();
+
+        priv->monitor_removed_id = g_signal_connect (display,
+                                                     "monitor-removed",
+                                                     G_CALLBACK (on_monitor_removed_wayland),
+                                                     manager);
+
+        priv->monitor_added_id = g_signal_connect (display,
+                                                   "monitor-added",
+                                                   G_CALLBACK (on_monitor_added_wayland),
+                                                   manager);
+    }
+}
+
+static void
+on_proxy_created (GObject      *source,
+                  GAsyncResult *res,
+                  gpointer      user_data)
+{
+    NolphinDesktopManager *manager = NOLPHIN_DESKTOP_MANAGER (user_data);
+    FETCH_PRIV (manager);
+
+    priv->proxy = nolphin_cinnamon_proxy_new_for_bus_finish (res, NULL);
+
+    if (priv->proxy == NULL) {
+        g_warning ("Cinnamon proxy unsuccessful, applying default behavior");
+
+        /* We should always end up with a proxy, as long as dbus itself is working.. */
+        priv->other_desktop = TRUE;
+        return;
+    }
+
+    DEBUG ("Cinnamon proxy established, getting owner and state");
+
+    priv->name_owner_changed_id = g_signal_connect_swapped (priv->proxy,
+                                                            "notify::g-name-owner",
+                                                            G_CALLBACK (on_bus_name_owner_changed),
+                                                            manager);
+
+    priv->proxy_signals_id = g_signal_connect (priv->proxy,
+                                               "g-signal",
+                                               G_CALLBACK (on_proxy_signal),
+                                               manager);
+
+    on_bus_name_owner_changed (manager);
+
+    if (!priv->proxy_owned) {
+        priv->failsafe_timeout_id = g_timeout_add_seconds (5, (GSourceFunc) on_failsafe_timeout, manager);
+    }
+
+    on_run_state_changed (manager);
+}
+
+static gboolean
+fallback_startup_idle_cb (NolphinDesktopManager *manager)
+{
+    on_run_state_changed (manager);
+
+    return FALSE;
+}
+
+static gboolean
+is_cinnamon_desktop (void)
+{
+    const gchar *session_desktop = g_getenv ("XDG_SESSION_DESKTOP");
+    const gchar *desktop_session = g_getenv ("DESKTOP_SESSION");
+
+    if (session_desktop != NULL &&
+        g_strstr_len (session_desktop, -1, "cinnamon") != NULL) {
+        return TRUE;
+    }
+
+    if (desktop_session != NULL &&
+        g_strstr_len (desktop_session, -1, "cinnamon") != NULL) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static void
+nolphin_desktop_manager_dispose (GObject *object)
+{
+    NolphinDesktopManager *manager = NOLPHIN_DESKTOP_MANAGER (object);
+    FETCH_PRIV (manager);
+
+    DEBUG ("Disposing NolphinDesktopManager");
+
+    close_all_windows (manager);
+
+    g_clear_object (&priv->overlay);
+
+    g_signal_handlers_disconnect_by_func (nolphin_desktop_preferences, queue_update_layout, manager);
+    g_signal_handlers_disconnect_by_func (nolphin_preferences, queue_update_layout, manager);
+
+    if (priv->fallback_size_changed_id > 0) {
+        g_signal_handler_disconnect (priv->fallback_screen, priv->fallback_size_changed_id);
+        priv->fallback_size_changed_id = 0;
+    }
+
+    if (priv->monitor_removed_id > 0 || priv->monitor_added_id > 0) {
+        GdkDisplay *display = gdk_display_get_default ();
+
+        if (priv->monitor_removed_id > 0) {
+            g_signal_handler_disconnect (display, priv->monitor_removed_id);
+            priv->monitor_removed_id = 0;
+        }
+
+        if (priv->monitor_added_id > 0) {
+            g_signal_handler_disconnect (display, priv->monitor_added_id);
+            priv->monitor_added_id = 0;
+        }
+    }
+
+    if (priv->has_wayland_app_hold) {
+        g_application_release (G_APPLICATION (nolphin_application_get_singleton ()));
+        priv->has_wayland_app_hold = FALSE;
+    }
+
+    G_OBJECT_CLASS (nolphin_desktop_manager_parent_class)->dispose (object);
+}
+
+static void
+nolphin_desktop_manager_finalize (GObject *object)
+{
+    FETCH_PRIV (object);
+
+    g_clear_object (&priv->action_manager);
+    g_clear_object (&priv->proxy);
+
+    DEBUG ("Finalizing NolphinDesktopManager");
+
+    G_OBJECT_CLASS (nolphin_desktop_manager_parent_class)->finalize (object);
+}
+
+static void
+nolphin_desktop_manager_class_init (NolphinDesktopManagerClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->finalize = nolphin_desktop_manager_finalize;
+  object_class->dispose = nolphin_desktop_manager_dispose;
+}
+
+static void
+nolphin_desktop_manager_init (NolphinDesktopManager *manager)
+{
+    NolphinDesktopManagerPrivate *priv;
+
+    manager->priv = G_TYPE_INSTANCE_GET_PRIVATE (manager, NOLPHIN_TYPE_DESKTOP_MANAGER, NolphinDesktopManagerPrivate);
+
+    DEBUG ("Desktop Manager Initialization");
+
+    priv = manager->priv;
+
+    priv->desktops = NULL;
+    priv->desktop_on_primary_only = FALSE;
+
+    priv->action_manager = NULL;
+
+    priv->update_layout_idle_id = 0;
+
+    g_signal_connect_swapped (nolphin_desktop_preferences, 
+                              "changed::" NOLPHIN_PREFERENCES_SHOW_DESKTOP,
+                              G_CALLBACK (queue_update_layout),
+                              manager);
+
+    g_signal_connect_swapped (nolphin_desktop_preferences,
+                              "changed::" NOLPHIN_PREFERENCES_DESKTOP_LAYOUT,
+                              G_CALLBACK (queue_update_layout),
+                              manager);
+
+    g_signal_connect_swapped (nolphin_desktop_preferences,
+                              "changed::" NOLPHIN_PREFERENCES_USE_DESKTOP_GRID,
+                              G_CALLBACK (queue_update_layout),
+                              manager);
+
+    /* Monitor the preference to have the desktop */
+    /* point to the Unix home folder */
+
+    g_signal_connect_swapped (nolphin_preferences,
+                              "changed::" NOLPHIN_PREFERENCES_DESKTOP_IS_HOME_DIR,
+                              G_CALLBACK (queue_update_layout),
+                              manager);
+
+    g_signal_connect_swapped (nolphin_preferences,
+                              "changed::" NOLPHIN_PREFERENCES_SHOW_ORPHANED_DESKTOP_ICONS,
+                              G_CALLBACK (queue_update_layout),
+                              manager);
+
+    /* If we're an x11 cinnamon session, increase the use count temporarily for the application,
+     * and establish a proxy for org.Cinnamon.  The hold prevents the GApplication from simply
+     * exiting while waiting for the GAsyncReadyCallback.
+     */
+
+    g_application_hold (G_APPLICATION (nolphin_application_get_singleton ()));
+
+    priv->other_desktop = !is_cinnamon_desktop ();
+    if (!priv->other_desktop && !eel_check_is_wayland ()) {
+         g_message ("nolphin-desktop: session is x11 cinnamon, establishing proxy");
+
+        nolphin_cinnamon_proxy_new_for_bus (G_BUS_TYPE_SESSION,
+                                         G_DBUS_PROXY_FLAGS_NONE,
+                                         "org.Cinnamon",
+                                         "/org/Cinnamon",
+                                         NULL,
+                                         (GAsyncReadyCallback) on_proxy_created,
+                                         manager);
+        return;
+    }
+
+    connect_fallback_signals (manager);
+
+    if (eel_check_is_wayland ()) {
+        /* Hold the application alive independently of any windows so that
+         * nolphin-desktop survives monitor removal (e.g. KVM switch).  Without
+         * this, gtk-layer-shell destroys our windows when the compositor
+         * removes an output and GtkApplication exits immediately with no
+         * windows left.  The hold is released in nolphin_desktop_manager_dispose
+         * when the application is genuinely quitting. */
+        g_application_hold (G_APPLICATION (nolphin_application_get_singleton ()));
+        priv->has_wayland_app_hold = TRUE;
+    }
+
+    g_timeout_add (250, (GSourceFunc) fallback_startup_idle_cb, manager);
+}
+
+static NolphinDesktopManager *_manager = NULL;
+
+NolphinDesktopManager*
+nolphin_desktop_manager_get (void)
+{
+    if (_manager == NULL) {
+        _manager = g_object_new (NOLPHIN_TYPE_DESKTOP_MANAGER, NULL);
+    }
+
+    return _manager;
+}
+
+gboolean
+nolphin_desktop_manager_has_desktop_windows (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+
+    GList *iter;
+    gboolean ret = FALSE;
+
+    g_return_val_if_fail (manager != NULL, FALSE);
+
+    for (iter = priv->desktops; iter != NULL; iter = iter->next) {
+        DesktopInfo *info = iter->data;
+
+        if (info->shows_desktop) {
+            ret = TRUE;
+            break;
+        }
+    }
+
+    return ret;
+}
+
+gboolean
+nolphin_desktop_manager_get_monitor_is_active (NolphinDesktopManager *manager,
+                                                          gint  monitor)
+{
+    FETCH_PRIV (manager);
+    GList *iter;
+    gboolean ret = FALSE;
+
+    g_return_val_if_fail (manager != NULL, FALSE);
+
+    for (iter = priv->desktops; iter != NULL; iter = iter->next) {
+        DesktopInfo *info = iter->data;
+
+        if (info->monitor_num == monitor) {
+            ret = info->shows_desktop;
+            break;
+        }
+    }
+
+    return ret;
+}
+
+gboolean
+nolphin_desktop_manager_get_monitor_is_primary (NolphinDesktopManager *manager,
+                                                           gint  monitor)
+{
+    FETCH_PRIV (manager);
+    GList *iter;
+    gboolean ret = FALSE;
+
+    g_return_val_if_fail (manager != NULL, FALSE);
+
+    for (iter = priv->desktops; iter != NULL; iter = iter->next) {
+        DesktopInfo *info = iter->data;
+
+        if (info->monitor_num == monitor) {
+            ret = info->is_primary;
+            break;
+        }
+    }
+
+    return ret;
+}
+
+gboolean
+nolphin_desktop_manager_get_primary_only (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+
+    return priv->desktop_on_primary_only;
+}
+
+NolphinActionManager *
+nolphin_desktop_manager_get_action_manager (void)
+{
+    g_return_val_if_fail (_manager != NULL, NULL);
+    FETCH_PRIV (_manager);
+
+    if (priv->action_manager == NULL) {
+        priv->action_manager = nolphin_action_manager_new ();
+    }
+
+    return priv->action_manager;
+}
+
+void
+nolphin_desktop_manager_get_window_rect_for_monitor (NolphinDesktopManager *manager,
+                                                  gint                monitor,
+                                                  GdkRectangle       *rect)
+{
+    g_return_if_fail (manager != NULL);
+
+    get_window_rect_for_monitor (manager, monitor, rect);
+}
+
+void
+nolphin_desktop_manager_get_margins (NolphinDesktopManager *manager,
+                                  gint                monitor,
+                                  gint               *left,
+                                  gint               *right,
+                                  gint               *top,
+                                  gint               *bottom)
+{
+    FETCH_PRIV (manager);
+    GdkRectangle work_rect, geometry;
+    gboolean use_layer_shell = eel_check_is_wayland ();
+
+    DEBUG ("NolphinDesktopManager get_margins: monitor=%d proxy_owned=%d other_desktop=%d use_layer_shell=%d",
+           monitor, priv->proxy_owned, priv->other_desktop, use_layer_shell);
+
+    /* When Cinnamon is running, we don't use margins because the window is
+     * sized to the work area (X11 mode) or the compositor sizes it to the
+     * workarea (layer-shell mode with exclusive_zone=0). */
+
+    if (priv->proxy_owned && !priv->other_desktop) {
+        *left = *right = *top = *bottom = 0;
+
+        DEBUG ("NolphinDesktopManager get_margins: returning 0 margins (Cinnamon running)");
+
+        return;
+    }
+
+    /* _NET_WORKAREA only applies to the primary monitor - use it to adjust
+       container margins on the primary icon container only.  For any others,
+       add a sane amount of padding for any likely chrome. */
+
+    if (monitor != nolphin_desktop_utils_get_primary_monitor ()) {
+        *left = *right = *top = *bottom = 25;
+
+        return;
+    }
+
+    nolphin_desktop_utils_get_monitor_geometry (monitor, &geometry);
+    nolphin_desktop_utils_get_monitor_work_rect (monitor, &work_rect);
+
+    *left = work_rect.x - geometry.x;
+    *right = (geometry.x + geometry.width) - (work_rect.x + work_rect.width);
+    *top = work_rect.y - geometry.y;
+    *bottom = (geometry.y + geometry.height) - (work_rect.y + work_rect.height);
+}
+
+GtkWindow *
+nolphin_desktop_manager_get_window_for_monitor (NolphinDesktopManager *manager,
+                                             gint                monitor)
+{
+    GtkWindow *window;
+    GList *iter;
+
+    FETCH_PRIV (manager);
+
+    window = NULL;
+
+    for (iter = priv->desktops; iter != NULL; iter = iter->next) {
+        DesktopInfo *info = iter->data;
+
+        if (info->monitor_num == monitor) {
+            window = GTK_WINDOW (info->window);
+            break;
+        }
+    }
+
+    return window;
+}
+
+void
+nolphin_desktop_manager_get_overlay_info (NolphinDesktopManager *manager,
+                                       gint                monitor,
+                                       GtkActionGroup    **action_group,
+                                       gint               *h_adjust,
+                                       gint               *v_adjust)
+{
+    GtkWindow *window;
+
+    window = nolphin_desktop_manager_get_window_for_monitor (manager, monitor);
+
+    if (NOLPHIN_IS_DESKTOP_WINDOW (window) &&
+        nolphin_desktop_window_get_grid_adjusts (NOLPHIN_DESKTOP_WINDOW (window),
+                                              h_adjust,
+                                              v_adjust)) {
+
+        *action_group = nolphin_desktop_window_get_action_group (NOLPHIN_DESKTOP_WINDOW (window));
+    } else {
+        *action_group = NULL;
+    }
+}
+
+void
+nolphin_desktop_manager_show_desktop_overlay (NolphinDesktopManager *manager,
+                                           gint                monitor)
+{
+    FETCH_PRIV (manager);
+
+    if (priv->overlay == NULL) {
+        priv->overlay = nolphin_desktop_overlay_new ();
+
+        g_object_add_weak_pointer (G_OBJECT (priv->overlay), (gpointer) &priv->overlay);
+
+        g_signal_connect (priv->overlay,
+                          "adjusts-changed",
+                          G_CALLBACK (on_overlay_adjustments_changed),
+                          manager);
+    }
+
+    nolphin_desktop_overlay_show (priv->overlay, monitor);
+}
+
+gboolean
+nolphin_desktop_manager_get_is_cinnamon         (NolphinDesktopManager *manager)
+{
+    FETCH_PRIV (manager);
+
+    return !priv->other_desktop;
+}

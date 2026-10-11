@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/nolphin/action-layout-editor/">
+    <file>nolphin-action-layout-editor.glade</file>
+    <file>nolphin-shortcuts.ui</file>
+  </gresource>
+</gresources>

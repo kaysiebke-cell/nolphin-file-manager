@@ -1,0 +1,693 @@
+/* -*- Mode: C; indent-tabs-mode: f; c-basic-offset: 4; tab-width: 4 -*- */
+
+/* nolphin-file-conflict-dialog: dialog that handles file conflicts
+   during transfer operations.
+
+   Copyright (C) 2008-2010 Cosimo Cecchi
+
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License as
+   published by the Free Software Foundation; either version 2 of the
+   License, or (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   General Public License for more details.
+   
+   You should have received a copy of the GNU General Public
+   License along with this program; if not, write to the
+   Free Software Foundation, Inc., 51 Franklin Street - Suite 500,
+   Boston, MA 02110-1335, USA.
+   
+   Authors: Cosimo Cecchi <cosimoc@gnome.org>
+*/
+
+#include <config.h>
+#include "nolphin-file-conflict-dialog.h"
+
+#include <string.h>
+#include <glib-object.h>
+#include <gio/gio.h>
+#include <glib/gi18n.h>
+#include <pango/pango.h>
+#include <eel/eel-vfs-extensions.h>
+
+#include "nolphin-file.h"
+#include "nolphin-icon-info.h"
+
+struct _NolphinFileConflictDialogDetails
+{
+	/* conflicting objects */
+	NolphinFile *source;
+	NolphinFile *destination;
+	NolphinFile *dest_dir;
+
+	gchar *conflict_name;
+	NolphinFileListHandle *handle;
+	gulong src_handler_id;
+	gulong dest_handler_id;
+
+	/* UI objects */
+	GtkWidget *stack;
+	GtkWidget *spinner;
+	GtkWidget *titles_vbox;
+	GtkWidget *first_hbox;
+	GtkWidget *second_hbox;
+	GtkWidget *expander;
+	GtkWidget *entry;
+	GtkWidget *checkbox;
+	GtkWidget *rename_button;
+	GtkWidget *replace_button;
+	GtkWidget *auto_rename_button;
+	GtkWidget *dest_image;
+	GtkWidget *src_image;
+};
+
+G_DEFINE_TYPE (NolphinFileConflictDialog,
+	       nolphin_file_conflict_dialog,
+	       GTK_TYPE_DIALOG);
+
+#define NOLPHIN_FILE_CONFLICT_DIALOG_GET_PRIVATE(object)		\
+	(G_TYPE_INSTANCE_GET_PRIVATE ((object), NOLPHIN_TYPE_FILE_CONFLICT_DIALOG, \
+				      NolphinFileConflictDialogDetails))
+
+static void
+file_icons_changed (NolphinFile *file,
+		    NolphinFileConflictDialog *fcd)
+{
+	GdkPixbuf *pixbuf;
+
+	pixbuf = nolphin_file_get_icon_pixbuf (fcd->details->destination,
+						NOLPHIN_ICON_SIZE_LARGE,
+						TRUE,
+                        gtk_widget_get_scale_factor (fcd->details->dest_image),
+						NOLPHIN_FILE_ICON_FLAGS_USE_THUMBNAILS);
+
+	gtk_image_set_from_pixbuf (GTK_IMAGE (fcd->details->dest_image), pixbuf);
+	g_object_unref (pixbuf);
+
+	pixbuf = nolphin_file_get_icon_pixbuf (fcd->details->source,
+						NOLPHIN_ICON_SIZE_LARGE,
+						TRUE,
+                        gtk_widget_get_scale_factor (fcd->details->src_image),
+						NOLPHIN_FILE_ICON_FLAGS_USE_THUMBNAILS);
+
+	gtk_image_set_from_pixbuf (GTK_IMAGE (fcd->details->src_image), pixbuf);
+	g_object_unref (pixbuf);
+}
+
+static void
+file_list_ready_cb (GList *files,
+		    gpointer user_data)
+{
+	NolphinFileConflictDialog *fcd = user_data;
+	NolphinFile *src, *dest, *dest_dir;
+	time_t src_mtime, dest_mtime;
+	gboolean source_is_dir,	dest_is_dir, should_show_type;
+	NolphinFileConflictDialogDetails *details;
+	char *primary_text, *message, *secondary_text;
+	const gchar *message_extra;
+	char *edit_name;
+	char *label_text;
+	char *size, *date, *type = NULL;
+	GdkPixbuf *pixbuf;
+	GtkWidget *label;
+	GString *str;
+	PangoAttrList *attr_list;
+    cairo_surface_t *surf;
+    gint ui_scale;
+
+	details = fcd->details;
+
+	details->handle = NULL;
+
+	dest_dir = g_list_nth_data (files, 0);
+	dest = g_list_nth_data (files, 1);
+	src = g_list_nth_data (files, 2);
+
+	src_mtime = nolphin_file_get_mtime (src);
+	dest_mtime = nolphin_file_get_mtime (dest);
+
+	g_autofree gchar *dest_name = nolphin_file_get_display_name (dest);
+	g_autofree gchar *dest_dir_name = nolphin_file_get_display_name (dest_dir);
+
+	source_is_dir = nolphin_file_is_directory (src);
+	dest_is_dir = nolphin_file_is_directory (dest);
+
+	type = nolphin_file_get_mime_type (dest);
+	should_show_type = !nolphin_file_is_mime_type (src, type);
+
+    g_clear_pointer (&type, g_free);
+
+	/* Set up the right labels */
+	if (dest_is_dir) {
+		if (source_is_dir) {
+			primary_text = g_strdup_printf
+				(_("Ordner »%s« zusammenführen?"),
+				 dest_name);
+
+			message_extra = 
+				_("Es wird beim Zusammenführen von Dateien gefragt, bevor Dateien überschrieben werden, welche im Konflikt mit den zu kopierenden Dateien stehen.");
+
+			if (src_mtime > dest_mtime) {
+				message = g_strdup_printf (
+					_("Ein älterer Ordner gleichen Namens existiert bereits in »%s«."),
+					dest_dir_name);
+			} else if (src_mtime < dest_mtime) {
+				message = g_strdup_printf (
+					_("Ein neuerer Ordner gleichen Namens existiert bereits in »%s«."),
+					dest_dir_name);
+			} else {
+				message = g_strdup_printf (
+					_("Ein Ordner gleichen Namens existiert bereits in »%s«."),
+					dest_dir_name);
+			}
+		} else {
+			message_extra =
+				_("Ersetzen führt zur Löschung aller vorhandenen Dateien in diesem Ordner.");
+			primary_text = g_strdup_printf
+				(_("Ordner »%s« ersetzen?"), dest_name);
+			message = g_strdup_printf
+				(_("Ein Ordner gleichen Namens existiert bereits in »%s«."),
+				 dest_dir_name);
+		}
+	} else {
+		primary_text = g_strdup_printf
+			(_("Datei »%s« ersetzen?"), dest_name);
+
+		message_extra = _("Ersetzen wird den gesamten Inhalt überschreiben.");
+
+		if (src_mtime > dest_mtime) {
+			message = g_strdup_printf (
+				_("Eine ältere Datei mit dem selben Namen existiert bereits in »%s«."),
+				dest_dir_name);
+		} else if (src_mtime < dest_mtime) {
+			message = g_strdup_printf (
+				_("Eine neuere Datei mit dem selben Namen existiert bereits in »%s«."),
+				dest_dir_name);
+		} else {
+			message = g_strdup_printf (
+				_("Eine weitere Datei mit dem gleichen Namen existiert bereits in »%s«."),
+				dest_dir_name);
+		}
+	}
+
+	secondary_text = g_strdup_printf ("%s\n%s", message, message_extra);
+    g_clear_pointer (&message, g_free);
+
+	label = gtk_label_new (primary_text);
+	gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
+	gtk_label_set_line_wrap_mode (GTK_LABEL (label), PANGO_WRAP_WORD_CHAR);
+	gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+	gtk_box_pack_start (GTK_BOX (details->titles_vbox),
+			    label, FALSE, FALSE, 0);
+	gtk_widget_show (label);
+
+	attr_list = pango_attr_list_new ();
+	pango_attr_list_insert (attr_list, pango_attr_weight_new (PANGO_WEIGHT_BOLD));
+	pango_attr_list_insert (attr_list, pango_attr_scale_new (PANGO_SCALE_LARGE));
+	g_object_set (label,
+		      "attributes", attr_list,
+		      NULL);
+
+	pango_attr_list_unref (attr_list);
+
+	label = gtk_label_new (secondary_text);
+	gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
+	gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+	gtk_box_pack_start (GTK_BOX (details->titles_vbox),
+			    label, FALSE, FALSE, 0);
+	gtk_widget_show (label);
+	g_free (primary_text);
+	g_free (secondary_text);
+
+    ui_scale = gtk_widget_get_scale_factor (fcd->details->titles_vbox),
+
+    /* Set up file icons */
+    pixbuf = nolphin_file_get_icon_pixbuf (dest,
+                                        NOLPHIN_ICON_SIZE_LARGE,
+                                        TRUE,
+                                        ui_scale,
+                                        NOLPHIN_FILE_ICON_FLAGS_USE_THUMBNAILS);
+    surf = gdk_cairo_surface_create_from_pixbuf (pixbuf, ui_scale, NULL);
+
+    details->dest_image = gtk_image_new_from_surface (surf);
+    g_clear_pointer (&surf, cairo_surface_destroy);
+    g_clear_object (&pixbuf);
+
+    gtk_box_pack_start (GTK_BOX (details->first_hbox),
+                        details->dest_image, FALSE, FALSE, 0);
+    gtk_widget_show (details->dest_image);
+
+    pixbuf = nolphin_file_get_icon_pixbuf (src,
+                                        NOLPHIN_ICON_SIZE_LARGE,
+                                        TRUE,
+                                        ui_scale,
+                                        NOLPHIN_FILE_ICON_FLAGS_USE_THUMBNAILS);
+    surf = gdk_cairo_surface_create_from_pixbuf (pixbuf, ui_scale, NULL);
+
+    details->src_image = gtk_image_new_from_surface (surf);
+    g_clear_pointer (&surf, cairo_surface_destroy);
+    g_clear_object (&pixbuf);
+
+    gtk_box_pack_start (GTK_BOX (details->second_hbox),
+                        details->src_image, FALSE, FALSE, 0);
+    gtk_widget_show (details->src_image);
+
+	/* Set up labels */
+	label = gtk_label_new (NULL);
+	date = nolphin_file_get_string_attribute (dest,
+						   "date_modified");
+	size = nolphin_file_get_string_attribute (dest, "size");
+
+	if (should_show_type) {
+		type = nolphin_file_get_string_attribute (dest, "type");
+	}
+
+	str = g_string_new (NULL);
+	g_string_append_printf (str, "<b>%s</b>\n", _("Originaldatei"));
+	g_string_append_printf (str, "<i>%s</i> %s\n", _("Größe:"), size);
+
+	if (should_show_type) {
+		g_string_append_printf (str, "<i>%s</i> %s\n", _("Typ:"), type);
+	}
+
+	g_string_append_printf (str, "<i>%s</i> %s", _("Zuletzt geändert:"), date);
+
+	label_text = str->str;
+	gtk_label_set_markup (GTK_LABEL (label),
+			      label_text);
+	gtk_box_pack_start (GTK_BOX (details->first_hbox),
+			    label, FALSE, FALSE, 0);
+	gtk_widget_show (label);
+
+    g_clear_pointer (&size, g_free);
+    g_clear_pointer (&type, g_free);
+    g_clear_pointer (&date, g_free);
+
+	g_string_erase (str, 0, -1);
+
+	/* Second label */
+	label = gtk_label_new (NULL);
+	date = nolphin_file_get_string_attribute (src,
+						   "date_modified");
+	size = nolphin_file_get_string_attribute (src, "size");
+
+	if (should_show_type) {
+		type = nolphin_file_get_string_attribute (src, "type");
+	}
+
+	g_string_append_printf (str, "<b>%s</b>\n", _("Ersetzen mit"));
+	g_string_append_printf (str, "<i>%s</i> %s\n", _("Größe:"), size);
+
+	if (should_show_type) {
+		g_string_append_printf (str, "<i>%s</i> %s\n", _("Typ:"), type);
+	}
+
+	g_string_append_printf (str, "<i>%s</i> %s", _("Zuletzt geändert:"), date);
+	label_text = g_string_free (str, FALSE);
+
+	gtk_label_set_markup (GTK_LABEL (label),
+			      label_text);
+	gtk_box_pack_start (GTK_BOX (details->second_hbox),
+			    label, FALSE, FALSE, 0);
+	gtk_widget_show (label);
+
+    g_clear_pointer (&size, g_free);
+    g_clear_pointer (&type, g_free);
+    g_clear_pointer (&date, g_free);
+    g_clear_pointer (&label_text, g_free);
+
+	/* Populate the entry */
+	edit_name = nolphin_file_get_edit_name (dest);
+	details->conflict_name = edit_name;
+
+	gtk_entry_set_text (GTK_ENTRY (details->entry), edit_name);
+
+	if (source_is_dir && dest_is_dir) {
+		gtk_button_set_label (GTK_BUTTON (details->replace_button),
+				      _("Zusammenführen"));
+	}
+
+	nolphin_file_monitor_add (src, fcd, NOLPHIN_FILE_ATTRIBUTES_FOR_ICON);
+	nolphin_file_monitor_add (dest, fcd, NOLPHIN_FILE_ATTRIBUTES_FOR_ICON);
+
+	details->src_handler_id = g_signal_connect (src, "changed",
+			  G_CALLBACK (file_icons_changed), fcd);
+	details->dest_handler_id = g_signal_connect (dest, "changed",
+			  G_CALLBACK (file_icons_changed), fcd);
+
+	gtk_stack_set_visible_child_name (GTK_STACK (details->stack), "content");
+	gtk_spinner_stop (GTK_SPINNER (details->spinner));
+
+	gtk_dialog_set_response_sensitive (GTK_DIALOG (fcd), CONFLICT_RESPONSE_SKIP, TRUE);
+	gtk_dialog_set_response_sensitive (GTK_DIALOG (fcd), CONFLICT_RESPONSE_AUTO_RENAME, TRUE);
+	gtk_dialog_set_response_sensitive (GTK_DIALOG (fcd), CONFLICT_RESPONSE_REPLACE, TRUE);
+	gtk_widget_set_sensitive (details->expander, TRUE);
+	gtk_widget_set_sensitive (details->checkbox, TRUE);
+	gtk_widget_grab_focus (details->replace_button);
+}
+
+static void
+build_dialog_appearance (NolphinFileConflictDialog *fcd)
+{
+	GList *files = NULL;
+	NolphinFileConflictDialogDetails *details = fcd->details;
+
+	files = g_list_prepend (files, details->source);
+	files = g_list_prepend (files, details->destination);
+	files = g_list_prepend (files, details->dest_dir);
+
+	nolphin_file_list_call_when_ready (files,
+					    NOLPHIN_FILE_ATTRIBUTES_FOR_ICON,
+					    &details->handle, file_list_ready_cb, fcd);
+	g_list_free (files);
+}
+
+static void
+set_source_and_destination (GtkWidget *w,
+			    GFile *source,
+			    GFile *destination,
+			    GFile *dest_dir)
+{
+	NolphinFileConflictDialog *dialog;
+	NolphinFileConflictDialogDetails *details;
+
+	dialog = NOLPHIN_FILE_CONFLICT_DIALOG (w);
+	details = dialog->details;
+
+	details->source = nolphin_file_get (source);
+	details->destination = nolphin_file_get (destination);
+	details->dest_dir = nolphin_file_get (dest_dir);
+
+	build_dialog_appearance (dialog);
+}
+
+static void
+entry_text_changed_cb (GtkEditable *entry,
+		       NolphinFileConflictDialog *dialog)
+{
+	NolphinFileConflictDialogDetails *details;
+
+	details = dialog->details;
+
+	/* The rename button is visible only if there's text
+	 * in the entry.
+	 */
+	if  (g_strcmp0 (gtk_entry_get_text (GTK_ENTRY (entry)), "") != 0 &&
+	     g_strcmp0 (gtk_entry_get_text (GTK_ENTRY (entry)), details->conflict_name) != 0) {
+		gtk_widget_hide (details->replace_button);
+		gtk_widget_show (details->rename_button);
+
+		gtk_widget_set_sensitive (details->checkbox, FALSE);
+
+		gtk_dialog_set_default_response (GTK_DIALOG (dialog),
+						 CONFLICT_RESPONSE_RENAME);
+	} else {
+		gtk_widget_hide (details->rename_button);
+		gtk_widget_show (details->replace_button);
+
+		gtk_widget_set_sensitive (details->checkbox, TRUE);
+
+		gtk_dialog_set_default_response (GTK_DIALOG (dialog),
+						 CONFLICT_RESPONSE_REPLACE);
+	}
+}
+
+static void
+expander_activated_cb (GtkExpander *w,
+		       NolphinFileConflictDialog *dialog)
+{
+	NolphinFileConflictDialogDetails *details;
+	int start_pos, end_pos;
+
+	details = dialog->details;
+
+	if (!gtk_expander_get_expanded (w)) {
+		if (g_strcmp0 (gtk_entry_get_text (GTK_ENTRY (details->entry)),
+			       details->conflict_name) == 0) {
+			gtk_widget_grab_focus (details->entry);
+
+			eel_filename_get_rename_region (details->conflict_name,
+							&start_pos, &end_pos);
+			gtk_editable_select_region (GTK_EDITABLE (details->entry),
+						    start_pos, end_pos);
+		}
+	}
+}
+
+static void
+checkbox_toggled_cb (GtkToggleButton *t,
+		     NolphinFileConflictDialog *dialog)
+{
+	NolphinFileConflictDialogDetails *details;
+
+	details = dialog->details;
+
+	gtk_widget_set_sensitive (details->expander,
+				  !gtk_toggle_button_get_active (t));
+	gtk_widget_set_sensitive (details->rename_button,
+				  !gtk_toggle_button_get_active (t));
+
+	if  (!gtk_toggle_button_get_active (t) &&
+	     g_strcmp0 (gtk_entry_get_text (GTK_ENTRY (details->entry)),
+			"") != 0 &&
+	     g_strcmp0 (gtk_entry_get_text (GTK_ENTRY (details->entry)),
+			details->conflict_name) != 0) {
+		gtk_widget_hide (details->replace_button);
+		gtk_widget_show (details->rename_button);
+	} else {
+		gtk_widget_hide (details->rename_button);
+		gtk_widget_show (details->replace_button);
+	}
+}
+
+static void
+reset_button_clicked_cb (GtkButton *w,
+			 NolphinFileConflictDialog *dialog)
+{
+	NolphinFileConflictDialogDetails *details;
+	int start_pos, end_pos;
+
+	details = dialog->details;
+
+	gtk_entry_set_text (GTK_ENTRY (details->entry),
+			    details->conflict_name);
+	gtk_widget_grab_focus (details->entry);
+	eel_filename_get_rename_region (details->conflict_name,
+					&start_pos, &end_pos);
+	gtk_editable_select_region (GTK_EDITABLE (details->entry),
+				    start_pos, end_pos);
+
+}
+
+static void
+nolphin_file_conflict_dialog_init (NolphinFileConflictDialog *fcd)
+{
+	GtkWidget *hbox, *vbox, *vbox2, *alignment;
+	GtkWidget *widget, *dialog_area;
+	NolphinFileConflictDialogDetails *details;
+	GtkDialog *dialog;
+
+	details = fcd->details = NOLPHIN_FILE_CONFLICT_DIALOG_GET_PRIVATE (fcd);
+	dialog = GTK_DIALOG (fcd);
+
+    /* The real content can only be built once file_list_ready_cb() runs.
+     * Until then show a spinner page in its place. */
+    dialog_area = gtk_dialog_get_content_area (dialog);
+    details->stack = gtk_stack_new ();
+    gtk_stack_set_transition_type (GTK_STACK (details->stack),
+                                   GTK_STACK_TRANSITION_TYPE_CROSSFADE);
+    gtk_box_pack_start (GTK_BOX (dialog_area), details->stack, TRUE, TRUE, 0);
+
+    /* loading page */
+    details->spinner = gtk_spinner_new ();
+    gtk_widget_set_size_request (details->spinner, 32, 32);
+    gtk_widget_set_halign (details->spinner, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign (details->spinner, GTK_ALIGN_CENTER);
+    gtk_stack_add_named (GTK_STACK (details->stack), details->spinner, "loading");
+    gtk_spinner_start (GTK_SPINNER (details->spinner));
+
+    /* content page */
+    hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
+    gtk_stack_add_named (GTK_STACK (details->stack), hbox, "content");
+    gtk_container_set_border_width (GTK_CONTAINER (hbox), 6);
+
+	/* Setup the dialog image */
+    widget = gtk_image_new_from_icon_name ("xsi-dialog-warning-symbolic", GTK_ICON_SIZE_DIALOG);
+	gtk_box_pack_start (GTK_BOX (hbox), widget, FALSE, FALSE, 0);
+	gtk_misc_set_alignment (GTK_MISC (widget), 0.5, 0.0);
+
+	/* Setup the vbox containing the dialog body */
+	vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
+	gtk_box_pack_start (GTK_BOX (hbox), vbox, FALSE, FALSE, 0);
+
+	/* Setup the vbox for the dialog labels */
+	widget = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
+	gtk_box_pack_start (GTK_BOX (vbox), widget, FALSE, FALSE, 0);
+	details->titles_vbox = widget;
+
+	/* Setup the hboxes to pack file infos into */
+	alignment = gtk_alignment_new (0.0, 0.0, 0.0, 0.0);
+	g_object_set (alignment, "left-padding", 12, NULL);
+	vbox2 = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
+	gtk_container_add (GTK_CONTAINER (alignment), vbox2);
+	gtk_box_pack_start (GTK_BOX (vbox), alignment, FALSE, FALSE, 0);
+
+	hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
+	gtk_box_pack_start (GTK_BOX (vbox2), hbox, FALSE, FALSE, 0);
+	details->first_hbox = hbox;
+
+	hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
+	gtk_box_pack_start (GTK_BOX (vbox2), hbox, FALSE, FALSE, 0);
+	details->second_hbox = hbox;
+
+	/* Setup the expander for the rename action */
+	details->expander = gtk_expander_new_with_mnemonic (_("Einen neuen Namen für das Ziel w_ählen"));
+	gtk_box_pack_start (GTK_BOX (vbox2), details->expander, FALSE, FALSE, 0);
+	g_signal_connect (details->expander, "activate",
+			  G_CALLBACK (expander_activated_cb), dialog);
+
+	hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+	gtk_container_add (GTK_CONTAINER (details->expander), hbox);
+
+	widget = gtk_entry_new ();
+	gtk_box_pack_start (GTK_BOX (hbox), widget, TRUE, TRUE, 6);
+	details->entry = widget;
+	g_signal_connect (widget, "changed",
+			  G_CALLBACK (entry_text_changed_cb), dialog);
+
+	widget = gtk_button_new_with_label (_("Zurücksetzen"));
+	gtk_button_set_image (GTK_BUTTON (widget),
+			      gtk_image_new_from_icon_name ("xsi-edit-undo-symbolic",
+							GTK_ICON_SIZE_MENU));
+	gtk_box_pack_start (GTK_BOX (hbox), widget, FALSE, FALSE, 6);
+	g_signal_connect (widget, "clicked",
+			  G_CALLBACK (reset_button_clicked_cb), dialog);
+
+	gtk_widget_show_all (alignment);
+
+
+	/* Setup the checkbox to apply the action to all files */
+	widget = gtk_check_button_new_with_mnemonic (_("Diese Aktion auf alle Dateien anwenden"));
+	gtk_box_pack_start (GTK_BOX (vbox),
+			    widget, FALSE, FALSE, 0);
+	details->checkbox = widget;
+	g_signal_connect (widget, "toggled",
+			  G_CALLBACK (checkbox_toggled_cb), dialog);
+
+	/* Add buttons */
+
+    gtk_dialog_add_button (dialog, _("_Abbrechen"),  GTK_RESPONSE_CANCEL);
+    gtk_dialog_add_button (dialog, _("_Überspringen"),  CONFLICT_RESPONSE_SKIP);
+
+	details->auto_rename_button =
+		gtk_dialog_add_button (dialog,
+					   _("Ver_doppeln"),
+					   CONFLICT_RESPONSE_AUTO_RENAME);
+
+	details->rename_button =
+		gtk_dialog_add_button (dialog,
+				       _("_Umbenennen"),
+				       CONFLICT_RESPONSE_RENAME);
+	gtk_widget_hide (details->rename_button);
+	gtk_widget_set_no_show_all(details->rename_button, TRUE);
+
+	details->replace_button =
+		gtk_dialog_add_button (dialog,
+				       _("Ersetzen"),
+				       CONFLICT_RESPONSE_REPLACE);
+
+	/* Until file_list_ready_cb() runs the dialog is only partially
+	 * populated: the entry is empty and conflict_name is unset. Acting
+	 * on it in that state is meaningless and, for Rename, dangerous (the
+	 * empty name resolves to the parent directory, see #3750). Allow only
+	 * Cancel until the dialog is fully built.
+	 */
+	gtk_dialog_set_response_sensitive (dialog, CONFLICT_RESPONSE_SKIP, FALSE);
+	gtk_dialog_set_response_sensitive (dialog, CONFLICT_RESPONSE_AUTO_RENAME, FALSE);
+	gtk_dialog_set_response_sensitive (dialog, CONFLICT_RESPONSE_REPLACE, FALSE);
+	gtk_widget_set_sensitive (details->expander, FALSE);
+	gtk_widget_set_sensitive (details->checkbox, FALSE);
+
+	/* Setup HIG properties */
+	gtk_container_set_border_width (GTK_CONTAINER (dialog), 5);
+	gtk_box_set_spacing (GTK_BOX (gtk_dialog_get_content_area (dialog)), 14);
+	gtk_window_set_resizable (GTK_WINDOW (dialog), FALSE);
+    gtk_button_box_set_layout (GTK_BUTTON_BOX (gtk_dialog_get_action_area (dialog)), GTK_BUTTONBOX_SPREAD);
+
+	gtk_widget_show_all (dialog_area);
+	gtk_stack_set_visible_child_name (GTK_STACK (details->stack), "loading");
+}
+
+static void
+do_finalize (GObject *self)
+{
+	NolphinFileConflictDialogDetails *details =
+		NOLPHIN_FILE_CONFLICT_DIALOG (self)->details;
+
+	g_free (details->conflict_name);
+
+	if (details->handle != NULL) {
+		nolphin_file_list_cancel_call_when_ready (details->handle);
+	}
+
+	if (details->src_handler_id) {
+		g_signal_handler_disconnect (details->source, details->src_handler_id);
+		nolphin_file_monitor_remove (details->source, self);
+	}
+
+	if (details->dest_handler_id) {
+		g_signal_handler_disconnect (details->destination, details->dest_handler_id);
+		nolphin_file_monitor_remove (details->destination, self);
+	}
+
+	nolphin_file_unref (details->source);
+	nolphin_file_unref (details->destination);
+	nolphin_file_unref (details->dest_dir);
+
+	G_OBJECT_CLASS (nolphin_file_conflict_dialog_parent_class)->finalize (self);
+}
+
+static void
+nolphin_file_conflict_dialog_class_init (NolphinFileConflictDialogClass *klass)
+{
+	G_OBJECT_CLASS (klass)->finalize = do_finalize;
+
+	g_type_class_add_private (klass, sizeof (NolphinFileConflictDialogDetails));
+}
+
+char *
+nolphin_file_conflict_dialog_get_new_name (NolphinFileConflictDialog *dialog)
+{
+	return g_strdup (gtk_entry_get_text
+			 (GTK_ENTRY (dialog->details->entry)));
+}
+
+gboolean
+nolphin_file_conflict_dialog_get_apply_to_all (NolphinFileConflictDialog *dialog)
+{
+	return gtk_toggle_button_get_active 
+		(GTK_TOGGLE_BUTTON (dialog->details->checkbox));
+}
+
+GtkWidget *
+nolphin_file_conflict_dialog_new (GtkWindow *parent,
+				   GFile *source,
+				   GFile *destination,
+				   GFile *dest_dir)
+{
+	GtkWidget *dialog;
+	
+	dialog = GTK_WIDGET (g_object_new (NOLPHIN_TYPE_FILE_CONFLICT_DIALOG,
+					   "title", _("Dateikonflikt"),
+					   NULL));
+	set_source_and_destination (dialog,
+				    source,
+				    destination,
+				    dest_dir);
+	gtk_window_set_transient_for (GTK_WINDOW (dialog),
+				      parent);
+	return dialog;
+}

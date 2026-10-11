@@ -1,0 +1,5 @@
+[Nolphin Search Helper]
+TryExec=pdftotext;
+Exec=pdftotext %s -
+MimeType=application/pdf;
+Priority=200

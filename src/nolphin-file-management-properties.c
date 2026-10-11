@@ -1,0 +1,1545 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 8; tab-width: 8 -*- */
+
+/* nolphin-file-management-properties.c - Functions to create and show the nolphin preference dialog.
+
+   Copyright (C) 2002 Jan Arne Petersen
+
+   The Gnome Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Library General Public License as
+   published by the Free Software Foundation; either version 2 of the
+   License, or (at your option) any later version.
+
+   The Gnome Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
+
+   You should have received a copy of the GNU Library General Public
+   License along with the Gnome Library; see the file COPYING.LIB.  If not,
+   write to the Free Software Foundation, Inc., 51 Franklin Street - Suite 500,
+   Boston, MA 02110-1335, USA.
+
+   Authors: Jan Arne Petersen <jpetersen@uni-bonn.de>
+*/
+
+#include <config.h>
+
+#include "nolphin-file-management-properties.h"
+
+#include <string.h>
+#include <time.h>
+#include <gtk/gtk.h>
+#include <gio/gio.h>
+
+#include <libnolphin-private/nolphin-file-chooser-preview.h>
+#include <glib/gi18n.h>
+
+#include <eel/eel-glib-extensions.h>
+
+#include <libnolphin-private/nolphin-column-chooser.h>
+#include <libnolphin-private/nolphin-column-utilities.h>
+#include <libnolphin-private/nolphin-global-preferences.h>
+#include <libnolphin-private/nolphin-module.h>
+
+#include "nolphin-plugin-manager.h"
+#include "nolphin-template-config-widget.h"
+#include "nolphin-actions.h"
+
+/* string enum preferences */
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DEFAULT_VIEW_WIDGET "default_view_combobox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_ICON_VIEW_ZOOM_WIDGET "icon_view_zoom_combobox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_COMPACT_VIEW_ZOOM_WIDGET "compact_view_zoom_combobox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_LIST_VIEW_ZOOM_WIDGET "list_view_zoom_combobox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SORT_ORDER_WIDGET "sort_order_combobox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FORMAT_WIDGET "date_format_combobox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FONT_CHOICE_WIDGET "date_font_choice_combobox"
+
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_PREVIEW_IMAGE_WIDGET "preview_image_combobox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_PREVIEW_FOLDER_WIDGET "preview_folder_combobox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SIZE_PREFIXES_WIDGET "size_prefixes_combobox"
+
+/* bool preferences */
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_INHERIT_VIEW_WIDGET "inherit_view_checkbox"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_REVERSE_SORT_WIDGET "reverse_sort_checkbox"
+#define NOLPHIN_FILE_MANAGEMENT_QUICK_RENAMES_WITH_PAUSE_IN_BETWEEN "quick_renames_with_pause_in_between"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_FAVORITES_FIRST_WIDGET "sort_favorites_first_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_FOLDERS_FIRST_WIDGET "sort_folders_first_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_COMPACT_LAYOUT_WIDGET "compact_layout_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_LABELS_BESIDE_ICONS_WIDGET "labels_beside_icons_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_ALL_COLUMNS_SAME_WIDTH "all_columns_same_width_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_ALWAYS_USE_BROWSER_WIDGET "always_use_browser_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TRASH_CONFIRM_MOVE_WIDGET "trash_confirm_move_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TRASH_CONFIRM_WIDGET "trash_confirm_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TRASH_DELETE_WIDGET "trash_delete_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SWAP_TRASH_DELETE "swap_trash_binding_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_OPEN_NEW_WINDOW_WIDGET "new_window_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TREE_VIEW_FOLDERS_WIDGET "treeview_folders_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_LIST_VIEW_EXPANDERS_WIDGET "list_view_show_expanders_checkbutton"
+
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_PREVIOUS_ICON_TOOLBAR_WIDGET "show_previous_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_NEXT_ICON_TOOLBAR_WIDGET "show_next_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_UP_ICON_TOOLBAR_WIDGET "show_up_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_RELOAD_ICON_TOOLBAR_WIDGET "show_reload_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_EDIT_ICON_TOOLBAR_WIDGET "show_edit_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_HOME_ICON_TOOLBAR_WIDGET "show_home_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_COMPUTER_ICON_TOOLBAR_WIDGET "show_computer_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_SEARCH_ICON_TOOLBAR_WIDGET "show_search_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_NEW_FOLDER_ICON_TOOLBAR_WIDGET "show_new_folder_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_OPEN_IN_TERMINAL_ICON_TOOLBAR_WIDGET "show_open_in_terminal_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_ICON_VIEW_ICON_TOOLBAR_WIDGET "show_icon_view_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_LIST_VIEW_ICON_TOOLBAR_WIDGET "show_list_view_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_COMPACT_VIEW_ICON_TOOLBAR_WIDGET "show_compact_view_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_SHOW_THUMBNAILS_ICON_TOOLBAR_WIDGET "show_show_thumbnails_icon_toolbar_togglebutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_TOGGLE_EXTRA_PANE_ICON_TOOLBAR_WIDGET "show_toggle_extra_pane_icon_toolbar_togglebutton"
+
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_FULL_PATH_IN_TITLE_BARS_WIDGET "show_full_path_in_title_bars_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_CLOSE_DEVICE_VIEW_ON_EJECT_WIDGET "close_device_view_on_eject_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTOMOUNT_MEDIA_WIDGET "media_automount_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTOOPEN_MEDIA_WIDGET "media_autoopen_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTORUN_MEDIA_WIDGET "media_autorun_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DETECT_CONTENT_MEDIA_WIDGET "media_detect_content_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_ADVANCED_PERMISSIONS_WIDGET "show_advanced_permissions_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_START_WITH_DUAL_PANE_WIDGET "start_with_dual_pane_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_RESTORE_TABS_ON_STARTUP_WIDGET "restore_tabs_on_startup_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_IGNORE_VIEW_METADATA_WIDGET "ignore_view_metadata_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_BOOKMARKS_IN_TO_MENUS_WIDGET "bookmarks_in_to_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_PLACES_IN_TO_MENUS_WIDGET "places_in_to_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_INHERIT_SHOW_THUMBNAILS_WIDGET "inherit_show_thumbnails_checkbutton"
+
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_BULK_RENAME_WIDGET "bulk_rename_entry"
+
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_ICON_VIEW_WIDGET "tooltips_on_icon_view_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_LIST_VIEW_WIDGET "tooltips_on_list_view_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_DESKTOP_WIDGET "tooltips_on_desktop_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_FILE_TYPE_WIDGET "tt_show_file_type_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_MOD_DATE_WIDGET "tt_show_modified_date_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_ACCESS_DATE_WIDGET "tt_show_accessed_date_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_CREATED_DATE_WIDGET "tt_show_created_date_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_FULL_PATH_WIDGET "tt_show_full_path_checkbutton"
+
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_NOLPHIN_PREFERENCES_SKIP_FILE_OP_QUEUE_WIDGET "skip_file_op_queue_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_NOLPHIN_PREFERENCES_CLICK_DBL_PARENT_FOLDER_WIDGET "click_double_parent_folder_checkbutton"
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_NOLPHIN_PREFERENCES_EXPAND_ROW_ON_DND_DWELL_WIDGET "expand_row_on_dnd_dwell_checkbutton"
+
+/* int enums */
+#define NOLPHIN_FILE_MANAGEMENT_PROPERTIES_THUMBNAIL_LIMIT_WIDGET "preview_image_size_combobox"
+
+#define W(s) (gtk_builder_get_object (builder, s))
+
+#define TOOLBAR_PADDING 20
+
+static const char * const default_view_values[] = {
+	"icon-view",
+	"list-view",
+	"compact-view",
+	NULL
+};
+
+static const char * const zoom_values[] = {
+	"smallest",
+	"smaller",
+	"small",
+	"standard",
+	"large",
+	"larger",
+	"largest",
+	NULL
+};
+
+static const char * const sort_order_values[] = {
+	"name",
+	"size",
+	"type",
+    "detailed_type",
+	"mtime",
+	"atime",
+	"trash-time",
+	NULL
+};
+
+static const char * const date_format_values[] = {
+	"locale",
+	"iso",
+	"informal",
+	NULL
+};
+
+static const char * const date_font_choice_values[] = {
+    "auto-mono",
+    "system-mono",
+    "no-mono",
+    NULL
+};
+
+static const char * const preview_image_values[] = {
+    "always",
+    "local-only",
+    "never",
+    NULL
+};
+
+static const char * const preview_folder_values[] = {
+	"always",
+	"local-only",
+	"never",
+	NULL
+};
+
+static const char * const click_behavior_components[] = {
+	"single_click_radiobutton",
+	"double_click_radiobutton",
+	NULL
+};
+
+static const char * const click_behavior_values[] = {
+	"single",
+	"double",
+	NULL
+};
+
+static const char * const executable_text_components[] = {
+	"scripts_execute_radiobutton",
+	"scripts_view_radiobutton",
+	"scripts_confirm_radiobutton",
+	NULL
+};
+
+static const char * const executable_text_values[] = {
+	"launch",
+	"display",
+	"ask",
+	NULL
+};
+
+static const char * const size_prefixes_values[] = {
+	"base-10",
+	"base-10-full",
+	"base-2",
+	"base-2-full",
+	NULL
+};
+
+static const guint64 thumbnail_limit_values[] = {
+	102400,
+	512000,
+	1048576,
+	3145728,
+	5242880,
+	10485760,
+	104857600,
+	1073741824,
+	2147483648U,
+	4294967295U,
+	8589934592U,
+	17179869184U,
+	34359738368U,
+	68719476736U
+};
+
+static const char * const icon_captions_components[] = {
+	"captions_0_combobox",
+	"captions_1_combobox",
+	"captions_2_combobox",
+	NULL
+};
+
+static GtkWidget *preferences_dialog = NULL;
+
+/* Embedded mode: the preferences replace the file area of the main window. */
+static GtkWidget *preferences_page = NULL;
+static GtkWidget *preferences_host = NULL;
+static gulong     preferences_key_handler = 0;
+
+static void
+close_preferences (void)
+{
+	GtkWidget *page = preferences_page;
+	GtkWidget *host = preferences_host;
+
+	if (preferences_dialog != NULL) {
+		gtk_widget_destroy (preferences_dialog);
+		return;
+	}
+	if (page == NULL) {
+		return;
+	}
+	if (host != NULL && preferences_key_handler != 0) {
+		g_signal_handler_disconnect (host, preferences_key_handler);
+	}
+	preferences_key_handler = 0;
+	preferences_host = NULL;
+	preferences_page = NULL;
+
+	if (host != NULL) {
+		GtkWidget *stack = g_object_get_data (G_OBJECT (host), "nolphin-content-stack");
+
+		if (stack != NULL) {
+			gtk_stack_set_visible_child_name (GTK_STACK (stack), "files");
+		}
+	}
+	gtk_widget_destroy (page);
+}
+
+static gboolean
+on_prefs_key_press (GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+{
+	if (event->keyval == GDK_KEY_Escape) {
+		close_preferences ();
+		return GDK_EVENT_STOP;
+	}
+	return GDK_EVENT_PROPAGATE;
+}
+
+static void
+on_prefs_close_clicked (GtkButton *button, gpointer user_data)
+{
+	close_preferences ();
+}
+
+static void
+on_prefs_page_destroy (GtkWidget *widget, gpointer user_data)
+{
+	g_object_unref (GTK_BUILDER (user_data));
+}
+
+static void
+nolphin_file_management_properties_size_group_create (GtkBuilder *builder,
+						       char *prefix,
+						       int items)
+{
+	GtkSizeGroup *size_group;
+	int i;
+	char *item_name;
+	GtkWidget *widget;
+
+	size_group = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
+
+	for (i = 0; i < items; i++) {	
+		item_name = g_strdup_printf ("%s_%d", prefix, i);
+		widget = GTK_WIDGET (gtk_builder_get_object (builder, item_name));
+		gtk_size_group_add_widget (size_group, widget);
+		g_free (item_name);
+	}
+	g_object_unref (G_OBJECT (size_group));
+}
+
+static void
+columns_changed_callback (NolphinColumnChooser *chooser,
+			  gpointer callback_data)
+{
+	char **visible_columns;
+	char **column_order;
+
+	nolphin_column_chooser_get_settings (NOLPHIN_COLUMN_CHOOSER (chooser),
+					      &visible_columns,
+					      &column_order);
+
+	g_settings_set_strv (nolphin_list_view_preferences,
+			     NOLPHIN_PREFERENCES_LIST_VIEW_DEFAULT_VISIBLE_COLUMNS,
+			     (const char * const *)visible_columns);
+	g_settings_set_strv (nolphin_list_view_preferences,
+			     NOLPHIN_PREFERENCES_LIST_VIEW_DEFAULT_COLUMN_ORDER,
+			     (const char * const *)column_order);
+
+	g_strfreev (visible_columns);
+	g_strfreev (column_order);
+}
+
+static void
+free_column_names_array (GPtrArray *column_names)
+{
+	g_ptr_array_foreach (column_names, (GFunc) g_free, NULL);
+	g_ptr_array_free (column_names, TRUE);
+}
+
+static void
+create_icon_caption_combo_box_items (GtkComboBoxText *combo_box,
+			             GList *columns)
+{
+	GList *l;
+	GPtrArray *column_names;
+
+	column_names = g_ptr_array_new ();
+
+	/* Translators: this is referred to captions under icons. */
+	gtk_combo_box_text_append_text (combo_box, _("Keine"));
+	g_ptr_array_add (column_names, g_strdup ("none"));
+
+	for (l = columns; l != NULL; l = l->next) {
+		NolphinColumn *column;
+		char *name;
+		char *label;
+
+		column = NOLPHIN_COLUMN (l->data);
+
+		g_object_get (G_OBJECT (column), 
+			      "name", &name, "label", &label, 
+			      NULL);
+
+		/* Don't show name here, it doesn't make sense */
+		if (!strcmp (name, "name")) {
+			g_free (name);
+			g_free (label);
+			continue;
+		}
+
+		gtk_combo_box_text_append_text (combo_box, label);
+		g_ptr_array_add (column_names, name);
+
+		g_free (label);
+	}
+	g_object_set_data_full (G_OBJECT (combo_box), "column_names",
+			        column_names,
+			        (GDestroyNotify) free_column_names_array);
+}
+
+static void
+icon_captions_changed_callback (GtkComboBox *combo_box,
+				gpointer user_data)
+{
+	GPtrArray *captions;
+	GtkBuilder *builder;
+	guint i;
+
+	builder = GTK_BUILDER (user_data);
+
+	captions = g_ptr_array_new ();
+
+	for (i = 0; icon_captions_components[i] != NULL; i++) {
+		int active;
+		GPtrArray *column_names;
+		char *name;
+		GtkWidget *c_box;
+
+		c_box = GTK_WIDGET (gtk_builder_get_object
+					(builder, icon_captions_components[i]));
+		active = gtk_combo_box_get_active (GTK_COMBO_BOX (c_box));
+
+		column_names = g_object_get_data (G_OBJECT (c_box),
+						  "column_names");
+
+		name = g_ptr_array_index (column_names, active);
+		g_ptr_array_add (captions, name);
+	}
+	g_ptr_array_add (captions, NULL);
+
+	g_settings_set_strv (nolphin_icon_view_preferences,
+			     NOLPHIN_PREFERENCES_ICON_VIEW_CAPTIONS,
+			     (const char **)captions->pdata);
+	g_ptr_array_free (captions, TRUE);
+}
+
+static void
+update_caption_combo_box (GtkBuilder *builder,
+			  const char *combo_box_name,
+			  const char *name)
+{
+	GtkWidget *combo_box;
+	guint i;
+	GPtrArray *column_names;
+
+	combo_box = GTK_WIDGET (gtk_builder_get_object (builder, combo_box_name));
+
+	g_signal_handlers_block_by_func
+		(combo_box,
+		 G_CALLBACK (icon_captions_changed_callback),
+		 builder);
+
+	column_names = g_object_get_data (G_OBJECT (combo_box), 
+					  "column_names");
+
+	for (i = 0; i < column_names->len; ++i) {
+		if (!strcmp (name, g_ptr_array_index (column_names, i))) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (combo_box), i);
+			break;
+		}
+	}
+
+	g_signal_handlers_unblock_by_func
+		(combo_box,
+		 G_CALLBACK (icon_captions_changed_callback),
+		 builder);
+}
+
+static void
+update_icon_captions_from_settings (GtkBuilder *builder)
+{
+	char **captions;
+	int i, j;
+
+	captions = g_settings_get_strv (nolphin_icon_view_preferences, NOLPHIN_PREFERENCES_ICON_VIEW_CAPTIONS);
+	if (captions == NULL)
+		return;
+
+	for (i = 0, j = 0; 
+	     icon_captions_components[i] != NULL;
+	     i++) {
+		char *data;
+
+		if (captions[j]) {
+			data = captions[j];
+			++j;
+		} else {
+			data = (char *)"none";
+		}
+
+		update_caption_combo_box (builder, 
+					  icon_captions_components[i],
+					  data);
+	}
+
+	g_strfreev (captions);
+}
+
+static void
+nolphin_file_management_properties_dialog_setup_icon_caption_page (GtkBuilder *builder)
+{
+	GList *columns;
+	int i;
+	gboolean writable;
+
+	writable = g_settings_is_writable (nolphin_icon_view_preferences,
+					   NOLPHIN_PREFERENCES_ICON_VIEW_CAPTIONS);
+
+	columns = nolphin_get_common_columns ();
+
+	for (i = 0; icon_captions_components[i] != NULL; i++) {
+		GtkWidget *combo_box;
+
+		combo_box = GTK_WIDGET (gtk_builder_get_object (builder,
+								icon_captions_components[i]));
+
+		create_icon_caption_combo_box_items (GTK_COMBO_BOX_TEXT (combo_box), columns);
+		gtk_widget_set_sensitive (combo_box, writable);
+
+		g_signal_connect (combo_box, "changed",
+				  G_CALLBACK (icon_captions_changed_callback),
+				  builder);
+	}
+
+	nolphin_column_list_free (columns);
+
+	update_icon_captions_from_settings (builder);
+}
+
+static void
+nolphin_file_management_properties_dialog_setup_plugin_page (GtkBuilder *builder)
+{
+    GtkWidget *box;
+
+    box = GTK_WIDGET (gtk_builder_get_object (builder, "plugin_box"));
+
+    gtk_box_pack_start (GTK_BOX (box),
+                        GTK_WIDGET (nolphin_plugin_manager_new ()),
+                        TRUE, TRUE, 0);
+}
+
+static void
+nolphin_file_management_properties_dialog_setup_templates_page (GtkBuilder *builder)
+{
+    GtkWidget *box;
+
+    box = GTK_WIDGET (gtk_builder_get_object (builder, "templates_box"));
+
+    gtk_box_pack_start (GTK_BOX (box),
+                        GTK_WIDGET (nolphin_template_config_widget_new ()),
+                        TRUE, TRUE, 0);
+}
+
+static void
+create_date_format_menu (GtkBuilder *builder)
+{
+	GtkComboBoxText *combo_box;
+	gchar *date_string;
+	GDateTime *now;
+
+	combo_box = GTK_COMBO_BOX_TEXT
+		(gtk_builder_get_object (builder,
+					 NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FORMAT_WIDGET));
+
+	now = g_date_time_new_now_local ();
+
+	date_string = g_date_time_format (now, "%c");
+	gtk_combo_box_text_append_text (combo_box, date_string);
+	g_free (date_string);
+
+	date_string = g_date_time_format (now, "%Y-%m-%d %H:%M:%S");
+	gtk_combo_box_text_append_text (combo_box, date_string);
+	g_free (date_string);
+
+	gtk_combo_box_text_append_text (combo_box, _("Gestern"));
+
+	g_date_time_unref (now);
+}
+
+static void
+set_columns_from_settings (NolphinColumnChooser *chooser)
+{
+	char **visible_columns;
+	char **column_order;
+
+	visible_columns = g_settings_get_strv (nolphin_list_view_preferences,
+					       NOLPHIN_PREFERENCES_LIST_VIEW_DEFAULT_VISIBLE_COLUMNS);
+	column_order = g_settings_get_strv (nolphin_list_view_preferences,
+					    NOLPHIN_PREFERENCES_LIST_VIEW_DEFAULT_COLUMN_ORDER);
+
+	nolphin_column_chooser_set_settings (NOLPHIN_COLUMN_CHOOSER (chooser),
+					      visible_columns,
+					      column_order);
+
+	g_strfreev (visible_columns);
+	g_strfreev (column_order);
+}
+
+static void
+use_default_callback (NolphinColumnChooser *chooser,
+		      gpointer user_data)
+{
+	g_settings_reset (nolphin_list_view_preferences,
+			  NOLPHIN_PREFERENCES_LIST_VIEW_DEFAULT_VISIBLE_COLUMNS);
+	g_settings_reset (nolphin_list_view_preferences,
+			  NOLPHIN_PREFERENCES_LIST_VIEW_DEFAULT_COLUMN_ORDER);
+	set_columns_from_settings (chooser);
+}
+
+static void
+nolphin_file_management_properties_dialog_setup_list_column_page (GtkBuilder *builder)
+{
+	GtkWidget *chooser;
+	GtkWidget *box;
+
+	chooser = nolphin_column_chooser_new (NULL);
+
+	set_columns_from_settings (NOLPHIN_COLUMN_CHOOSER (chooser));
+
+	g_signal_connect (chooser, "changed",
+			  G_CALLBACK (columns_changed_callback), chooser);
+	g_signal_connect (chooser, "use_default",
+			  G_CALLBACK (use_default_callback), chooser);
+
+	gtk_widget_show (chooser);
+	box = GTK_WIDGET (gtk_builder_get_object (builder, "list_columns_vbox"));
+
+	gtk_box_pack_start (GTK_BOX (box), chooser, TRUE, TRUE, 0);
+}
+
+static void
+bind_builder_bool (GtkBuilder *builder,
+		   GSettings *settings,
+		   const char *widget_name,
+		   const char *prefs)
+{
+	g_settings_bind (settings, prefs,
+			 gtk_builder_get_object (builder, widget_name),
+			 "active", G_SETTINGS_BIND_DEFAULT);
+}
+
+static void
+bind_builder_bool_inverted (GtkBuilder *builder,
+			    GSettings *settings,
+			    const char *widget_name,
+			    const char *prefs)
+{
+	g_settings_bind (settings, prefs,
+			 gtk_builder_get_object (builder, widget_name),
+			 "active", G_SETTINGS_BIND_INVERT_BOOLEAN);
+}
+
+static void
+bind_builder_string_entry (GtkBuilder *builder,
+                            GSettings *settings,
+                           const char *widget_name,
+                           const char *prefs)
+{
+    g_settings_bind (settings, prefs,
+                     gtk_builder_get_object (builder, widget_name),
+                     "text", G_SETTINGS_BIND_DEFAULT);
+}
+
+static gboolean
+enum_get_mapping (GValue             *value,
+		  GVariant           *variant,
+		  gpointer            user_data)
+{
+	const char **enum_values = user_data;
+	const char *str;
+	int i;
+
+	str = g_variant_get_string (variant, NULL);
+	for (i = 0; enum_values[i] != NULL; i++) {
+		if (strcmp (enum_values[i], str) == 0) {
+			g_value_set_int (value, i);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+static GVariant *
+enum_set_mapping (const GValue       *value,
+		  const GVariantType *expected_type,
+		  gpointer            user_data)
+{
+	const char **enum_values = user_data;
+
+	return g_variant_new_string (enum_values[g_value_get_int (value)]);
+}
+
+static void
+bind_builder_enum (GtkBuilder *builder,
+		   GSettings *settings,
+		   const char *widget_name,
+		   const char *prefs,
+		   const char **enum_values)
+{
+	g_settings_bind_with_mapping (settings, prefs,
+				      gtk_builder_get_object (builder, widget_name),
+				      "active", G_SETTINGS_BIND_DEFAULT,
+				      enum_get_mapping,
+				      enum_set_mapping,
+				      enum_values, NULL);
+}
+
+
+typedef struct {
+	const guint64 *values;
+	int n_values;
+} UIntEnumBinding;
+
+static gboolean
+uint_enum_get_mapping (GValue             *value,
+		       GVariant           *variant,
+		       gpointer            user_data)
+{
+	UIntEnumBinding *binding = user_data;
+	guint64 v;
+	int i;
+
+	v = g_variant_get_uint64 (variant);
+	for (i = 0; i < binding->n_values; i++) {
+		if (binding->values[i] >= v) {
+			g_value_set_int (value, i);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+static GVariant *
+uint_enum_set_mapping (const GValue       *value,
+		       const GVariantType *expected_type,
+		       gpointer            user_data)
+{
+	UIntEnumBinding *binding = user_data;
+
+	return g_variant_new_uint64 (binding->values[g_value_get_int (value)]);
+}
+
+static void
+bind_builder_uint_enum (GtkBuilder *builder,
+			GSettings *settings,
+			const char *widget_name,
+			const char *prefs,
+			const guint64 *values,
+			int n_values)
+{
+	UIntEnumBinding *binding;
+
+	binding = g_new (UIntEnumBinding, 1);
+	binding->values = values;
+	binding->n_values = n_values;
+
+	g_settings_bind_with_mapping (settings, prefs,
+				      gtk_builder_get_object (builder, widget_name),
+				      "active", G_SETTINGS_BIND_DEFAULT,
+				      uint_enum_get_mapping,
+				      uint_enum_set_mapping,
+				      binding, g_free);
+}
+
+static GVariant *
+radio_mapping_set (const GValue *gvalue,
+		   const GVariantType *expected_type,
+		   gpointer user_data)
+{
+	const gchar *widget_value = user_data;
+	GVariant *retval = NULL;
+
+	if (g_value_get_boolean (gvalue)) {
+		retval = g_variant_new_string (widget_value);
+	}
+
+	return retval;
+}
+
+static gboolean
+radio_mapping_get (GValue *gvalue,
+		   GVariant *variant,
+		   gpointer user_data)
+{
+	const gchar *widget_value = user_data;
+	const gchar *value;
+
+	value = g_variant_get_string (variant, NULL);
+
+	if (g_strcmp0 (value, widget_value) == 0) {
+		g_value_set_boolean (gvalue, TRUE);
+	} else {
+		g_value_set_boolean (gvalue, FALSE);
+	}
+
+	return TRUE;
+}
+
+static void
+bind_builder_radio (GtkBuilder *builder,
+		    GSettings *settings,
+		    const char **widget_names,
+		    const char *prefs,
+		    const char **values)
+{
+	GtkWidget *button;
+	int i;
+
+	for (i = 0; widget_names[i] != NULL; i++) {
+		button = GTK_WIDGET (gtk_builder_get_object (builder, widget_names[i]));
+
+		g_settings_bind_with_mapping (settings, prefs,
+					      button, "active",
+					      G_SETTINGS_BIND_DEFAULT,
+					      radio_mapping_get, radio_mapping_set,
+					      (gpointer) values[i], NULL);
+	}
+}
+
+static void
+setup_configurable_menu_items (GtkBuilder *builder)
+{
+    gint i;
+
+    for (i = 0; i < CONFIGURABLE_MENU_ITEM_COUNT; i++) {
+        if (CONFIGURABLE_MENU_ITEM_INFO[i].config_widget_name == NULL) {
+            continue;
+        }
+
+        bind_builder_bool (builder,
+                           nolphin_menu_config_preferences,
+                           CONFIGURABLE_MENU_ITEM_INFO[i].config_widget_name,
+                           CONFIGURABLE_MENU_ITEM_INFO[i].settings_key);
+    }
+}
+
+static void
+setup_tooltip_items (GtkBuilder *builder)
+{
+    gboolean enabled = FALSE;
+
+    enabled = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_ICON_VIEW_WIDGET))) ||
+              gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_DESKTOP_WIDGET))) ||
+              gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_LIST_VIEW_WIDGET)));
+
+    gtk_widget_set_sensitive (GTK_WIDGET (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_FILE_TYPE_WIDGET)), enabled);
+    gtk_widget_set_sensitive (GTK_WIDGET (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_MOD_DATE_WIDGET)), enabled);
+    gtk_widget_set_sensitive (GTK_WIDGET (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_CREATED_DATE_WIDGET)), enabled);
+    gtk_widget_set_sensitive (GTK_WIDGET (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_ACCESS_DATE_WIDGET)), enabled);
+    gtk_widget_set_sensitive (GTK_WIDGET (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_FULL_PATH_WIDGET)), enabled);
+}
+
+static void
+connect_tooltip_items (GtkBuilder *builder)
+{
+    GtkToggleButton *w;
+
+    w = GTK_TOGGLE_BUTTON (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_ICON_VIEW_WIDGET));
+    g_signal_connect_swapped (w, "toggled", G_CALLBACK (setup_tooltip_items), builder);
+
+    w = GTK_TOGGLE_BUTTON (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_LIST_VIEW_WIDGET));
+    g_signal_connect_swapped (w, "toggled", G_CALLBACK (setup_tooltip_items), builder);
+
+    w = GTK_TOGGLE_BUTTON (W (NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_DESKTOP_WIDGET));
+    g_signal_connect_swapped (w, "toggled", G_CALLBACK (setup_tooltip_items), builder);
+
+}
+
+/* When single click radio button is selected, checkbox for quick renames should get unselected and disable to avoid annoying features */
+static void
+setup_quick_renames (GtkBuilder *builder)
+{
+	gboolean enabled = FALSE;
+	enabled = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (W (click_behavior_components[1])));
+	if(enabled==FALSE){
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(W (NOLPHIN_FILE_MANAGEMENT_QUICK_RENAMES_WITH_PAUSE_IN_BETWEEN)), FALSE);
+	}
+	gtk_widget_set_sensitive (GTK_WIDGET (W (NOLPHIN_FILE_MANAGEMENT_QUICK_RENAMES_WITH_PAUSE_IN_BETWEEN)), enabled);
+}
+
+static void
+connect_quick_renames (GtkBuilder *builder)
+{
+	GtkRadioButton *w;
+	w=GTK_RADIO_BUTTON(W(click_behavior_components[0]));
+ 		g_signal_connect_swapped (w, "toggled", G_CALLBACK (setup_quick_renames), builder);
+
+	w=GTK_RADIO_BUTTON(W(click_behavior_components[1]));
+		g_signal_connect_swapped (w, "toggled", G_CALLBACK (setup_quick_renames), builder);
+}
+
+static void
+on_dialog_destroy (GtkWidget *widget,
+                   gpointer   user_data)
+{
+    GtkBuilder *builder = GTK_BUILDER (user_data);
+
+    g_object_unref (builder);
+}
+
+static void
+on_date_format_combo_changed (GtkComboBox *widget,
+                              gpointer     user_data)
+{
+    GtkBuilder *builder = GTK_BUILDER (user_data);
+    gint active = gtk_combo_box_get_active (widget);
+
+    switch (active) {
+        case NOLPHIN_DATE_FORMAT_LOCALE:
+        case NOLPHIN_DATE_FORMAT_ISO:
+            gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (builder, NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FONT_CHOICE_WIDGET)), TRUE);
+            break;
+        case NOLPHIN_DATE_FORMAT_INFORMAL:
+        default:
+            gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (builder, NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FONT_CHOICE_WIDGET)), FALSE);
+            break;
+    }
+}
+
+static void
+set_gtk_filechooser_sort_first (GObject *object,
+				GParamSpec *pspec)
+{
+	g_settings_set_boolean (gtk_filechooser_preferences,
+				NOLPHIN_PREFERENCES_SORT_DIRECTORIES_FIRST,
+				gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (object)));
+}
+
+
+/* --- Einstellungen exportieren / importieren / zurücksetzen ----
+ * Alle Nolphin-Einstellungen liegen unter /org/nolphin/ in dconf; das
+ * Systemwerkzeug dconf sichert und lädt sie als Textdatei. Fehlt dconf,
+ * wird das gemeldet statt eine Funktion vorzutäuschen. */
+
+#define SETTINGS_DCONF_PATH "/org/nolphin/"
+
+static void
+settings_io_message (GtkWidget *parent, GtkMessageType type, const gchar *text, const gchar *secondary)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (parent);
+	GtkWidget *dialog = gtk_message_dialog_new (GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+						    GTK_DIALOG_DESTROY_WITH_PARENT, type, GTK_BUTTONS_OK, "%s", text);
+
+	if (secondary != NULL) {
+		gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), "%s", secondary);
+	}
+	gtk_dialog_run (GTK_DIALOG (dialog));
+	gtk_widget_destroy (dialog);
+}
+
+static gboolean
+settings_io_confirm (GtkWidget *parent, const gchar *text, const gchar *secondary, const gchar *accept)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (parent);
+	GtkWidget *dialog = gtk_message_dialog_new (GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+						    GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
+						    GTK_BUTTONS_NONE, "%s", text);
+	gboolean ok;
+
+	gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), "%s", secondary);
+	gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("_Abbrechen"), GTK_RESPONSE_CANCEL, accept, GTK_RESPONSE_OK, NULL);
+	ok = gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_OK;
+	gtk_widget_destroy (dialog);
+	return ok;
+}
+
+/* Führt dconf aus; @input (optional) wird auf stdin geschrieben. */
+static gboolean
+settings_io_run_dconf (const gchar * const *argv, const gchar *input, gchar **out, GError **error)
+{
+	GSubprocess *proc;
+	GBytes *in_bytes = NULL, *out_bytes = NULL, *err_bytes = NULL;
+	gboolean ok;
+	gchar *tool = g_find_program_in_path ("dconf");
+
+	if (tool == NULL) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+			     _("Das Systemwerkzeug »dconf« ist nicht installiert."));
+		return FALSE;
+	}
+	g_free (tool);
+
+	proc = g_subprocess_newv (argv, G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_PIPE |
+				  G_SUBPROCESS_FLAGS_STDERR_PIPE, error);
+	if (proc == NULL) {
+		return FALSE;
+	}
+	in_bytes = g_bytes_new (input != NULL ? input : "", input != NULL ? strlen (input) : 0);
+	ok = g_subprocess_communicate (proc, in_bytes, NULL, &out_bytes, &err_bytes, error);
+	g_bytes_unref (in_bytes);
+	if (ok && !g_subprocess_get_successful (proc)) {
+		gsize len = 0;
+		const gchar *e = err_bytes != NULL ? g_bytes_get_data (err_bytes, &len) : NULL;
+
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "%s",
+			     (e != NULL && len > 0) ? e : _("dconf wurde mit einem Fehler beendet."));
+		ok = FALSE;
+	}
+	if (ok && out != NULL) {
+		gsize len = 0;
+		const gchar *data = out_bytes != NULL ? g_bytes_get_data (out_bytes, &len) : NULL;
+
+		*out = g_strndup (data != NULL ? data : "", len);
+	}
+	g_clear_pointer (&out_bytes, g_bytes_unref);
+	g_clear_pointer (&err_bytes, g_bytes_unref);
+	g_object_unref (proc);
+	return ok;
+}
+
+static void
+on_settings_export_clicked (GtkButton *button, gpointer user_data)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (GTK_WIDGET (button));
+	GtkWidget *chooser = gtk_file_chooser_dialog_new (_("Einstellungen exportieren"),
+							  GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+							  GTK_FILE_CHOOSER_ACTION_SAVE,
+							  _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+							  _("_Exportieren"), GTK_RESPONSE_ACCEPT, NULL);
+	const gchar *dump[] = { "dconf", "dump", SETTINGS_DCONF_PATH, NULL };
+
+	gtk_file_chooser_set_do_overwrite_confirmation (GTK_FILE_CHOOSER (chooser), TRUE);
+	gtk_file_chooser_set_current_name (GTK_FILE_CHOOSER (chooser), "nolphin-einstellungen.ini");
+
+	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
+		gchar *path = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
+		gchar *text = NULL;
+		GError *error = NULL;
+
+		if (settings_io_run_dconf (dump, NULL, &text, &error) &&
+		    g_file_set_contents (path, text, -1, &error)) {
+			settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_INFO, _("Einstellungen exportiert."), path);
+		} else {
+			settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_ERROR,
+					     _("Die Einstellungen konnten nicht exportiert werden."),
+					     error != NULL ? error->message : NULL);
+			g_clear_error (&error);
+		}
+		g_free (text);
+		g_free (path);
+	}
+	gtk_widget_destroy (chooser);
+}
+
+static void
+on_settings_import_clicked (GtkButton *button, gpointer user_data)
+{
+	GtkWidget *toplevel = gtk_widget_get_toplevel (GTK_WIDGET (button));
+	GtkWidget *chooser = gtk_file_chooser_dialog_new (_("Einstellungen importieren"),
+							  GTK_IS_WINDOW (toplevel) ? GTK_WINDOW (toplevel) : NULL,
+							  GTK_FILE_CHOOSER_ACTION_OPEN,
+							  _("_Abbrechen"), GTK_RESPONSE_CANCEL,
+							  _("_Importieren"), GTK_RESPONSE_ACCEPT, NULL);
+	const gchar *load[] = { "dconf", "load", SETTINGS_DCONF_PATH, NULL };
+
+	nolphin_file_chooser_add_preview (GTK_FILE_CHOOSER (chooser));
+	if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT) {
+		gchar *path = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
+		gchar *text = NULL;
+		GError *error = NULL;
+		GKeyFile *check = g_key_file_new ();
+
+		/* Nur eine gültige Einstellungsdatei (INI-Aufbau) wird eingespielt. */
+		if (!g_file_get_contents (path, &text, NULL, &error) ||
+		    !g_key_file_load_from_data (check, text, -1, G_KEY_FILE_NONE, &error)) {
+			settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_ERROR,
+					     _("Das ist keine gültige Einstellungsdatei."),
+					     error != NULL ? error->message : NULL);
+			g_clear_error (&error);
+		} else if (settings_io_confirm (GTK_WIDGET (button),
+						_("Einstellungen importieren?"),
+						_("Die gespeicherten Werte aus der Datei ersetzen die entsprechenden aktuellen Einstellungen."),
+						_("_Importieren"))) {
+			if (settings_io_run_dconf (load, text, NULL, &error)) {
+				settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_INFO, _("Einstellungen importiert."),
+						     _("Manche Änderungen greifen erst nach einem Neustart von Nolphin."));
+			} else {
+				settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_ERROR,
+						     _("Die Einstellungen konnten nicht importiert werden."),
+						     error != NULL ? error->message : NULL);
+				g_clear_error (&error);
+			}
+		}
+		g_key_file_free (check);
+		g_free (text);
+		g_free (path);
+	}
+	gtk_widget_destroy (chooser);
+}
+
+static void
+on_settings_reset_clicked (GtkButton *button, gpointer user_data)
+{
+	const gchar *reset[] = { "dconf", "reset", "-f", SETTINGS_DCONF_PATH, NULL };
+	GError *error = NULL;
+
+	if (!settings_io_confirm (GTK_WIDGET (button),
+				  _("Alle Einstellungen zurücksetzen?"),
+				  _("Alle Nolphin-Einstellungen gehen auf die Werkseinstellungen zurück. Das lässt sich nicht rückgängig machen; vorher exportieren sichert sie."),
+				  _("_Zurücksetzen"))) {
+		return;
+	}
+	if (settings_io_run_dconf (reset, NULL, NULL, &error)) {
+		settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_INFO, _("Einstellungen zurückgesetzt."),
+				     _("Manche Änderungen greifen erst nach einem Neustart von Nolphin."));
+	} else {
+		settings_io_message (GTK_WIDGET (button), GTK_MESSAGE_ERROR,
+				     _("Die Einstellungen konnten nicht zurückgesetzt werden."),
+				     error != NULL ? error->message : NULL);
+		g_clear_error (&error);
+	}
+}
+
+/* Leiste mit den drei Knöpfen für die Einstellungsseite bzw. den Dialog. */
+static GtkWidget *
+build_settings_io_box (void)
+{
+	GtkWidget *box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+	GtkWidget *b;
+
+	b = gtk_button_new_with_label (_("Exportieren …"));
+	gtk_widget_set_tooltip_text (b, _("Alle Einstellungen in eine Datei sichern"));
+	g_signal_connect (b, "clicked", G_CALLBACK (on_settings_export_clicked), NULL);
+	gtk_box_pack_start (GTK_BOX (box), b, FALSE, FALSE, 0);
+
+	b = gtk_button_new_with_label (_("Importieren …"));
+	gtk_widget_set_tooltip_text (b, _("Einstellungen aus einer zuvor exportierten Datei laden"));
+	g_signal_connect (b, "clicked", G_CALLBACK (on_settings_import_clicked), NULL);
+	gtk_box_pack_start (GTK_BOX (box), b, FALSE, FALSE, 0);
+
+	b = gtk_button_new_with_label (_("Zurücksetzen …"));
+	gtk_widget_set_tooltip_text (b, _("Alle Einstellungen auf die Werkseinstellungen zurücksetzen"));
+	g_signal_connect (b, "clicked", G_CALLBACK (on_settings_reset_clicked), NULL);
+	gtk_box_pack_start (GTK_BOX (box), b, FALSE, FALSE, 0);
+
+	return box;
+}
+
+static  void
+nolphin_file_management_properties_dialog_setup (GtkBuilder  *builder,
+                                              GtkWindow   *window,
+                                              const gchar *initial_page)
+{
+	GtkWidget *dialog;
+	GtkWidget *content_stack;
+
+	/* setup UI */
+	nolphin_file_management_properties_size_group_create (builder,
+							       (char *)"views_label",
+							       5);
+	nolphin_file_management_properties_size_group_create (builder,
+							       (char *)"captions_label",
+							       3);
+	nolphin_file_management_properties_size_group_create (builder,
+							       (char *)"preview_label",
+							       3);
+	create_date_format_menu (builder);
+
+
+	/* nolphin patch */
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_PREVIOUS_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_PREVIOUS_ICON_TOOLBAR);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_NEXT_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_NEXT_ICON_TOOLBAR);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_UP_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_UP_ICON_TOOLBAR);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_RELOAD_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_RELOAD_ICON_TOOLBAR);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_EDIT_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_EDIT_ICON_TOOLBAR);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_HOME_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_HOME_ICON_TOOLBAR);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_COMPUTER_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_COMPUTER_ICON_TOOLBAR);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_SEARCH_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_SEARCH_ICON_TOOLBAR);
+    bind_builder_bool (builder, nolphin_preferences,
+        NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_NEW_FOLDER_ICON_TOOLBAR_WIDGET,
+        NOLPHIN_PREFERENCES_SHOW_NEW_FOLDER_ICON_TOOLBAR);
+    bind_builder_bool (builder, nolphin_preferences,
+        NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_OPEN_IN_TERMINAL_ICON_TOOLBAR_WIDGET,
+        NOLPHIN_PREFERENCES_SHOW_OPEN_IN_TERMINAL_TOOLBAR);
+    bind_builder_bool (builder, nolphin_preferences,
+        NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_TOGGLE_EXTRA_PANE_ICON_TOOLBAR_WIDGET,
+        NOLPHIN_PREFERENCES_SHOW_TOGGLE_EXTRA_PANE_TOOLBAR);
+    bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_ICON_VIEW_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_ICON_VIEW_ICON_TOOLBAR);
+    bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_LIST_VIEW_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_LIST_VIEW_ICON_TOOLBAR);
+    bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_COMPACT_VIEW_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_COMPACT_VIEW_ICON_TOOLBAR);
+    bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_SHOW_THUMBNAILS_ICON_TOOLBAR_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_SHOW_THUMBNAILS_TOOLBAR);
+
+	/* setup preferences */
+	bind_builder_bool (builder, nolphin_icon_view_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_LABELS_BESIDE_ICONS_WIDGET,
+			   NOLPHIN_PREFERENCES_ICON_VIEW_LABELS_BESIDE_ICONS);
+	bind_builder_bool (builder, nolphin_compact_view_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_ALL_COLUMNS_SAME_WIDTH,
+			   NOLPHIN_PREFERENCES_COMPACT_VIEW_ALL_COLUMNS_SAME_WIDTH);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_FOLDERS_FIRST_WIDGET,
+			   NOLPHIN_PREFERENCES_SORT_DIRECTORIES_FIRST);
+	g_signal_connect (gtk_builder_get_object (builder, NOLPHIN_FILE_MANAGEMENT_PROPERTIES_FOLDERS_FIRST_WIDGET),
+                          "notify::active",
+                          G_CALLBACK (set_gtk_filechooser_sort_first), NULL);
+	bind_builder_bool(builder, nolphin_preferences,
+			    NOLPHIN_FILE_MANAGEMENT_QUICK_RENAMES_WITH_PAUSE_IN_BETWEEN,
+			    NOLPHIN_PREFERENCES_CLICK_TO_RENAME);
+	bind_builder_bool_inverted (builder, nolphin_preferences,
+				    NOLPHIN_FILE_MANAGEMENT_PROPERTIES_ALWAYS_USE_BROWSER_WIDGET,
+				    NOLPHIN_PREFERENCES_ALWAYS_USE_BROWSER);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TRASH_CONFIRM_MOVE_WIDGET,
+			   NOLPHIN_PREFERENCES_CONFIRM_MOVE_TO_TRASH);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TRASH_CONFIRM_WIDGET,
+			   NOLPHIN_PREFERENCES_CONFIRM_TRASH);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TRASH_DELETE_WIDGET,
+			   NOLPHIN_PREFERENCES_ENABLE_DELETE);
+    bind_builder_bool (builder, nolphin_preferences,
+               NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SWAP_TRASH_DELETE,
+               NOLPHIN_PREFERENCES_SWAP_TRASH_DELETE);
+	bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_FULL_PATH_IN_TITLE_BARS_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_FULL_PATH_TITLES);
+	bind_builder_bool (builder, nolphin_tree_sidebar_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TREE_VIEW_FOLDERS_WIDGET,
+			   NOLPHIN_PREFERENCES_TREE_SHOW_ONLY_DIRECTORIES);
+  bind_builder_bool (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_INHERIT_VIEW_WIDGET,
+			   NOLPHIN_PREFERENCES_INHERIT_FOLDER_VIEWER);
+  bind_builder_bool (builder, nolphin_preferences,
+               NOLPHIN_FILE_MANAGEMENT_PROPERTIES_REVERSE_SORT_WIDGET,
+               NOLPHIN_PREFERENCES_DEFAULT_SORT_IN_REVERSE_ORDER);
+  bind_builder_bool (builder, nolphin_preferences,
+               NOLPHIN_FILE_MANAGEMENT_PROPERTIES_FAVORITES_FIRST_WIDGET,
+               NOLPHIN_PREFERENCES_SORT_FAVORITES_FIRST);
+	bind_builder_enum (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DEFAULT_VIEW_WIDGET,
+			   NOLPHIN_PREFERENCES_DEFAULT_FOLDER_VIEWER,
+			   (const char **) default_view_values);
+	bind_builder_enum (builder, nolphin_icon_view_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_ICON_VIEW_ZOOM_WIDGET,
+			   NOLPHIN_PREFERENCES_ICON_VIEW_DEFAULT_ZOOM_LEVEL,
+			   (const char **) zoom_values);
+	bind_builder_enum (builder, nolphin_compact_view_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_COMPACT_VIEW_ZOOM_WIDGET,
+			   NOLPHIN_PREFERENCES_COMPACT_VIEW_DEFAULT_ZOOM_LEVEL,
+			   (const char **) zoom_values);
+	bind_builder_enum (builder, nolphin_list_view_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_LIST_VIEW_ZOOM_WIDGET,
+			   NOLPHIN_PREFERENCES_LIST_VIEW_DEFAULT_ZOOM_LEVEL,
+			   (const char **) zoom_values);
+	bind_builder_enum (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SORT_ORDER_WIDGET,
+			   NOLPHIN_PREFERENCES_DEFAULT_SORT_ORDER,
+			   (const char **) sort_order_values);
+	bind_builder_enum (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_PREVIEW_IMAGE_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_IMAGE_FILE_THUMBNAILS,
+			   (const char **) preview_image_values);
+    bind_builder_bool (builder, nolphin_preferences,
+               NOLPHIN_FILE_MANAGEMENT_PROPERTIES_INHERIT_SHOW_THUMBNAILS_WIDGET,
+               NOLPHIN_PREFERENCES_INHERIT_SHOW_THUMBNAILS);
+	bind_builder_enum (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_PREVIEW_FOLDER_WIDGET,
+			   NOLPHIN_PREFERENCES_SHOW_DIRECTORY_ITEM_COUNTS,
+			   (const char **) preview_folder_values);
+	bind_builder_enum (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SIZE_PREFIXES_WIDGET,
+			   NOLPHIN_PREFERENCES_SIZE_PREFIXES,
+			   (const char **) size_prefixes_values);
+	bind_builder_enum (builder, nolphin_preferences,
+			   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FORMAT_WIDGET,
+			   NOLPHIN_PREFERENCES_DATE_FORMAT,
+			   (const char **) date_format_values);
+    bind_builder_enum (builder, nolphin_preferences,
+               NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FONT_CHOICE_WIDGET,
+               NOLPHIN_PREFERENCES_DATE_FONT_CHOICE,
+               (const char **) date_font_choice_values);
+	bind_builder_radio (builder, nolphin_preferences,
+			    (const char **) click_behavior_components,
+			    NOLPHIN_PREFERENCES_CLICK_POLICY,
+			    (const char **) click_behavior_values);
+	bind_builder_radio (builder, nolphin_preferences,
+			    (const char **) executable_text_components,
+			    NOLPHIN_PREFERENCES_EXECUTABLE_TEXT_ACTIVATION,
+			    (const char **) executable_text_values);
+
+	bind_builder_uint_enum (builder, nolphin_preferences,
+				NOLPHIN_FILE_MANAGEMENT_PROPERTIES_THUMBNAIL_LIMIT_WIDGET,
+				NOLPHIN_PREFERENCES_IMAGE_FILE_THUMBNAIL_LIMIT,
+				thumbnail_limit_values,
+				G_N_ELEMENTS (thumbnail_limit_values));
+
+    if (nolphin_global_preferences_desktop_settings_native ()) {
+        bind_builder_bool (builder, gnome_media_handling_preferences,
+                   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTOMOUNT_MEDIA_WIDGET,
+                   GNOME_DESKTOP_MEDIA_HANDLING_AUTOMOUNT);
+
+        bind_builder_bool (builder, gnome_media_handling_preferences,
+                   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTOOPEN_MEDIA_WIDGET,
+                   GNOME_DESKTOP_MEDIA_HANDLING_AUTOMOUNT_OPEN);
+
+        bind_builder_bool_inverted (builder, gnome_media_handling_preferences,
+                   NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTORUN_MEDIA_WIDGET,
+                   GNOME_DESKTOP_MEDIA_HANDLING_AUTORUN);
+    } else {
+        /* Diese Einstellungen gehören dem Desktop (Cinnamon/MATE). Ohne
+         * dessen Schema würden sie nichts bewirken - nicht vortäuschen. */
+        const gchar *ids[] = {
+            NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTOMOUNT_MEDIA_WIDGET,
+            NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTOOPEN_MEDIA_WIDGET,
+            NOLPHIN_FILE_MANAGEMENT_PROPERTIES_AUTORUN_MEDIA_WIDGET
+        };
+        guint w;
+
+        for (w = 0; w < G_N_ELEMENTS (ids); w++) {
+            GtkWidget *widget = GTK_WIDGET (gtk_builder_get_object (builder, ids[w]));
+            if (widget != NULL) {
+                gtk_widget_set_sensitive (widget, FALSE);
+                gtk_widget_set_tooltip_text (widget,
+                    _("Diese Einstellung gehört zum Desktop und ist auf diesem Desktop nicht verfügbar."));
+            }
+        }
+    }
+
+    bind_builder_bool (builder, nolphin_preferences,
+               NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DETECT_CONTENT_MEDIA_WIDGET,
+               NOLPHIN_PREFERENCES_MEDIA_HANDLING_DETECT_CONTENT);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_CLOSE_DEVICE_VIEW_ON_EJECT_WIDGET,
+                       NOLPHIN_PREFERENCES_CLOSE_DEVICE_VIEW_ON_EJECT);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_ADVANCED_PERMISSIONS_WIDGET,
+                       NOLPHIN_PREFERENCES_SHOW_ADVANCED_PERMISSIONS);
+
+    bind_builder_string_entry (builder, nolphin_preferences,
+                         NOLPHIN_FILE_MANAGEMENT_PROPERTIES_BULK_RENAME_WIDGET,
+                         NOLPHIN_PREFERENCES_BULK_RENAME_TOOL);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_START_WITH_DUAL_PANE_WIDGET,
+                       NOLPHIN_PREFERENCES_START_WITH_DUAL_PANE);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_RESTORE_TABS_ON_STARTUP_WIDGET,
+                       NOLPHIN_PREFERENCES_RESTORE_TABS_ON_STARTUP);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_IGNORE_VIEW_METADATA_WIDGET,
+                       NOLPHIN_PREFERENCES_IGNORE_VIEW_METADATA);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_BOOKMARKS_IN_TO_MENUS_WIDGET,
+                       NOLPHIN_PREFERENCES_SHOW_BOOKMARKS_IN_TO_MENUS);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_PLACES_IN_TO_MENUS_WIDGET,
+                       NOLPHIN_PREFERENCES_SHOW_PLACES_IN_TO_MENUS);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_DESKTOP_WIDGET,
+                       NOLPHIN_PREFERENCES_TOOLTIPS_DESKTOP);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_ICON_VIEW_WIDGET,
+                       NOLPHIN_PREFERENCES_TOOLTIPS_ICON_VIEW);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIPS_ON_LIST_VIEW_WIDGET,
+                       NOLPHIN_PREFERENCES_TOOLTIPS_LIST_VIEW);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_FILE_TYPE_WIDGET,
+                       NOLPHIN_PREFERENCES_TOOLTIP_FILE_TYPE);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_MOD_DATE_WIDGET,
+                       NOLPHIN_PREFERENCES_TOOLTIP_MOD_DATE);
+    
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_ACCESS_DATE_WIDGET,
+                       NOLPHIN_PREFERENCES_TOOLTIP_ACCESS_DATE);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_CREATED_DATE_WIDGET,
+                       NOLPHIN_PREFERENCES_TOOLTIP_CREATED_DATE);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_TOOLTIP_FULL_PATH_WIDGET,
+                       NOLPHIN_PREFERENCES_TOOLTIP_FULL_PATH);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_NOLPHIN_PREFERENCES_SKIP_FILE_OP_QUEUE_WIDGET,
+                       NOLPHIN_PREFERENCES_NEVER_QUEUE_FILE_OPS);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_NOLPHIN_PREFERENCES_CLICK_DBL_PARENT_FOLDER_WIDGET,
+                       NOLPHIN_PREFERENCES_CLICK_DOUBLE_PARENT_FOLDER);
+
+    bind_builder_bool (builder, nolphin_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_NOLPHIN_PREFERENCES_EXPAND_ROW_ON_DND_DWELL_WIDGET,
+                       NOLPHIN_PREFERENCES_EXPAND_ROW_ON_DND_DWELL);
+
+    bind_builder_bool (builder, nolphin_list_view_preferences,
+                       NOLPHIN_FILE_MANAGEMENT_PROPERTIES_SHOW_LIST_VIEW_EXPANDERS_WIDGET,
+                       NOLPHIN_PREFERENCES_LIST_VIEW_ENABLE_EXPANSION);
+
+    setup_tooltip_items (builder);
+    connect_tooltip_items (builder);
+
+    /* to make checkbox for quickrenames get disabled when single click is selected */ 
+    setup_quick_renames(builder);
+    connect_quick_renames(builder);
+
+    g_signal_connect (gtk_builder_get_object (builder, NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FORMAT_WIDGET), "changed",
+                      G_CALLBACK (on_date_format_combo_changed), builder);
+
+    on_date_format_combo_changed (GTK_COMBO_BOX (gtk_builder_get_object (builder, NOLPHIN_FILE_MANAGEMENT_PROPERTIES_DATE_FORMAT_WIDGET)),
+                                  builder);
+
+	nolphin_file_management_properties_dialog_setup_icon_caption_page (builder);
+	nolphin_file_management_properties_dialog_setup_list_column_page (builder);
+    nolphin_file_management_properties_dialog_setup_plugin_page (builder);
+    nolphin_file_management_properties_dialog_setup_templates_page (builder);
+
+
+    setup_configurable_menu_items (builder);
+
+    dialog = GTK_WIDGET (gtk_builder_get_object (builder, "file_management_dialog"));
+
+	if (initial_page != NULL) {
+		GtkStack *stack;
+
+		stack = GTK_STACK (gtk_builder_get_object (builder, "page_stack"));
+
+		gtk_stack_set_visible_child_name (stack, initial_page);
+	}
+
+	content_stack = window != NULL ? g_object_get_data (G_OBJECT (window), "nolphin-content-stack") : NULL;
+
+	if (content_stack != NULL) {
+		GtkWidget *page = gtk_bin_get_child (GTK_BIN (dialog));
+		GtkWidget *bar, *close_button;
+
+		/* Detach the page from the dialog window and host it in the main window. */
+		g_object_ref (page);
+		gtk_container_remove (GTK_CONTAINER (dialog), page);
+		gtk_widget_destroy (dialog);
+
+		/* Bottom bar with the close button (back to the file view). */
+		bar = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+		gtk_widget_set_margin_start (bar, 24);
+		gtk_widget_set_margin_end (bar, 24);
+		gtk_widget_set_margin_top (bar, 12);
+		gtk_widget_set_margin_bottom (bar, 12);
+		gtk_box_pack_start (GTK_BOX (bar), build_settings_io_box (), FALSE, FALSE, 0);
+		close_button = gtk_button_new_with_label (_("Close"));
+		gtk_widget_set_size_request (close_button, 120, -1);
+		g_signal_connect (close_button, "clicked", G_CALLBACK (on_prefs_close_clicked), NULL);
+		gtk_box_pack_end (GTK_BOX (bar), close_button, FALSE, FALSE, 0);
+		gtk_widget_show_all (bar);
+		gtk_box_pack_end (GTK_BOX (page), bar, FALSE, FALSE, 0);
+
+		g_signal_connect (page, "destroy", G_CALLBACK (on_prefs_page_destroy), builder);
+		gtk_stack_add_named (GTK_STACK (content_stack), page, "preferences");
+		g_object_unref (page);
+
+		preferences_page = page;
+		preferences_host = GTK_WIDGET (window);
+		preferences_key_handler = g_signal_connect (window, "key-press-event",
+							    G_CALLBACK (on_prefs_key_press), NULL);
+		gtk_stack_set_visible_child_name (GTK_STACK (content_stack), "preferences");
+		return;
+	}
+
+	/* Fallback: stand-alone dialog (no main window available). */
+	{
+		GtkWidget *page = gtk_bin_get_child (GTK_BIN (dialog));
+
+		if (GTK_IS_BOX (page)) {
+			GtkWidget *io_box = build_settings_io_box ();
+
+			gtk_widget_set_margin_start (io_box, 24);
+			gtk_widget_set_margin_bottom (io_box, 12);
+			gtk_widget_show_all (io_box);
+			gtk_box_pack_end (GTK_BOX (page), io_box, FALSE, FALSE, 0);
+		}
+	}
+	g_signal_connect (dialog, "delete-event",
+			  G_CALLBACK (gtk_widget_destroy), NULL);
+	g_signal_connect (dialog, "destroy",
+			  G_CALLBACK (on_dialog_destroy), builder);
+	g_signal_connect (dialog, "key-press-event",
+			  G_CALLBACK (on_prefs_key_press), NULL);
+	gtk_window_set_icon_name (GTK_WINDOW (dialog), "folder");
+	preferences_dialog = dialog;
+	g_object_add_weak_pointer (G_OBJECT (dialog), (gpointer *) &preferences_dialog);
+	gtk_widget_show (dialog);
+}
+
+void
+nolphin_file_management_properties_dialog_show (GtkWindow   *window,
+                                             const gchar *initial_page)
+{
+	GtkBuilder *builder;
+
+	if (preferences_dialog != NULL) {
+		gtk_window_present (GTK_WINDOW (preferences_dialog));
+		return;
+	}
+	if (preferences_page != NULL) {
+		if (preferences_host != NULL) {
+			GtkWidget *stack = g_object_get_data (G_OBJECT (preferences_host), "nolphin-content-stack");
+
+			if (stack != NULL) {
+				gtk_stack_set_visible_child_name (GTK_STACK (stack), "preferences");
+			}
+		}
+		return;
+	}
+
+	builder = gtk_builder_new ();
+    gtk_builder_set_translation_domain (builder, GETTEXT_PACKAGE);
+	gtk_builder_add_from_resource (builder,
+				       "/org/nolphin/nolphin-file-management-properties.glade",
+				       NULL);
+
+	nolphin_file_management_properties_dialog_setup (builder, window, initial_page);
+}

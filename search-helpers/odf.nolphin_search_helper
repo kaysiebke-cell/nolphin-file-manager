@@ -1,0 +1,5 @@
+[Nolphin Search Helper]
+TryExec=nolphin-odf-to-txt;
+Exec=nolphin-odf-to-txt %s
+MimeType=application/vnd.oasis.opendocument.text;application/vnd.oasis.opendocument.spreadsheet;application/vnd.oasis.opendocument.presentation;application/vnd.oasis.opendocument.graphics;
+Priority=100

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/nolphin">
+    <file>nolphin-bookmarks-window.glade</file>
+    <file>nolphin-desktop-overlay.glade</file>
+    <file>nolphin-desktop-preferences.glade</file>
+    <file>nolphin-file-management-properties.glade</file>
+    <file>nolphin-search-bar.glade</file>
+
+    <file>nolphin-shortcuts.ui</file>
+
+    <file>nolphin-blank-desktop-window-ui.xml</file>
+    <file>nolphin-desktop-icon-grid-view-ui.xml</file>
+    <file>nolphin-desktop-icon-view-ui.xml</file>
+    <file>nolphin-directory-view-ui.xml</file>
+    <file>nolphin-icon-view-ui.xml</file>
+    <file>nolphin-list-view-ui.xml</file>
+    <file>nolphin-places-sidebar-ui.xml</file>
+    <file>nolphin-shell-ui.xml</file>
+    <file>nolphin-statusbar-ui.xml</file>
+    <file>nolphin-tree-sidebar-ui.xml</file>
+
+    <file alias="icons/knob.png">knob.png</file>
+    <file alias="icons/thumbnail_frame.png">thumbnail_frame.png</file>
+
+    <!-- Nutzeranforderung: Nolphins eigene Icons duerfen nicht von
+         einer externen Icon-Theme-Installation abhaengen - hier als
+         GResource fest ins Programm eingebaut, damit sie auch ganz
+         ohne "ninja install" ueber gtk_icon_theme_add_resource_path()
+         gefunden werden (siehe nolphin_register_bundled_icons() in
+         src/nolphin-main.c und src/nolphin-desktop-main.c). -->
+    <file alias="icons/16x16/actions/menu-bullet.png">../data/icons/hicolor/actions/16x16/menu-bullet.png</file>
+    <file alias="icons/16x16/actions/menu-none.png">../data/icons/hicolor/actions/16x16/menu-none.png</file>
+    <file alias="icons/16x16/actions/menu-sort-down-free.png">../data/icons/hicolor/actions/16x16/menu-sort-down-free.png</file>
+    <file alias="icons/16x16/actions/menu-sort-down.png">../data/icons/hicolor/actions/16x16/menu-sort-down.png</file>
+    <file alias="icons/16x16/actions/menu-sort-left-free.png">../data/icons/hicolor/actions/16x16/menu-sort-left-free.png</file>
+    <file alias="icons/16x16/actions/menu-sort-left.png">../data/icons/hicolor/actions/16x16/menu-sort-left.png</file>
+    <file alias="icons/16x16/actions/menu-sort-right-free.png">../data/icons/hicolor/actions/16x16/menu-sort-right-free.png</file>
+    <file alias="icons/16x16/actions/menu-sort-right.png">../data/icons/hicolor/actions/16x16/menu-sort-right.png</file>
+    <file alias="icons/16x16/actions/menu-sort-up-free.png">../data/icons/hicolor/actions/16x16/menu-sort-up-free.png</file>
+    <file alias="icons/16x16/actions/menu-sort-up.png">../data/icons/hicolor/actions/16x16/menu-sort-up.png</file>
+    <file alias="icons/16x16/actions/nolphin-eject.png">../data/icons/hicolor/actions/16x16/nolphin-eject.png</file>
+    <file alias="icons/32x32/actions/nolphin-eject.png">../data/icons/hicolor/actions/32x32/nolphin-eject.png</file>
+    <file alias="icons/scalable/actions/nolphin-auto-arrange-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-auto-arrange-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-desktop-scale-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-desktop-scale-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-horizontal-layout-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-horizontal-layout-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-horizontal-layout-wide-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-horizontal-layout-wide-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-location-symbolic-rtl.svg">../data/icons/hicolor/actions/scalable/nolphin-location-symbolic-rtl.svg</file>
+    <file alias="icons/scalable/actions/nolphin-location-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-location-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-recursive-search-symbolic-rtl.svg">../data/icons/hicolor/actions/scalable/nolphin-recursive-search-symbolic-rtl.svg</file>
+    <file alias="icons/scalable/actions/nolphin-recursive-search-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-recursive-search-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-sidebar-hide-symbolic-rtl.svg">../data/icons/hicolor/actions/scalable/nolphin-sidebar-hide-symbolic-rtl.svg</file>
+    <file alias="icons/scalable/actions/nolphin-sidebar-hide-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-sidebar-hide-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-sidebar-places-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-sidebar-places-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-sidebar-show-symbolic-rtl.svg">../data/icons/hicolor/actions/scalable/nolphin-sidebar-show-symbolic-rtl.svg</file>
+    <file alias="icons/scalable/actions/nolphin-sidebar-show-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-sidebar-show-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-sidebar-tree-symbolic-rtl.svg">../data/icons/hicolor/actions/scalable/nolphin-sidebar-tree-symbolic-rtl.svg</file>
+    <file alias="icons/scalable/actions/nolphin-sidebar-tree-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-sidebar-tree-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-vertical-layout-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-vertical-layout-symbolic.svg</file>
+    <file alias="icons/scalable/actions/nolphin-vertical-layout-wide-symbolic.svg">../data/icons/hicolor/actions/scalable/nolphin-vertical-layout-wide-symbolic.svg</file>
+    <file alias="icons/16x16/apps/nolphin.png">../data/icons/hicolor/apps/16x16/nolphin.png</file>
+    <file alias="icons/22x22/apps/nolphin.png">../data/icons/hicolor/apps/22x22/nolphin.png</file>
+    <file alias="icons/24x24/apps/nolphin.png">../data/icons/hicolor/apps/24x24/nolphin.png</file>
+    <file alias="icons/32x32/apps/nolphin.png">../data/icons/hicolor/apps/32x32/nolphin.png</file>
+    <file alias="icons/scalable/apps/nolphin.svg">../data/icons/hicolor/apps/scalable/nolphin.svg</file>
+    <file alias="icons/scalable/categories/nolphin-prefs-behavior-symbolic.svg">../data/icons/hicolor/categories/scalable/nolphin-prefs-behavior-symbolic.svg</file>
+    <file alias="icons/scalable/categories/nolphin-prefs-display-symbolic.svg">../data/icons/hicolor/categories/scalable/nolphin-prefs-display-symbolic.svg</file>
+    <file alias="icons/scalable/categories/nolphin-prefs-plugins-symbolic.svg">../data/icons/hicolor/categories/scalable/nolphin-prefs-plugins-symbolic.svg</file>
+    <file alias="icons/scalable/categories/nolphin-prefs-preview-symbolic.svg">../data/icons/hicolor/categories/scalable/nolphin-prefs-preview-symbolic.svg</file>
+    <file alias="icons/scalable/categories/nolphin-prefs-toolbar-symbolic.svg">../data/icons/hicolor/categories/scalable/nolphin-prefs-toolbar-symbolic.svg</file>
+    <file alias="icons/16x16/emblems/emblem-note.png">../data/icons/hicolor/emblems/16x16/emblem-note.png</file>
+    <file alias="icons/24x24/emblems/emblem-note.png">../data/icons/hicolor/emblems/24x24/emblem-note.png</file>
+    <file alias="icons/48x48/emblems/emblem-note.png">../data/icons/hicolor/emblems/48x48/emblem-note.png</file>
+    <file alias="icons/scalable/status/nolphin-progress-0-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-0-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-10-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-10-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-100-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-100-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-20-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-20-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-30-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-30-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-40-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-40-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-50-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-50-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-60-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-60-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-70-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-70-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-80-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-80-symbolic.svg</file>
+    <file alias="icons/scalable/status/nolphin-progress-90-symbolic.svg">../data/icons/hicolor/status/scalable/nolphin-progress-90-symbolic.svg</file>
+
+    <file>nolphin-style-fallback.css</file>
+    <file>nolphin-style-fallback-mandatory.css</file>
+    <file>nolphin-style-application.css</file>
+  </gresource>
+</gresources>

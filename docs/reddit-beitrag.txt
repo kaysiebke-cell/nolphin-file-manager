@@ -1,0 +1,32 @@
+Hi everyone,
+
+I've been working on a file manager for Linux Mint Cinnamon called Nolphin. It's a fork of Nemo 6.7.7 (GTK3, C11, GPL), renamed and extended. It is an independent hobby project, not affiliated with Linux Mint.
+
+Why I started this:
+
+1. In Nemo I couldn't get a proper file preview panel working without errors, the way Dolphin has it. That was the starting point.
+
+2. It always bothered me that every function opened a new window, and those windows piled up on top of the file manager. Since the right-hand sidebar for the preview was already there, it made sense to expand it into a proper workspace: every function lives in that sidebar, so you can work in parallel without a window covering the file manager.
+
+3. The file management didn't cover what my projects need. That starts with CAD files, and also my small GitHub projects, which I wanted to see and manage right inside the file manager.
+
+What the workspace (F11) offers:
+
+- Preview with media info (images, PDF, video, audio)
+- Properties, permissions and ACL
+- Terminal (F4) in the current folder
+- Git panel with status icons on files (commit, push/pull, log, diff)
+- Archive manager (list, add, replace, remove, test, extract)
+- .deb package builder
+- Bulk rename with preview, folder compare/sync (rsync, never deletes), duplicate finder, file versions
+- "GID projects": project folders in the sidebar that show the project's README in the workspace
+
+If a helper tool or preview backend is missing, Nolphin says so instead of faking the feature.
+
+How it was built: I built Nolphin together with an AI assistant (Claude Code). The ideas, goals and decisions about what the file manager should do are mine; the coding was a joint effort, and I test the results myself.
+
+Status: it runs on my Linux Mint Cinnamon machine, but it hasn't had wide testing yet, so expect rough edges.
+
+Screenshots and the full feature list are in the README: https://github.com/kaysiebke-cell/nolphin-file-manager
+
+I'd love feedback: what's missing, what's annoying, what would make you try it? Bug reports on GitHub are very welcome.

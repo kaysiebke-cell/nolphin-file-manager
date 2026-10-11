@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+"-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+"http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+
+<policyconfig>
+
+ <vendor>Nolphin Project</vendor>
+ <vendor_url>https://github.com/linuxmint/nolphin</vendor_url>
+
+ <action id="org.nolphin.root">
+   <description>Run Nolphin with elevated privileges</description>
+   <message gettext-domain="nolphin">Files</message>
+   <icon_name>gksu-root-terminal</icon_name>
+   <defaults>
+     <allow_any>auth_admin_keep</allow_any>
+     <allow_inactive>auth_admin_keep</allow_inactive>
+     <allow_active>auth_admin_keep</allow_active>
+   </defaults>
+   <annotate key="org.freedesktop.policykit.exec.path">@bindir@/nolphin</annotate>
+   <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+ </action>
+
+</policyconfig>

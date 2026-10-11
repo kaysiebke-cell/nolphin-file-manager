@@ -1,0 +1,3 @@
+# Used by gnome-session
+# https://wiki.gnome.org/Projects/SessionManagement/GnomeSession
+nolphin: desktop-entry-contains-unknown-key * AutostartCondition

@@ -1,0 +1,5 @@
+[Nolphin Search Helper]
+TryExec=nolphin-xls-to-txt;
+Exec=nolphin-xls-to-txt %s
+MimeType=application/vnd.ms-excel;
+Priority=100
