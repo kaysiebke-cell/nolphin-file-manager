@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Nolphin
+Comment=Start Nolphin desktop at log in
+Exec=nolphin-desktop
+OnlyShowIn=X-Cinnamon;
+AutostartCondition=GSettings org.nolphin.desktop show-desktop-icons
+X-GNOME-AutoRestart=true
+NoDisplay=true

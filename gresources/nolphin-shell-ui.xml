@@ -1,0 +1,220 @@
+<ui>
+<accelerator action="Search"/>
+<accelerator action="SplitViewNextPane"/>
+<accelerator action="TabsPrevious"/>
+<accelerator action="TabsNext"/>
+<accelerator action="TabsMoveLeft"/>
+<accelerator action="TabsMoveRight"/>
+<accelerator action="ZoomInAccel"/>
+<accelerator action="ZoomInAccel2"/>
+<accelerator action="ZoomOutAccel"/>
+<menubar name="MenuBar">
+	<menu action="File">
+		<placeholder name="New Items Placeholder">
+			<menuitem name="New Tab" action="New Tab"/>
+			<menuitem name="New Window" action="New Window"/>
+		</placeholder>
+		<separator/>
+		<placeholder name="Open Placeholder"/>
+		<separator/>
+		<placeholder name="Location Placeholder"/>
+		<menuitem name="Connect to Server" action="Connect to Server"/>
+		<menu action="WorkspacesMenu">
+			<menuitem name="Workspace Save" action="Workspace Save"/>
+			<menuitem name="Workspace Load" action="Workspace Load"/>
+			<menuitem name="Workspace Duplicate" action="Workspace Duplicate"/>
+			<menuitem name="Workspace Manage" action="Workspace Manage"/>
+		</menu>
+		<separator/>
+		<placeholder name="File Items Placeholder"/>
+		<separator/>
+		<placeholder name="Global File Items Placeholder"/>
+		<separator/>
+		<placeholder name="Extension Actions"/>
+		<separator/>
+                <placeholder name="Close Items Placeholder">
+			<menuitem name="Close All Windows" action="Close All Windows"/>
+		</placeholder>
+		<menuitem name="Close" action="Close"/>
+	</menu>
+	<menu action="Edit">
+		<placeholder name="Undostack Actions"/>
+		<separator/>
+		<placeholder name="Clipboard Actions">
+                </placeholder>
+		<separator/>
+		<placeholder name="Copy Move to Placeholder"/>
+		<separator/>
+		<placeholder name="Select Items"/>
+		<separator/>
+		<placeholder name="File Items Placeholder"/>
+		<separator/>
+		<placeholder name="Dangerous File Items Placeholder"/>
+		<separator/>
+		<placeholder name="Edit Items Placeholder"/>
+		<placeholder name="Global Edit Items Placeholder">
+			<menu action="ToolsMenu">
+				<menuitem name="Tool Sync" action="Tool Sync"/>
+				<menuitem name="Tool Rules" action="Tool Rules"/>
+				<menuitem name="Tool Batch" action="Tool Batch"/>
+				<menuitem name="Tool Duplicates" action="Tool Duplicates"/>
+				<menu action="VersionsMenu">
+					<menuitem name="Version Save" action="Version Save"/>
+					<menuitem name="Version Show" action="Version Show"/>
+				</menu>
+			</menu>
+			<menu action="ClipboardMenu">
+				<menuitem name="Show Clipboard" action="Show Clipboard"/>
+				<menuitem name="Clear Clipboard" action="Clear Clipboard"/>
+			</menu>
+		</placeholder>
+		<separator/>
+		<placeholder name="Extension Actions"/>
+		<separator/>
+		<menuitem name="Preferences" action="Preferences"/>
+	</menu>
+	<menu action="View">
+		<menuitem name="Stop" action="Stop"/>
+		<menuitem name="Reload" action="Reload"/>
+		<separator/>
+		<placeholder name="Show Hide Placeholder">
+			<menu action="Sidebar List">
+				<menuitem name="Sidebar Places" action="Sidebar Places"/>
+				<menuitem name="Sidebar Tree" action="Sidebar Tree"/>
+				<separator/>
+				<menuitem name="Show Hide Sidebar" action="Show Hide Sidebar"/>
+				<menuitem name="Show Hide GID Projects" action="Show Hide GID Projects"/>
+			</menu>
+            <menu action="Toolbar List">
+                <menuitem name="Toolbar Show Pathbar" action="Toolbar Always Show Pathbar"/>
+                <menuitem name="Toolbar Show Entry" action="Toolbar Always Show Entry"/>
+                <separator/>
+                <menuitem name="Show Hide Toolbar" action="Show Hide Toolbar"/>
+            </menu>
+            <menuitem name="Show Hide Menubar" action="Show Hide Menubar"/>
+			<menuitem name="Show Hide Statusbar" action="Show Hide Statusbar"/>
+			<menuitem name="Show Hide Terminal" action="Show Hide Terminal"/>
+            <separator/>
+			<menu action="SplitViewMenu">
+				<menuitem name="Show Hide Extra Pane Sub" action="Show Hide Extra Pane"/>
+				<menuitem name="Split View Horizontal" action="Split View Horizontal"/>
+				<menu action="SplitLayoutMenu">
+					<menuitem name="Split Layout Two Columns" action="Split Layout Two Columns"/>
+					<menuitem name="Split Layout Three Columns" action="Split Layout Three Columns"/>
+					<menuitem name="Split Layout Grid" action="Split Layout Grid"/>
+					<menuitem name="Split Layout Big Plus Two" action="Split Layout Big Plus Two"/>
+					<menuitem name="Split Layout Two Rows" action="Split Layout Two Rows"/>
+				</menu>
+				<menu action="SplitPaneMenu">
+					<menuitem name="Split Pane 1" action="Split Pane 1"/>
+					<menuitem name="Split Pane 2" action="Split Pane 2"/>
+					<menuitem name="Split Pane 3" action="Split Pane 3"/>
+					<menuitem name="Split Pane 4" action="Split Pane 4"/>
+					<separator/>
+					<menuitem name="Split Pane Previous" action="Split Pane Previous"/>
+					<menuitem name="Split Pane Numbers" action="Split Pane Numbers"/>
+				</menu>
+				<separator/>
+				<menuitem name="Split Pane Swap" action="Split Pane Swap"/>
+				<menuitem name="Duplicate Pane" action="Duplicate Pane"/>
+				<menuitem name="Maximize Pane" action="Maximize Pane"/>
+				<menuitem name="Close Pane" action="Close Pane"/>
+			</menu>
+            <menuitem name="Edit Location" action="Edit Location"/>
+		</placeholder>
+		<separator/>
+		<placeholder name="View Preferences Placeholder"/>
+		<separator/>
+		<placeholder name="View Items Placeholder"/>
+		<separator/>
+		<placeholder name="Zoom Items Placeholder">
+			<menuitem name="Zoom In" action="Zoom In"/>
+			<menuitem name="Zoom Out" action="Zoom Out"/>
+			<menuitem name="Zoom Normal" action="Zoom Normal"/>
+		</placeholder>
+		<placeholder name="View Choices">
+            <separator/>
+            <menuitem name="Icon View" action="IconView"/>
+            <menuitem name="List View" action="ListView"/>
+            <menuitem name="Compact View" action="CompactView"/>
+            <menuitem name="Gallery View" action="GalleryView"/>
+		</placeholder>
+	</menu>
+	<placeholder name="Other Menus">
+	        <menu action="Go">
+                        <placeholder name="Navigation Items">
+			<menuitem name="Up" action="Up"/>
+			<menuitem name="Back" action="Back"/>
+			<menuitem name="Forward"  action="Forward"/>
+			<menuitem name="SplitViewSameLocationMenu" action="SplitViewSameLocation"/>
+	                </placeholder>
+	                <separator/>
+			<menuitem name="Home" action="Home"/>
+			<menuitem name="Computer" action="Go to Computer"/>
+			<menuitem name="Go to Templates" action="Go to Templates"/>
+			<menuitem name="Go to Trash" action="Go to Trash"/>
+		        <menuitem name="Go to Network" action="Go to Network"/>
+			<menu action="GIDProjectsMenu">
+				<placeholder name="GID Projects Placeholder"/>
+				<separator/>
+				<menuitem name="GID Add Project" action="GID Add Project"/>
+			</menu>
+			<separator/>
+			<menu action="HistoryMenu">
+				<placeholder name="History Placeholder"/>
+				<separator/>
+				<menuitem name="Clear History" action="ClearHistory"/>
+			</menu>
+			<menu action="FrequentMenu">
+				<placeholder name="Frequent Placeholder"/>
+			</menu>
+			<menu action="TabsMenu">
+				<menuitem name="Tabs Next" action="TabsNext"/>
+				<menuitem name="Tabs Previous" action="TabsPrevious"/>
+				<menuitem name="Restore Closed Tab" action="Restore Closed Tab"/>
+				<separator/>
+				<menuitem name="Duplicate Tab" action="Duplicate Tab"/>
+				<menuitem name="Lock Tab" action="Lock Tab"/>
+				<menuitem name="Rename Tab" action="Rename Tab"/>
+				<menuitem name="Close All Tabs" action="Close All Tabs"/>
+			</menu>
+			<separator/>
+			<menuitem name="Search" action="Search"/>
+		</menu>
+		<menu action="Bookmarks">
+			<menuitem name="Add Bookmark" action="Add Bookmark"/>
+			<menuitem name="Edit Bookmark" action="Edit Bookmarks"/>
+			<separator/>
+			<placeholder name="Bookmarks Placeholder"/>
+		</menu>
+
+	</placeholder>
+	<menu action="Help">
+		<menuitem action="NolphinHelp"/>
+        <menuitem action="NolphinShortcuts"/>
+<!--		<menuitem action="NolphinHelpSearch"/>
+		<menuitem action="NolphinHelpSort"/>
+		<menuitem action="NolphinHelpLost"/>
+		<menuitem action="NolphinHelpShare"/>    -->
+		<separator/>
+		<menu action="DiagnosticsMenu">
+			<menuitem name="Diag Logs" action="Diag Logs"/>
+			<menuitem name="Diag Report" action="Diag Report"/>
+			<menuitem name="Diag System" action="Diag System"/>
+			<menuitem name="Diag Plugins" action="Diag Plugins"/>
+		</menu>
+		<menuitem name="Build Deb Package" action="Build Deb Package"/>
+		<menuitem name="About Nolphin" action="About Nolphin"/>
+	</menu>
+</menubar>
+<popup name="background">
+	<placeholder name="Before Zoom Items">
+		<placeholder name="New Window Items"/>
+		<placeholder name="New Object Items"/>
+		<separator/>
+	       <placeholder name="Extension Actions"/>
+	</placeholder>
+        <separator/>
+	<placeholder name="After Zoom Items"/>
+</popup>
+</ui>

@@ -1,0 +1,5 @@
+[Nolphin Search Helper]
+TryExec=nolphin-mso-to-txt;
+Exec=nolphin-mso-to-txt %s
+MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.openxmlformats-officedocument.presentationml.presentation;
+Priority=100

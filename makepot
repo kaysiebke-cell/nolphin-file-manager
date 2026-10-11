@@ -1,0 +1,16 @@
+#!/bin/bash
+data/nolphin-actions/extract_action_strings data/nolphin-actions
+itstool -o nolphin.pot data/nolphin.xml.in
+xgettext -c --join-existing --its=polkit.its data/org.nolphin.root.policy.in --output=nolphin.pot
+xgettext -c --join-existing --from-code=UTF-8 --keyword=_ --keyword=N_ --output=nolphin.pot \
+    src/*.c libnolphin-extension/*.c libnolphin-private/*.c eel/*.c
+
+xgettext -c --join-existing  -L Python data/nolphin-actions/action_i18n_strings.py generate_additional_file --output=nolphin.pot
+xgettext -c --join-existing  -L Glade gresources/nolphin-bookmarks-window.glade --output=nolphin.pot
+xgettext -c --join-existing  -L Glade gresources/nolphin-desktop-overlay.glade --output=nolphin.pot
+xgettext -c --join-existing  -L Glade gresources/nolphin-desktop-preferences.glade --output=nolphin.pot
+xgettext -c --join-existing  -L Glade gresources/nolphin-file-management-properties.glade --output=nolphin.pot
+xgettext -c --join-existing  -L Glade gresources/nolphin-search-bar.glade --output=nolphin.pot
+xgettext -c --join-existing  -L Glade gresources/*.ui --output=nolphin.pot
+xgettext -c --join-existing  -L Glade gresources/nolphin-action-layout-editor.glade --output=nolphin.pot
+xgettext -c --join-existing  -L Python action-layout-editor/*.py --output=nolphin.pot

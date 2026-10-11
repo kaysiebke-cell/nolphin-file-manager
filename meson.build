@@ -1,0 +1,227 @@
+# Meson build file
+
+# https://github.com/linuxmint/nemo
+project('nolphin', 'c', version : '6.7.7', meson_version : '>=0.64.0')
+
+# 1. If the library code has changed at all since last release, then increment revision.
+# 2. If any interfaces have been added, then increment current and set revision to 0.
+# Interface break is not allowed.
+nolphin_extension_current  = 5
+nolphin_extension_revision = 0
+
+# We need to decrement current by one in the calculation of the age because
+# the library was started with version "1:0:0" instead of "0:0:0"
+NOLPHIN_EXTENSION_VERSION_INFO = '@0@:@1@:@2@'.format(
+  nolphin_extension_current, nolphin_extension_revision, nolphin_extension_current - 1
+)
+
+################################################################################
+conf = configuration_data()
+
+gnome = import('gnome')
+pkgconfig = import('pkgconfig')
+
+cc = meson.get_compiler('c')
+prefix = get_option('prefix')
+buildtype = get_option('buildtype')
+
+# Surround the version in quotes to make it a C string
+conf.set_quoted('VERSION', meson.project_version())
+
+check_headers = [
+  'malloc.h',
+  'sys/mount.h',
+  'sys/param.h',
+  'sys/vfs.h',
+  'X11/XF86keysym.h',
+]
+
+foreach h : check_headers
+  conf.set10('HAVE_' + h.underscorify().to_upper(), cc.has_header(h))
+endforeach
+
+conf.set10('HAVE_MALLOPT', cc.has_function('mallopt', prefix: '#include <malloc.h>'))
+
+
+add_global_arguments([
+    '-Werror=implicit-function-declaration',
+  ],
+  language: 'c',
+)
+
+if not get_option('deprecated_warnings')
+  add_global_arguments([
+      '-Wno-deprecated-declarations',
+      '-Wno-deprecated',
+      '-Wno-declaration-after-statement',
+      '-DGLIB_DISABLE_DEPRECATION_WARNINGS',
+    ],
+    language: 'c',
+  )
+endif
+
+if buildtype in ['debug', 'debugoptimized']
+    conf.set('ENABLE_DEBUG', true)
+endif
+
+if buildtype == 'debug'
+    add_global_arguments('-fno-omit-frame-pointer', language: 'c')
+endif
+
+################################################################################
+# Find dependencies
+
+glib_version = '>=2.45.7'
+
+math    = cc.find_library('m', required: true)
+
+gtk     = dependency('gtk+-3.0',                    version: '>=3.10.0')
+gio     = dependency('gio-2.0',                     version: glib_version)
+gio_unix= dependency('gio-unix-2.0',                version: glib_version)
+glib    = dependency('glib-2.0',                    version: glib_version)
+gmodule = dependency('gmodule-no-export-2.0',       version: glib_version)
+gobject = dependency('gobject-2.0',                 version: '>=2.0')
+go_intr = dependency('gobject-introspection-1.0',   version: '>=1.0')
+json    = dependency('json-glib-1.0',               version: '>=1.6')
+
+cinnamon= dependency('cinnamon-desktop',            version: '>=4.8.0', required: get_option('cinnamon_desktop'))
+gail    = dependency('gail-3.0')
+x11     = dependency('x11')
+xapp    = dependency('xapp',                        version: '>=2.0.0', required: get_option('xapp'))
+vte     = dependency('vte-2.91',                    version: '>=0.50.0')
+
+# Facultative dependencies
+
+trackerChoice = get_option('tracker')
+tracker_enabled = false
+if trackerChoice != 'false'
+  trackerRequired = (trackerChoice == 'true')
+  # Check all the possible versions
+    tracker_sparql = dependency('tracker-sparql-3.0',  required: false)
+  if not tracker_sparql.found()
+    tracker_sparql = dependency('tracker-sparql-2.0',  required: false)
+  endif
+  if not tracker_sparql.found()
+    tracker_sparql = dependency('tracker-sparql-1.0',  required: false)
+  endif
+  if not tracker_sparql.found()
+    tracker_sparql = dependency('tracker-sparql-0.18', required: false)
+  endif
+  if not tracker_sparql.found()
+    tracker_sparql = dependency('tracker-sparql-0.16', required: trackerRequired)
+  endif
+
+  tracker_enabled = trackerRequired or tracker_sparql.found()
+endif
+conf.set('ENABLE_TRACKER', tracker_enabled)
+
+
+gtkdoc_enabled = get_option('gtk_doc')
+if gtkdoc_enabled
+  find_program('gtkdoc-scan', required: true)
+endif
+
+
+libexif_enabled = get_option('exif')
+if libexif_enabled
+  libexif = dependency('libexif',                   version: '>=0.6.20')
+endif
+conf.set('HAVE_XAPP', xapp.found())
+conf.set('HAVE_CINNAMON_DESKTOP', cinnamon.found())
+conf.set('HAVE_EXIF', libexif_enabled)
+
+exempi_enabled = get_option('xmp')
+if exempi_enabled
+  exempi = dependency('exempi-2.0',                 version: '>=2.2.0')
+endif
+conf.set('HAVE_EXEMPI', exempi_enabled)
+
+libselinux_enabled = get_option('selinux')
+if libselinux_enabled
+  libselinux = dependency('libselinux',             version: '>=2.0')
+endif
+conf.set('HAVE_SELINUX', libselinux_enabled)
+
+gtk_layer_shell_enabled = get_option('gtk_layer_shell')
+if gtk_layer_shell_enabled
+  gtk_layer_shell = dependency('gtk-layer-shell-0', version: '>=0.8', required: true)
+  wayland_client = dependency('wayland-client', required: true)
+  conf.set('HAVE_GTK_LAYER_SHELL', gtk_layer_shell.found())
+endif
+
+# make sure pango development files are installed
+pango = dependency('pango', version: '>=1.44.0')
+
+enableEmptyView = get_option('empty_view')
+conf.set10('ENABLE_EMPTY_VIEW', enableEmptyView)
+
+conf.set_quoted('GETTEXT_PACKAGE', 'nolphin')
+conf.set_quoted('LOCALE_DIR',  join_paths(get_option('prefix'), get_option('localedir')))
+conf.set_quoted('LOCALEDIR',   join_paths(get_option('prefix'), get_option('localedir')))
+conf.set('ENABLE_NLS', cc.has_header('libintl.h'))
+conf.set('HAVE_GETTEXT', true)
+conf.set('HAVE_LOCALE_H', cc.has_header('locale.h'))
+
+configure_file(
+  input : 'config.h.meson.in',
+  output: 'config.h',
+  configuration: conf
+)
+
+################################################################################
+
+rootInclude = include_directories('.')
+nolphinDataPath      = join_paths(get_option('prefix'), get_option('datadir'), 'nolphin')
+libExecPath       = join_paths(get_option('prefix'), get_option('libexecdir'))
+# Keep this constant, in case some extensions are behind in being updated...
+nolphinExtensionPath = join_paths(get_option('prefix'), get_option('libdir'), 'nolphin', 'extensions-3.0')
+
+nolphin_definitions =  [
+  '-DNOLPHIN_DATADIR="@0@"'.format(nolphinDataPath),
+  '-DNOLPHIN_EXTENSIONDIR="@0@"'.format(nolphinExtensionPath),
+  '-DLIBEXECDIR="@0@"'.format(libExecPath),
+  '-DG_LOG_DOMAIN="Nolphin"'
+]
+
+subdir('cut-n-paste-code/libegg')
+subdir('data')
+subdir('eel')
+subdir('files')
+subdir('gresources')
+subdir('libnolphin-extension')
+subdir('libnolphin-private')
+subdir('gtk-module')
+subdir('po')
+subdir('src')
+subdir('search-helpers')
+subdir('test')
+subdir('docs')
+subdir('action-layout-editor')
+
+# Post-installation actions. Skipped automatically when DESTDIR is set
+# (debian builds, etc.), since the package manager handles them.
+gnome.post_install(
+    glib_compile_schemas: true,
+    gtk_update_icon_cache: true,
+    update_mime_database: true,
+)
+
+message('\n'.join(['',
+'        @0@-@1@'.format(meson.project_name(), meson.project_version()),
+'',
+'    prefix:                 @0@'.format(prefix),
+'    source code location:   @0@'.format(meson.project_source_root()),
+'    compiler:               @0@'.format(cc.get_id()),
+'    libexif support:        @0@'.format(libexif_enabled),
+'    exempi  support:        @0@'.format(exempi_enabled),
+'    Tracker support:        @0@'.format(tracker_enabled),
+'    Wayland support:        @0@'.format(cc.has_header('gdk/gdkwayland.h', dependencies: gtk)),
+'    gtk-layer-shell:        @0@'.format(gtk_layer_shell_enabled),
+'',
+'    nolphin-extension documentation: @0@'.format(gtkdoc_enabled),
+'    nolphin-extension introspection: @0@'.format(true),
+'',
+'    debugging support:      @0@'.format(buildtype),
+'    perf profiling support: @0@'.format(buildtype == 'debug'),
+'',
+]))

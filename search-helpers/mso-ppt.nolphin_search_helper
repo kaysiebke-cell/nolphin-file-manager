@@ -1,0 +1,5 @@
+[Nolphin Search Helper]
+TryExec=nolphin-ppt-to-txt;libreoffice;
+Exec=nolphin-ppt-to-txt %s
+MimeType=application/vnd.ms-powerpoint;
+Priority=100

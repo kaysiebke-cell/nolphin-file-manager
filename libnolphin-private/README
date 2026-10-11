@@ -1,0 +1,13 @@
+README for nolphin/libnolphin-private
+
+This library, libnolphin-private, is totally private to nolphin.
+
+If you are writing a nolphin component, you should not use this
+library or link with it.  The code in here is internal to nolphin
+and not available for public consumption.
+
+If you think that there is something interesting in this library that
+you would like to use in a third party component, please send mail to
+the nolphin mailing list at:
+
+nolphin-list@gnome.org
