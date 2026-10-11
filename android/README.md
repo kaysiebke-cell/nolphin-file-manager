@@ -1,5 +1,7 @@
 # Nolphin Handy (Android-App)
 
+Eigenes Repository der App: https://github.com/kaysiebke-cell/nolphin-handy
+
 Kleine App für den Handy-Austausch von Nolphin. Sie ist der **Empfänger auf dem Handy**: Legen Sie am PC Dateien in „Zum Handy“, kommen sie von selbst auf das Handy. Dateien vom Handy schicken Sie über das Teilen-Menü an den PC.
 
 Nur das Android-Framework, **keine Bibliotheken**, kein Gradle. Mindestens Android 10.
