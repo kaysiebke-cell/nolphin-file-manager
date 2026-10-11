@@ -61,6 +61,8 @@
 #include "nolphin-bookmark-list.h"
 #include "nolphin-places-sidebar.h"
 #include "nolphin-window.h"
+#include "nolphin-workspace-panel.h"
+#include "nolphin-phone.h"
 #include "nolphin-window-slot.h"
 #include "nolphin-workspace-panel.h"
 
@@ -149,6 +151,9 @@ typedef struct {
     guint expand_timeout_source;
     guint popup_menu_action_index;
     guint update_places_on_idle_id;
+    guint phone_status_id;          /* prüft regelmäßig, ob die Handy-App angemeldet ist */
+    gboolean phone_connected;       /* so wurde der Eintrag „Handy“ zuletzt gezeichnet */
+    gchar *phone_uri;               /* URI des Eintrags „Handy“ (~/Handy) */
 
 } NolphinPlacesSidebar;
 
@@ -208,6 +213,32 @@ enum {
     POSITION_MIDDLE,
     POSITION_LOWER
 };
+
+/* URI des Ausgangsordners "~/Handy" (legt die Ordner an) oder NULL. */
+static gchar *
+phone_outbox_uri (void)
+{
+    gchar *path, *uri = NULL;
+
+    if (!nolphin_phone_ensure_folders ()) {
+        return NULL;
+    }
+    path = nolphin_phone_outbox_path ();
+    uri = g_filename_to_uri (path, NULL, NULL);
+    g_free (path);
+    return uri;
+}
+
+static gboolean
+is_phone_uri (const gchar *uri)
+{
+    gchar *phone = uri != NULL ? phone_outbox_uri () : NULL;
+    gboolean same = phone != NULL && strcmp (uri, phone) == 0;
+
+    g_free (phone);
+    return same;
+}
+
 
 static void  open_selected_bookmark                    (NolphinPlacesSidebar        *sidebar,
 							GtkTreeModel                 *model,
@@ -910,6 +941,30 @@ update_places (NolphinPlacesSidebar *sidebar)
 
     if (sidebar->bottom_bookend_uri == NULL) {
         sidebar->bottom_bookend_uri = g_strdup (mount_uri);
+    }
+
+    /* Handy: Der Eintrag zeigt auf den Ausgangsordner "~/Handy". Dateien, die
+     * man darauf zieht, werden dorthin kopiert und kann das Handy laden. Ein Klick öffnet
+     * den Ordner; der Handy-Austausch liegt unter Datei ▸ Handy-Austausch. */
+    {
+        GtkIconTheme *theme = gtk_icon_theme_get_default ();
+        const gchar *phone_icon = gtk_icon_theme_has_icon (theme, "phone-symbolic") ? "phone-symbolic" :
+                                  gtk_icon_theme_has_icon (theme, "smartphone-symbolic") ? "smartphone-symbolic" :
+                                  "network-wireless-symbolic";
+        gchar *phone_uri = phone_outbox_uri ();
+
+        if (phone_uri != NULL) {
+            g_free (sidebar->phone_uri);
+            sidebar->phone_uri = g_strdup (phone_uri);
+            sidebar->phone_connected = nolphin_phone_is_connected ();
+            cat_iter = add_place (sidebar, PLACES_BUILT_IN,
+                                   SECTION_COMPUTER,
+                                   _("Handy"), phone_icon,
+                                   phone_uri, NULL, NULL, NULL, 0,
+                                   _("Bilder und Dateien mit dem Handy austauschen. Dateien hierher ziehen, um sie aufs Handy zu schicken."), 0, FALSE,
+                                   cat_iter);
+            g_free (phone_uri);
+        }
     }
 
     if (eel_vfs_supports_uri_scheme("trash")) {
@@ -1841,6 +1896,10 @@ drag_motion_callback (GtkTreeView *tree_view,
                                                      &action,
                                                      &sidebar->desktop_dnd_source_fs,
                                                      &sidebar->desktop_dnd_can_delete_source);
+            if (is_phone_uri (uri) && action != 0) {
+                /* aufs Handy wird immer kopiert, nie verschoben */
+                action = GDK_ACTION_COPY;
+            }
             g_free (uri);
 		}
 	}
@@ -4139,6 +4198,45 @@ row_visibility_function (GtkTreeModel *model,
     return FALSE;
 }
 
+/* Zeichnet beim Eintrag „Handy“ einen grünen Punkt, solange die Handy-App angemeldet ist. */
+static void
+name_cell_data_func (GtkTreeViewColumn *column,
+		     GtkCellRenderer   *cell,
+		     GtkTreeModel      *model,
+		     GtkTreeIter       *iter,
+		     gpointer           user_data)
+{
+	NolphinPlacesSidebar *sidebar = user_data;
+	gchar *uri = NULL, *name = NULL;
+
+	gtk_tree_model_get (model, iter, PLACES_SIDEBAR_COLUMN_URI, &uri, PLACES_SIDEBAR_COLUMN_NAME, &name, -1);
+	if (sidebar->phone_connected && uri != NULL && name != NULL && sidebar->phone_uri != NULL &&
+	    strcmp (uri, sidebar->phone_uri) == 0) {
+		gchar *escaped = g_markup_escape_text (name, -1);
+		gchar *markup = g_strdup_printf ("%s  <span foreground=\"#2ecc71\">●</span>", escaped);
+
+		g_object_set (cell, "markup", markup, NULL);
+		g_free (markup);
+		g_free (escaped);
+	} else {
+		g_object_set (cell, "attributes", NULL, NULL);
+	}
+	g_free (uri);
+	g_free (name);
+}
+
+/* Zeichnet den Eintrag „Handy“ neu, sobald sich ändert, ob die Handy-App angemeldet ist. */
+static gboolean
+phone_status_tick (gpointer user_data)
+{
+	NolphinPlacesSidebar *sidebar = user_data;
+
+	if (nolphin_phone_is_connected () != sidebar->phone_connected) {
+		update_places (sidebar);
+	}
+	return G_SOURCE_CONTINUE;
+}
+
 static void
 nolphin_places_sidebar_init (NolphinPlacesSidebar *sidebar)
 {
@@ -4174,6 +4272,7 @@ nolphin_places_sidebar_init (NolphinPlacesSidebar *sidebar)
                                                         NOLPHIN_WINDOW_STATE_NETWORK_EXPANDED);
 
     gtk_widget_set_size_request (GTK_WIDGET (sidebar), 140, -1);
+    sidebar->phone_status_id = g_timeout_add_seconds (3, phone_status_tick, sidebar);
 
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (sidebar),
 					GTK_POLICY_NEVER,
@@ -4248,6 +4347,7 @@ nolphin_places_sidebar_init (NolphinPlacesSidebar *sidebar)
                          "disk-full-percent", PLACES_SIDEBAR_COLUMN_DF_PERCENT,
                          "show-disk-full-percent", PLACES_SIDEBAR_COLUMN_SHOW_DF,
                          NULL);
+    gtk_tree_view_column_set_cell_data_func (primary_column, cell, name_cell_data_func, sidebar, NULL);
     g_object_set (cell,
               "ellipsize", PANGO_ELLIPSIZE_END,
               "ellipsize-set", TRUE,
@@ -4433,6 +4533,8 @@ nolphin_places_sidebar_dispose (GObject *object)
 
 	sidebar = NOLPHIN_PLACES_SIDEBAR (object);
 
+	g_clear_handle_id (&sidebar->phone_status_id, g_source_remove);
+	g_clear_pointer (&sidebar->phone_uri, g_free);
 	sidebar->window = NULL;
 	sidebar->tree_view = NULL;
 

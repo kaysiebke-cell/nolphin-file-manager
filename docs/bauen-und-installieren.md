@@ -19,6 +19,16 @@ ninja -C build
 meson test -C build
 ```
 
+## Handy-App bauen (optional)
+
+Für den Handy-Austausch gibt es eine kleine Android-App. Sie wird **vor** dem Installieren gebaut und dann mitinstalliert:
+
+```bash
+android/build.sh
+```
+
+Voraussetzungen: JDK und das Android-SDK (`ANDROID_HOME`, standardmäßig `~/Android/Sdk`). Ohne die App läuft der Handy-Austausch weiter im Browser des Handys. Mehr in `android/README.md`.
+
 ## Installieren
 
 ```bash

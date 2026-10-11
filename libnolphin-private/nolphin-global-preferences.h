@@ -161,6 +161,10 @@ typedef enum
 #define NOLPHIN_PREFERENCES_SIDEBAR_BOOKMARK_BREAKPOINT "sidebar-bookmark-breakpoint"
 
 #define NOLPHIN_PREFERENCES_GID_PROJECTS "gid-projects"
+#define NOLPHIN_PREFERENCES_PHONE_FOLDER "phone-folder"
+#define NOLPHIN_PREFERENCES_PHONE_TOKEN_HOURS "phone-token-hours"
+#define NOLPHIN_PREFERENCES_PHONE_IDLE_MINUTES "phone-idle-minutes"
+#define NOLPHIN_PREFERENCES_PHONE_MAX_UPLOAD_MB "phone-max-upload-mb"
 
 enum
 {

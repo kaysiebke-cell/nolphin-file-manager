@@ -53,6 +53,14 @@ Die Schlüsselwörter gelten unabhängig von der Groß-/Kleinschreibung; ein Beg
 * **Arbeitsbereiche:** speichern Reiter, Teilung, Fenstergröße und Panels unter einem Namen; Laden, Duplizieren und Löschen im Panel. Beim Beenden merkt sich Nolphin die letzte Sitzung.
 * **Gehe zu:** Verlauf, häufig verwendete Orte und Reiter; „Zwischenablage als Datei einfügen“ im Bearbeiten-Menü.
 
+## Handy-Austausch
+
+* **Einstieg:** Klick auf **Handy** in der Seitenleiste unter „Mein Rechner“ oder Datei ▸ Handy-Austausch. Nolphin startet den Austausch, zeigt den **QR-Code** im Arbeitsbereich und öffnet den Ordner `~/Handy` in der Hauptansicht. Es gibt nichts einzustellen.
+* **Handy → PC:** Das Handy scannt den Code und lädt Bilder und Dateien im Browser hoch. Sie landen in `~/Handy/Vom Handy`. Eine App ist nicht nötig; es gibt keine Fremdabhängigkeit.
+* **PC → Handy:** Dateien auf **Handy** in der Seitenleiste ziehen oder Rechtsklick ▸ **An Handy senden**. Beides kopiert nach `~/Handy/Zum Handy`; das Handy lädt sie auf der Seite im Browser.
+* **Handy-App (Android):** Der erste Scan des QR-Codes (mit der Kamera des Handys) bietet die App zum Installieren an; danach scannt man in der App („QR-Code scannen“, eigener QR-Leser) oder wieder mit der Kamera, um sie zu verbinden. Sie lädt neue Dateien aus „Zum Handy“ von selbst nach `Download/Nolphin` und sendet Dateien über das Teilen-Menü an den PC. Reines Android-Framework, keine Bibliotheken, Quelltext in `android/`.
+* **Sicherheit:** Schlüssel im Link, nur Verbindungen aus privaten Netzen, nie überschreiben, Selbstabschaltung nach 15 Minuten ohne Anfrage. Die Verbindung ist nicht verschlüsselt, nur im eigenen WLAN verwenden.
+
 ## GID-Projekte
 
 * **Projektliste:** Der Bereich „GID-Projekte“ sitzt unter Orte bzw. Ordnerbaum und lässt sich über Ansicht ▸ Seitenleiste ▸ „GID-Projekte anzeigen“ ein- und ausblenden. Jedes Projekt ist ein lokaler Ordner, bei einem Git-Repository steht der aktuelle Branch daneben (aus `.git/HEAD` gelesen, ohne `git`).
