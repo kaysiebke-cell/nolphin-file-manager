@@ -284,7 +284,7 @@ action_phone_callback (GtkAction *action, gpointer user_data)
 		return;
 	}
 	window = NOLPHIN_WINDOW (user_data);
-	nolphin_workspace_panel_show_phone (nolphin_window_get_workspace_panel (window), window);
+	nolphin_workspace_panel_show_phone (nolphin_window_get_workspace_panel (window), window, TRUE);
 }
 
 static void

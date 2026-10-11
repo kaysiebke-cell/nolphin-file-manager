@@ -5095,14 +5095,14 @@ nolphin_workspace_panel_show_sync (GtkWidget *workspace_panel, NolphinWindow *wi
 
 /* Zeigt den Handy-Austausch. */
 void
-nolphin_workspace_panel_show_phone (GtkWidget *workspace_panel, NolphinWindow *window)
+nolphin_workspace_panel_show_phone (GtkWidget *workspace_panel, NolphinWindow *window, gboolean autostart)
 {
 	GtkWidget *page;
 
 	g_return_if_fail (GTK_IS_STACK (workspace_panel));
 
 	page = gtk_stack_get_child_by_name (GTK_STACK (workspace_panel), "phone");
-	nolphin_phone_page_open (page);
+	nolphin_phone_page_open (page, autostart);
 	workspace_panel_show_page (workspace_panel, window, "phone");
 }
 

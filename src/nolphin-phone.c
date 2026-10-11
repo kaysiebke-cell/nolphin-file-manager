@@ -504,7 +504,7 @@ GtkWidget *
 nolphin_phone_page_new (NolphinWindow *window)
 {
 	PhonePage *d = g_new0 (PhonePage, 1);
-	GtkWidget *outer, *scroller, *intro, *row, *tree, *tree_scroller, *label;
+	GtkWidget *outer, *scroller, *intro, *row, *tree, *tree_scroller, *label, *settings, *expander;
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
 	gchar *default_inbox;
@@ -523,39 +523,37 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_box_pack_start (GTK_BOX (outer), nolphin_tools_back_button_new (window), FALSE, FALSE, 0);
 	gtk_box_pack_start (GTK_BOX (outer), nolphin_tools_heading_new (_("Handy-Austausch")), FALSE, FALSE, 0);
 
-	intro = gtk_label_new (_("Tauscht Bilder und Dateien mit dem Handy über das WLAN. Starte den Austausch und scanne den QR-Code mit der "
-				 "Kamera des Handys. Auf dem Handy öffnet sich eine Seite im Browser; eine App ist nicht nötig. "
+	intro = gtk_label_new (_("Tauscht Bilder und Dateien mit dem Handy über das WLAN. Scanne den QR-Code mit der Kamera des Handys. "
+				 "Auf dem Handy öffnet sich eine Seite im Browser; eine App ist nicht nötig. "
 				 "Der Link enthält einen Schlüssel, nur wer ihn kennt, kommt hinein. Die Verbindung ist nicht verschlüsselt: "
 				 "nur im eigenen Netz verwenden."));
 	gtk_label_set_line_wrap (GTK_LABEL (intro), TRUE);
 	gtk_label_set_xalign (GTK_LABEL (intro), 0.0);
 	gtk_style_context_add_class (gtk_widget_get_style_context (intro), "dim-label");
-	gtk_box_pack_start (GTK_BOX (outer), intro, FALSE, FALSE, 0);
-
-	gtk_box_pack_start (GTK_BOX (outer),
-			    folder_row (_("Eingangsordner (hierhin kommen Dateien vom Handy)"), &d->inbox_label, &d->inbox_button,
-					NULL, G_CALLBACK (on_inbox_choose), NULL, d), FALSE, FALSE, 0);
-	gtk_box_pack_start (GTK_BOX (outer),
-			    folder_row (_("Freigabeordner (optional, Dateien zum Laden aufs Handy)"), &d->share_label, &d->share_button,
-					&d->share_clear_button, G_CALLBACK (on_share_choose), G_CALLBACK (on_share_clear), d), FALSE, FALSE, 0);
-
-	label = gtk_label_new (_("Netzwerkadresse des PCs"));
-	gtk_widget_set_halign (label, GTK_ALIGN_START);
-	gtk_style_context_add_class (gtk_widget_get_style_context (label), "dim-label");
-	gtk_box_pack_start (GTK_BOX (outer), label, FALSE, FALSE, 0);
-	row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-	d->address_combo = gtk_combo_box_text_new ();
-	d->start_button = gtk_button_new_with_label (_("Starten"));
-	gtk_style_context_add_class (gtk_widget_get_style_context (d->start_button), "suggested-action");
-	g_signal_connect (d->start_button, "clicked", G_CALLBACK (on_start_clicked), d);
-	gtk_box_pack_start (GTK_BOX (row), d->address_combo, TRUE, TRUE, 0);
-	gtk_box_pack_start (GTK_BOX (row), d->start_button, FALSE, FALSE, 0);
-	gtk_box_pack_start (GTK_BOX (outer), row, FALSE, FALSE, 0);
 
 	d->status = gtk_label_new ("");
 	gtk_label_set_line_wrap (GTK_LABEL (d->status), TRUE);
 	gtk_label_set_xalign (GTK_LABEL (d->status), 0.0);
 	gtk_box_pack_start (GTK_BOX (outer), d->status, FALSE, FALSE, 0);
+
+	d->start_button = gtk_button_new_with_label (_("Starten"));
+	gtk_style_context_add_class (gtk_widget_get_style_context (d->start_button), "suggested-action");
+	g_signal_connect (d->start_button, "clicked", G_CALLBACK (on_start_clicked), d);
+	gtk_box_pack_start (GTK_BOX (outer), d->start_button, FALSE, FALSE, 0);
+
+	settings = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
+	gtk_box_pack_start (GTK_BOX (settings),
+			    folder_row (_("Eingangsordner (hierhin kommen Dateien vom Handy)"), &d->inbox_label, &d->inbox_button,
+					NULL, G_CALLBACK (on_inbox_choose), NULL, d), FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (settings),
+			    folder_row (_("Freigabeordner (optional, Dateien zum Laden aufs Handy)"), &d->share_label, &d->share_button,
+					&d->share_clear_button, G_CALLBACK (on_share_choose), G_CALLBACK (on_share_clear), d), FALSE, FALSE, 0);
+	label = gtk_label_new (_("Netzwerkadresse des PCs"));
+	gtk_widget_set_halign (label, GTK_ALIGN_START);
+	gtk_style_context_add_class (gtk_widget_get_style_context (label), "dim-label");
+	gtk_box_pack_start (GTK_BOX (settings), label, FALSE, FALSE, 0);
+	d->address_combo = gtk_combo_box_text_new ();
+	gtk_box_pack_start (GTK_BOX (settings), d->address_combo, FALSE, FALSE, 0);
 
 	d->qr_area = gtk_drawing_area_new ();
 	gtk_widget_set_size_request (d->qr_area, 240, 240);
@@ -599,6 +597,11 @@ nolphin_phone_page_new (NolphinWindow *window)
 	g_signal_connect (d->open_button, "clicked", G_CALLBACK (on_open_inbox), d);
 	gtk_box_pack_start (GTK_BOX (outer), d->open_button, FALSE, FALSE, 0);
 
+	expander = gtk_expander_new (_("Einstellungen"));
+	gtk_container_add (GTK_CONTAINER (expander), settings);
+	gtk_box_pack_start (GTK_BOX (outer), expander, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (outer), intro, FALSE, FALSE, 0);
+
 	scroller = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_container_add (GTK_CONTAINER (scroller), outer);
@@ -611,11 +614,16 @@ nolphin_phone_page_new (NolphinWindow *window)
 }
 
 void
-nolphin_phone_page_open (GtkWidget *page)
+nolphin_phone_page_open (GtkWidget *page, gboolean autostart)
 {
 	PhonePage *d = page != NULL ? g_object_get_data (G_OBJECT (page), "phone-data") : NULL;
 
-	if (d != NULL) {
-		phone_refresh_addresses (d);
+	if (d == NULL) {
+		return;
+	}
+	phone_refresh_addresses (d);
+	if (autostart && d->server == NULL &&
+	    gtk_combo_box_get_active (GTK_COMBO_BOX (d->address_combo)) >= 0) {
+		phone_start (d);
 	}
 }

@@ -12,8 +12,9 @@
 G_BEGIN_DECLS
 
 GtkWidget *nolphin_phone_page_new  (NolphinWindow *window);
-/* Aktualisiert beim Öffnen der Seite die Liste der Netzwerkadressen. */
-void       nolphin_phone_page_open (GtkWidget *page);
+/* Aktualisiert beim Öffnen der Seite die Liste der Netzwerkadressen und
+ * startet bei @autostart den Austausch, falls er noch nicht läuft. */
+void       nolphin_phone_page_open (GtkWidget *page, gboolean autostart);
 
 G_END_DECLS
 

@@ -61,6 +61,7 @@
 #include "nolphin-bookmark-list.h"
 #include "nolphin-places-sidebar.h"
 #include "nolphin-window.h"
+#include "nolphin-workspace-panel.h"
 #include "nolphin-window-slot.h"
 #include "nolphin-workspace-panel.h"
 
@@ -187,7 +188,10 @@ enum {
 	PLACES_SIDEBAR_COLUMN_COUNT
 };
 
-typedef enum {
+typedef /* Kennung des Seitenleisten-Eintrags "Handy" (kein echter Ort) */
+#define NOLPHIN_PHONE_URI "x-nolphin-phone:///"
+
+enum {
 	PLACES_BUILT_IN,
 	PLACES_XDG_DIR,
 	PLACES_MOUNTED_VOLUME,
@@ -910,6 +914,21 @@ update_places (NolphinPlacesSidebar *sidebar)
 
     if (sidebar->bottom_bookend_uri == NULL) {
         sidebar->bottom_bookend_uri = g_strdup (mount_uri);
+    }
+
+    /* Handy-Austausch: kein Ordner, öffnet das Panel (siehe open_selected_bookmark) */
+    {
+        GtkIconTheme *theme = gtk_icon_theme_get_default ();
+        const gchar *phone_icon = gtk_icon_theme_has_icon (theme, "phone-symbolic") ? "phone-symbolic" :
+                                  gtk_icon_theme_has_icon (theme, "smartphone-symbolic") ? "smartphone-symbolic" :
+                                  "network-wireless-symbolic";
+
+        cat_iter = add_place (sidebar, PLACES_BUILT_IN,
+                               SECTION_COMPUTER,
+                               _("Handy"), phone_icon,
+                               NOLPHIN_PHONE_URI, NULL, NULL, NULL, 0,
+                               _("Bilder und Dateien mit dem Handy über das WLAN austauschen"), 0, FALSE,
+                               cat_iter);
     }
 
     if (eel_vfs_supports_uri_scheme("trash")) {
@@ -2500,7 +2519,12 @@ open_selected_bookmark (NolphinPlacesSidebar *sidebar,
 
 	gtk_tree_model_get (model, iter, PLACES_SIDEBAR_COLUMN_URI, &uri, -1);
 
-	if (uri != NULL) {
+	if (uri != NULL && strcmp (uri, NOLPHIN_PHONE_URI) == 0) {
+		/* kein Ordner: Handy-Austausch im rechten Arbeitsbereich öffnen und starten */
+		nolphin_workspace_panel_show_phone (nolphin_window_get_workspace_panel (sidebar->window),
+						    sidebar->window, TRUE);
+		g_free (uri);
+	} else if (uri != NULL) {
 		DEBUG ("Activating bookmark %s", uri);
 
 		location = g_file_new_for_uri (uri);

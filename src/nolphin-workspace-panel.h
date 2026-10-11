@@ -102,9 +102,12 @@ void       nolphin_workspace_panel_show_gid          (GtkWidget *workspace_panel
 						       NolphinWindow *window,
 						       GFile *project_folder);
 
-/* Zeigt den Handy-Austausch (Datei ▸ Handy-Austausch) und blendet das Panel ein. */
+/* Zeigt den Handy-Austausch (Seitenleiste „Handy“, Datei ▸ Handy-Austausch)
+ * und blendet das Panel ein. @autostart startet den Server sofort, wenn er
+ * noch nicht läuft und ein lokales Netz vorhanden ist. */
 void       nolphin_workspace_panel_show_phone        (GtkWidget *workspace_panel,
-						       NolphinWindow *window);
+						       NolphinWindow *window,
+						       gboolean autostart);
 
 /* Zeigt den .deb-Paket-Ersteller und blendet das Panel ein. */
 void       nolphin_workspace_panel_show_deb_builder  (GtkWidget *workspace_panel,
