@@ -2,7 +2,6 @@ package org.nolphin.handy;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.net.Uri;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -32,28 +31,19 @@ final class Conn {
         prefs(c).edit().remove("host").remove("token").apply();
     }
 
-    /**
-     * Liest einen Verbindungslink: nolphin://connect?host=H&t=T oder den Link
-     * aus dem QR-Code (http://H/?t=T). Gibt false zurück, wenn er nicht passt.
-     */
-    static boolean parse(Context c, String link) {
-        if (link == null) {
-            return false;
-        }
-        Uri u = Uri.parse(link.trim());
-        String scheme = u.getScheme();
-        String host = null;
-        if ("nolphin".equals(scheme)) {
-            host = u.getQueryParameter("host");
-        } else if ("http".equals(scheme)) {
-            host = u.getAuthority();
-        }
-        String token = u.getQueryParameter("t");
-        if (host == null || host.isEmpty() || token == null || token.isEmpty()) {
-            return false;
-        }
-        prefs(c).edit().putString("host", host).putString("token", token).apply();
-        return true;
+    /** Speichert eine geprüfte Verbindung (siehe Connector). Ein neuer Schlüssel gilt ab sofort. */
+    static void save(Context c, Link link) {
+        prefs(c).edit().putString("host", link.authority()).putString("token", link.token)
+                .putLong("expires", link.expires).apply();
+    }
+
+    /** Vor dem Laden fragen, statt neue Dateien vom PC sofort zu laden. */
+    static boolean confirmBeforeDownload(Context c) {
+        return prefs(c).getBoolean("confirm", false);
+    }
+
+    static void setConfirmBeforeDownload(Context c, boolean value) {
+        prefs(c).edit().putBoolean("confirm", value).apply();
     }
 
     /** Dateien, die schon auf dem Handy sind (Name und Größe). */

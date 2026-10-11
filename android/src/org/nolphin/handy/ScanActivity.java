@@ -41,6 +41,8 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
     private final AtomicBoolean busy = new AtomicBoolean(false);
     private volatile boolean done;
     private String lastRejected = "";
+    private long rejectedAt;
+    private volatile boolean verifying;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -247,7 +249,7 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
 
     /** Sagt dem Nutzer, was die Kamera sieht, damit er das Handy richtig halten kann. */
     private void showProgress(int finders) {
-        if (done || !lastRejected.isEmpty()) {
+        if (done || verifying || !lastRejected.isEmpty()) {
             return;
         }
         if (finders >= 3) {
@@ -257,20 +259,32 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
         }
     }
 
-    private void accept(String text) {
-        if (done) {
+    private void accept(final String text) {
+        if (done || verifying) {
             return;
         }
-        if (Conn.parse(this, text)) {
-            done = true;
-            Toast.makeText(this, "Mit dem PC verbunden", Toast.LENGTH_SHORT).show();
-            Intent svc = new Intent(this, SyncService.class);
-            startForegroundService(svc);
-            finish();
-        } else if (!text.equals(lastRejected)) {
-            lastRejected = text;
-            hint.setText("Das ist kein Nolphin-Code.\nRichte die Kamera auf den QR-Code am PC.");
+        if (text.equals(lastRejected) && System.currentTimeMillis() - rejectedAt < 4000) {
+            return;   // derselbe abgelehnte Code: nicht bei jedem Bild erneut prüfen
         }
+        verifying = true;
+        hint.setText("QR-Code gelesen. Prüfe die Verbindung zum PC …");
+        Connector.connect(this, text, new Connector.Listener() {
+            @Override
+            public void onSuccess(Link link) {
+                done = true;
+                Toast.makeText(ScanActivity.this, "Mit dem PC verbunden", Toast.LENGTH_SHORT).show();
+                startForegroundService(new Intent(ScanActivity.this, SyncService.class));
+                finish();
+            }
+
+            @Override
+            public void onFailure(String message) {
+                verifying = false;
+                lastRejected = text;
+                rejectedAt = System.currentTimeMillis();
+                hint.setText(message + "\n\nRichte die Kamera auf den aktuellen QR-Code am PC.");
+            }
+        });
     }
 
     // ---- Lebenszyklus -----------------------------------------------------------------------

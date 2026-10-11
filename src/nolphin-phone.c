@@ -91,6 +91,8 @@ typedef struct {
 	GtkWidget *qr_area;
 	GtkWidget *url_entry;
 	GtkWidget *copy_button;
+	GtkWidget *rotate_button;
+	gchar     *address;       /* gewählte Netzwerkadresse des laufenden Austauschs */
 	GtkListStore *store;
 } PhonePage;
 
@@ -203,6 +205,7 @@ phone_update_ui (PhonePage *d)
 	gtk_button_set_label (GTK_BUTTON (d->start_button), running ? _("Beenden") : _("Starten"));
 	gtk_widget_set_sensitive (d->address_combo, !running);
 	gtk_widget_set_sensitive (d->copy_button, running);
+	gtk_widget_set_sensitive (d->rotate_button, running);
 	gtk_widget_queue_draw (d->qr_area);
 }
 
@@ -338,12 +341,29 @@ on_file_received (const gchar *name, goffset size, gpointer user_data)
 	g_idle_add (received_idle, e);
 }
 
+/* Verbindungslink, Format Version 1:
+ *   http://<Adresse>:<Port>/?t=<Schlüssel, 32 Hex-Zeichen>&v=1&e=<Ablauf, Unix-Sekunden>
+ * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). */
+static void
+phone_refresh_url (PhonePage *d)
+{
+	gchar *token = nolphin_phone_server_dup_token (d->server);
+	gchar *url = g_strdup_printf ("http://%s:%u/?t=%s&v=1&e=%" G_GINT64_FORMAT, d->address,
+				      nolphin_phone_server_get_port (d->server), token,
+				      nolphin_phone_server_get_expires (d->server));
+
+	d->has_qr = nolphin_qr_encode (url, -1, &d->qr);
+	gtk_entry_set_text (GTK_ENTRY (d->url_entry), url);
+	gtk_widget_queue_draw (d->qr_area);
+	g_free (token);
+	g_free (url);
+}
+
 static void
 phone_start (PhonePage *d)
 {
 	GError *error = NULL;
 	gchar *address = gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (d->address_combo));
-	gchar *url;
 
 	if (address == NULL) {
 		gtk_label_set_text (GTK_LABEL (d->status), _("Keine Netzwerkadresse ausgewählt."));
@@ -363,17 +383,14 @@ phone_start (PhonePage *d)
 		g_free (address);
 		return;
 	}
-	url = g_strdup_printf ("http://%s:%u/?t=%s", address, nolphin_phone_server_get_port (d->server),
-			       nolphin_phone_server_get_token (d->server));
-	d->has_qr = nolphin_qr_encode (url, -1, &d->qr);
-	gtk_entry_set_text (GTK_ENTRY (d->url_entry), url);
+	g_free (d->address);
+	d->address = address;
+	phone_refresh_url (d);
 	gtk_label_set_text (GTK_LABEL (d->status),
 			    d->has_qr ? _("Läuft. QR-Code mit der Handy-Kamera scannen (gleiches WLAN).")
 				      : _("Läuft. QR-Code nicht möglich, öffne den Link im Handy-Browser."));
 	d->timeout_id = g_timeout_add_seconds (30, on_idle_check, d);
 	phone_update_ui (d);
-	g_free (url);
-	g_free (address);
 }
 
 /* --- Bedienelemente ----------------------------------------------------------------------- */
@@ -387,6 +404,25 @@ on_start_clicked (GtkButton *button, gpointer data)
 		phone_stop (d, NULL);
 	} else {
 		phone_start (d);
+	}
+}
+
+static void
+on_rotate_clicked (GtkButton *button, gpointer data)
+{
+	PhonePage *d = data;
+	GError *error = NULL;
+
+	if (d->server == NULL) {
+		return;
+	}
+	if (nolphin_phone_server_rotate_token (d->server, &error)) {
+		phone_refresh_url (d);
+		gtk_label_set_text (GTK_LABEL (d->status),
+				    _("Neuer QR-Code. Der alte Code und alle damit verbundenen Handys sind ungültig; scanne den neuen Code."));
+	} else {
+		gtk_label_set_text (GTK_LABEL (d->status), error->message);
+		g_clear_error (&error);
 	}
 }
 
@@ -414,6 +450,7 @@ phone_page_free (gpointer data)
 	shared_unref (d->shared);
 	g_clear_object (&d->inbox);
 	g_clear_object (&d->share);
+	g_free (d->address);
 	g_free (d);
 }
 
@@ -478,8 +515,12 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_widget_set_tooltip_text (d->copy_button, _("Link kopieren"));
 	gtk_entry_set_width_chars (GTK_ENTRY (d->url_entry), 8);
 	g_signal_connect (d->copy_button, "clicked", G_CALLBACK (on_copy_clicked), d);
+	d->rotate_button = gtk_button_new_from_icon_name ("view-refresh-symbolic", GTK_ICON_SIZE_BUTTON);
+	gtk_widget_set_tooltip_text (d->rotate_button, _("Neuen QR-Code erzeugen (der alte wird sofort ungültig)"));
+	g_signal_connect (d->rotate_button, "clicked", G_CALLBACK (on_rotate_clicked), d);
 	gtk_box_pack_start (GTK_BOX (row), d->url_entry, TRUE, TRUE, 0);
 	gtk_box_pack_start (GTK_BOX (row), d->copy_button, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (row), d->rotate_button, FALSE, FALSE, 0);
 	gtk_box_pack_start (GTK_BOX (outer), row, FALSE, FALSE, 0);
 
 	label = nolphin_tools_heading_new (_("Empfangen"));

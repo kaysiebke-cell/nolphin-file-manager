@@ -74,6 +74,8 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](docs/bau
 | 1 | [Bauen und Installieren](docs/bauen-und-installieren.md) | Voraussetzungen, Bauen, Tests, Installation |
 | 2 | [Der rechte Arbeitsbereich](docs/arbeitsbereich.md) | Panels für Vorschau, Eigenschaften, Archive, Terminal, Git und mehr – mit Bildern |
 | 3 | [Funktionen im Detail](docs/funktionen.md) | Dateiverwaltung, Archive, Git, Werkzeuge, Suche, Handy-Austausch, GID-Projekte, Sicherheit |
+| 3a | [Handy-Austausch: Analyse](docs/handy-austausch-analyse.md) | Ist-Zustand, Vergleich mit LocalSend, Warpinator und PairDrop, Verbindungsablauf, Sicherheit, Tests |
+| 3b | [Handy-Austausch: Schnittstelle](docs/handy-austausch-api.md) | Verbindungslink und QR-Format, Wege, Fehlercodes, Verhalten der App |
 | 4 | [Einstellungen und Anpassung](docs/einstellungen.md) | Einstellungsseiten, Layout-Editor, Export und Import |
 | 5 | [Andere Desktops: XFCE und MATE](docs/andere-desktops.md) | Optionale Bibliotheken, Symbol-Ersatz, Teststand, bekannte Grenzen |
 | 6 | [Nolphin und Nemo](docs/nolphin-und-nemo.md) | Vergleich und Einrichtung als Nemo-Ersatz |

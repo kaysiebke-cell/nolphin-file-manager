@@ -39,7 +39,13 @@ NolphinPhoneServer *nolphin_phone_server_start (const gchar              *bind_a
 						GError                  **error);
 
 guint16      nolphin_phone_server_get_port          (NolphinPhoneServer *server);
-const gchar *nolphin_phone_server_get_token         (NolphinPhoneServer *server);
+/* Aktueller Schlüssel (neu zugewiesen, mit g_free () freizugeben). */
+gchar       *nolphin_phone_server_dup_token         (NolphinPhoneServer *server);
+/* Unix-Zeit (Sekunden), ab der der aktuelle Schlüssel nicht mehr gilt. */
+gint64       nolphin_phone_server_get_expires       (NolphinPhoneServer *server);
+/* Erzeugt einen neuen Schlüssel; der alte ist sofort ungültig (Widerruf). */
+gboolean     nolphin_phone_server_rotate_token      (NolphinPhoneServer *server,
+						     GError            **error);
 /* g_get_monotonic_time () der letzten gültigen Anfrage (oder des Starts). */
 gint64       nolphin_phone_server_get_last_activity (NolphinPhoneServer *server);
 /* Beendet den Server; @received wird danach nicht mehr aufgerufen. */

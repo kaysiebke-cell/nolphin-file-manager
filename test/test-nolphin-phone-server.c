@@ -204,6 +204,7 @@ run_tests (gpointer unused)
 	guint16 port;
 	gchar *r, *target, *token_q;
 	const gchar *token;
+	gchar *token_owned;
 	gchar *big;
 	gsize i;
 
@@ -237,7 +238,8 @@ run_tests (gpointer unused)
 		return NULL;
 	}
 	port = nolphin_phone_server_get_port (server);
-	token = nolphin_phone_server_get_token (server);
+	token_owned = nolphin_phone_server_dup_token (server);
+	token = token_owned;
 	check (port > 0 && strlen (token) == 32, "Port und Schlüssel vorhanden");
 	check (g_file_query_exists (inbox_file, NULL), "Eingangsordner wurde angelegt");
 	token_q = g_strdup_printf ("t=%s", token);
@@ -477,10 +479,73 @@ run_tests (gpointer unused)
 		g_free (noauth);
 	}
 
+	/* Gerätedaten (/info): prüft, dass Nolphin antwortet */
+	target = g_strdup_printf ("/info?%s", token_q);
+	r = get (port, target);
+	check (status_of (r) == 200 && strstr (r, "\"app\":\"nolphin\"") != NULL && strstr (r, "\"api\":1") != NULL &&
+	       strstr (r, "\"expires\":") != NULL && strstr (r, "\"share\":true") != NULL, "info: App, API-Version, Ablauf");
+	g_free (r);
+	g_free (target);
+	r = get (port, "/info?t=falsch");
+	check (status_of (r) == 403, "info mit falschem Schlüssel: 403");
+	g_free (r);
+
+	/* Widerruf: neuer Schlüssel, der alte ist sofort ungültig */
+	{
+		gchar *old_q = g_strdup (token_q);
+		gchar *fresh;
+		gint64 exp_before = nolphin_phone_server_get_expires (server);
+
+		g_usleep (1100 * 1000);
+		check (nolphin_phone_server_rotate_token (server, NULL), "Schlüsselwechsel");
+		fresh = nolphin_phone_server_dup_token (server);
+		check (strcmp (fresh, token) != 0 && strlen (fresh) == 32, "neuer Schlüssel unterscheidet sich");
+		check (nolphin_phone_server_get_expires (server) > exp_before, "Ablaufzeit wird beim Wechsel erneuert");
+		target = g_strdup_printf ("/info?%s", old_q);
+		r = get (port, target);
+		check (status_of (r) == 403, "alter Schlüssel nach dem Wechsel: 403");
+		g_free (r);
+		g_free (target);
+		target = g_strdup_printf ("/info?t=%s", fresh);
+		r = get (port, target);
+		check (status_of (r) == 200, "neuer Schlüssel gilt");
+		g_free (r);
+		g_free (target);
+		g_free (fresh);
+		g_free (old_q);
+	}
+
 	/* Meldungen über empfangene Dateien */
 	g_mutex_lock (&received_lock);
 	check (received_names->len == 5, "Rückmeldung für jede empfangene Datei");
 	g_mutex_unlock (&received_lock);
+
+	/* Ablauf: Schlüssel mit kurzer Lebensdauer wird nach Ablauf abgelehnt, mit Hinweis "expired" */
+	{
+		NolphinPhoneServer *shortlived;
+		gchar *tk, *tq;
+		guint16 sp;
+
+		g_setenv ("NOLPHIN_PHONE_TOKEN_LIFETIME", "2", TRUE);
+		shortlived = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, &error);
+		g_unsetenv ("NOLPHIN_PHONE_TOKEN_LIFETIME");
+		check (shortlived != NULL, "Server mit kurzer Schlüsselzeit startet");
+		if (shortlived != NULL) {
+			sp = nolphin_phone_server_get_port (shortlived);
+			tk = nolphin_phone_server_dup_token (shortlived);
+			tq = g_strdup_printf ("/info?t=%s", tk);
+			r = get (sp, tq);
+			check (status_of (r) == 200 && strstr (r, "\"share\":false") != NULL, "Schlüssel gilt vor dem Ablauf");
+			g_free (r);
+			g_usleep (3200 * 1000);
+			r = get (sp, tq);
+			check (status_of (r) == 403 && g_str_has_suffix (r, "expired"), "abgelaufener Schlüssel: 403 mit Hinweis expired");
+			g_free (r);
+			nolphin_phone_server_stop (shortlived);
+			g_free (tk);
+			g_free (tq);
+		}
+	}
 
 	/* Ende */
 	nolphin_phone_server_stop (server);
@@ -495,6 +560,7 @@ run_tests (gpointer unused)
 		g_spawn_sync (NULL, argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, NULL);
 	}
 	g_free (token_q);
+	g_free (token_owned);
 	g_object_unref (inbox_file);
 	g_object_unref (share_file);
 	g_free (inbox);

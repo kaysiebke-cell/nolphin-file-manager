@@ -4,11 +4,13 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.app.PendingIntent;
 import android.content.ClipData;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.database.Cursor;
+import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.os.IBinder;
 import android.provider.MediaStore;
@@ -38,6 +40,8 @@ public class SyncService extends Service {
     static final String ACTION_STOP = "org.nolphin.handy.STOP";
     static final String ACTION_UPLOAD = "org.nolphin.handy.UPLOAD";
     static final String ACTION_ALL = "org.nolphin.handy.ALL";
+    static final String ACTION_CANCEL = "org.nolphin.handy.CANCEL";
+    static final String ACTION_FETCH = "org.nolphin.handy.FETCH";
 
     private static final String CH_STATE = "state";
     private static final String CH_FILES = "files";
@@ -45,6 +49,10 @@ public class SyncService extends Service {
 
     /** Zustand für die Anzeige in MainActivity. */
     static volatile String status = "Nicht verbunden";
+    /** Laufende Übertragung für die Anzeige, zum Beispiel "Lade Bild.jpg: 45 %"; leer, wenn keine läuft. */
+    static volatile String transfer = "";
+    /** Wird gesetzt, wenn der Nutzer die laufende Übertragung abbricht. */
+    private static volatile boolean cancelRequested;
     private static final ArrayDeque<String> events = new ArrayDeque<>();
 
     static synchronized void event(String text) {
@@ -64,6 +72,10 @@ public class SyncService extends Service {
 
     private volatile boolean stop;
     private volatile boolean forceAll;
+    private volatile boolean reconnect;                  // neuer Schlüssel: die laufende Wartezeit abbrechen
+    private volatile HttpURLConnection waiting;         // die gerade laufende Anfrage an /wait
+    private long lastProgress;
+    private final java.util.Set<String> offered = new java.util.HashSet<>();   // schon angebotene Dateien (Rückfrage)
     private Thread worker;
     private int nextNotification = 100;
 
@@ -84,8 +96,27 @@ public class SyncService extends Service {
             return START_NOT_STICKY;
         }
         startForeground(ID_STATE, stateNotification(status), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        if (ACTION_ALL.equals(action)) {
+        if (action == null && worker != null && worker.isAlive()) {
+            // Die App wurde (neu) verbunden: die alte Wartezeit mit dem alten Schlüssel sofort beenden
+            reconnect = true;
+            HttpURLConnection w = waiting;
+            if (w != null) {
+                w.disconnect();
+            }
+        }
+        if (ACTION_CANCEL.equals(action)) {
+            cancelRequested = true;
+        } else if (ACTION_ALL.equals(action)) {
             forceAll = true;
+        } else if (ACTION_FETCH.equals(action) && intent != null) {
+            final String name = intent.getStringExtra("name");
+            final long size = intent.getLongExtra("size", -1);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    fetchOne(name, size);
+                }
+            }, "nolphin-fetch").start();
         } else if (ACTION_UPLOAD.equals(action) && intent != null) {
             final List<Uri> uris = urisOf(intent);
             new Thread(new Runnable() {
@@ -123,12 +154,39 @@ public class SyncService extends Service {
     }
 
     private Notification stateNotification(String text) {
-        return new Notification.Builder(this, CH_STATE)
+        Notification.Builder b = new Notification.Builder(this, CH_STATE)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
                 .setContentTitle("Nolphin Handy")
-                .setContentText(text)
-                .setOngoing(true)
-                .build();
+                .setContentText(transfer.isEmpty() ? text : transfer)
+                .setOngoing(true);
+        if (!transfer.isEmpty()) {
+            Intent cancel = new Intent(this, SyncService.class).setAction(ACTION_CANCEL);
+            PendingIntent pi = PendingIntent.getForegroundService(this, 1, cancel,
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            b.addAction(new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel), "Abbrechen", pi).build());
+        }
+        return b.build();
+    }
+
+    /** Fortschritt anzeigen (höchstens alle 400 ms) und auf Abbruch prüfen. */
+    private void progress(String verb, String name, long done, long total) throws IOException {
+        if (cancelRequested) {
+            throw new IOException("abgebrochen");
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastProgress < 400 && done < total) {
+            return;
+        }
+        lastProgress = now;
+        transfer = verb + " " + name + (total > 0 ? ": " + (done * 100 / total) + " %" : "");
+        getSystemService(NotificationManager.class).notify(ID_STATE, stateNotification(status));
+    }
+
+    private void endTransfer() {
+        transfer = "";
+        cancelRequested = false;
+        getSystemService(NotificationManager.class).notify(ID_STATE, stateNotification(status));
     }
 
     private void setStatus(String text) {
@@ -165,6 +223,7 @@ public class SyncService extends Service {
                 HttpURLConnection c = (HttpURLConnection) url.openConnection();
                 c.setConnectTimeout(8000);
                 c.setReadTimeout(40000);
+                waiting = c;
                 int code = c.getResponseCode();
                 if (code == 403) {
                     c.disconnect();
@@ -184,9 +243,15 @@ public class SyncService extends Service {
                 setStatus("Verbunden mit " + host);
                 handleFiles(host, token, o.getJSONArray("files"));
             } catch (Exception e) {
-                setStatus("PC nicht erreichbar, neuer Versuch …");
                 version = "";
+                if (reconnect) {
+                    reconnect = false;   // absichtlich beendet: sofort mit den neuen Daten weitermachen
+                    continue;
+                }
+                setStatus("PC nicht erreichbar, neuer Versuch …");
                 sleep(5000);
+            } finally {
+                waiting = null;
             }
         }
     }
@@ -208,18 +273,82 @@ public class SyncService extends Service {
             if (!all && seen.contains(key)) {
                 continue;
             }
-            if (download(host, token, name)) {
-                seen.add(key);
-                Conn.saveSeen(this, seen);
-                notifyFile("Vom PC empfangen", name);
-            } else {
-                notifyFile("Laden fehlgeschlagen", name);
+            if (!all && Conn.confirmBeforeDownload(this)) {
+                if (offered.add(key)) {
+                    offer(name, size);
+                }
+                continue;
             }
+            fetch(host, token, name, size, seen);
         }
         if (first) {
             Conn.setSeeded(this);
         }
         Conn.saveSeen(this, seen);
+    }
+
+    /** Lädt eine Datei und meldet das Ergebnis; merkt sich Erfolg und Abbruch, damit sie nicht erneut geladen wird. */
+    private void fetch(String host, String token, String name, long size, Set<String> seen) {
+        String key = name + "|" + size;
+        cancelRequested = false;
+        boolean ok;
+        try {
+            ok = download(host, token, name);
+        } finally {
+            boolean wasCancelled = cancelRequested;
+            endTransfer();
+            if (wasCancelled) {
+                seen.add(key);   // abgebrochen: nicht von selbst erneut laden
+                Conn.saveSeen(this, seen);
+                notifyFile("Laden abgebrochen", name);
+                return;
+            }
+        }
+        if (ok) {
+            seen.add(key);
+            Conn.saveSeen(this, seen);
+            notifyFile("Vom PC empfangen", name);
+        } else {
+            notifyFile("Laden fehlgeschlagen", name);
+        }
+    }
+
+    /** Rückfrage statt sofortigem Laden: Benachrichtigung mit der Aktion "Laden". */
+    private void offer(String name, long size) {
+        Intent i = new Intent(this, SyncService.class).setAction(ACTION_FETCH)
+                .putExtra("name", name).putExtra("size", size);
+        PendingIntent pi = PendingIntent.getForegroundService(this, nextNotification, i,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification n = new Notification.Builder(this, CH_FILES)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle("Datei vom PC bereit")
+                .setContentText(name + " (" + humanSize(size) + ")")
+                .addAction(new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.stat_sys_download), "Laden", pi).build())
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build();
+        getSystemService(NotificationManager.class).notify(nextNotification++, n);
+        event("Bereit zum Laden: " + name);
+    }
+
+    private void fetchOne(String name, long size) {
+        String host = Conn.host(this);
+        String token = Conn.token(this);
+        if (name == null || host == null || token == null) {
+            return;
+        }
+        fetch(host, token, name, size, Conn.seen(this));
+    }
+
+    private static String humanSize(long b) {
+        if (b < 1024) {
+            return b + " B";
+        }
+        if (b < 1024 * 1024) {
+            return (b / 1024) + " KB";
+        }
+        return String.format(Locale.ROOT, "%.1f MB", b / 1048576.0);
     }
 
     private boolean download(String host, String token, String name) {
@@ -243,8 +372,18 @@ public class SyncService extends Service {
                 c.disconnect();
                 return false;
             }
+            long total = c.getContentLengthLong();
             try (InputStream in = c.getInputStream(); OutputStream out = getContentResolver().openOutputStream(target)) {
-                copy(in, out);
+                byte[] buf = new byte[64 * 1024];
+                long done = 0;
+                int n;
+                progress("Lade", name, 0, total);
+                while ((n = in.read(buf)) > 0) {
+                    out.write(buf, 0, n);
+                    done += n;
+                    progress("Lade", name, done, total);
+                }
+                out.flush();
             }
             c.disconnect();
             cv.clear();
@@ -305,12 +444,15 @@ public class SyncService extends Service {
                 c.setDoOutput(true);
                 c.setFixedLengthStreamingMode(size);
                 long sent = 0;
+                cancelRequested = false;
+                progress("Sende", name, 0, size);
                 try (InputStream src = in; OutputStream out = c.getOutputStream()) {
                     byte[] buf = new byte[64 * 1024];
                     int n;
                     while ((n = src.read(buf)) > 0) {
                         out.write(buf, 0, n);
                         sent += n;
+                        progress("Sende", name, sent, size);
                     }
                 }
                 if (sent != size) {
@@ -326,10 +468,15 @@ public class SyncService extends Service {
                     notifyFile("Senden fehlgeschlagen", name + ": PC antwortet mit Fehler " + code);
                 }
             } catch (Exception e) {
-                // Den Grund nennen, damit sich der Fehler eingrenzen lässt
-                notifyFile("Senden fehlgeschlagen", name + ": " + e.getClass().getSimpleName()
-                        + (e.getMessage() != null ? " (" + e.getMessage() + ")" : ""));
+                if (cancelRequested) {
+                    notifyFile("Senden abgebrochen", name);
+                } else {
+                    // Den Grund nennen, damit sich der Fehler eingrenzen lässt
+                    notifyFile("Senden fehlgeschlagen", name + ": " + e.getClass().getSimpleName()
+                            + (e.getMessage() != null ? " (" + e.getMessage() + ")" : ""));
+                }
             } finally {
+                endTransfer();
                 if (temp != null) {
                     temp.delete();
                 }

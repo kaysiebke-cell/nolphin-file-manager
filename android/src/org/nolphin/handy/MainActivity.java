@@ -26,7 +26,8 @@ public class MainActivity extends Activity {
     private TextView statusView;
     private TextView logView;
     private EditText linkField;
-    private Button scanButton, sendButton, allButton, disconnectButton, pasteButton, linkButton;
+    private Button scanButton, sendButton, allButton, disconnectButton, pasteButton, linkButton, cancelButton;
+    private android.widget.CheckBox confirmBox;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable refresh = new Runnable() {
         @Override
@@ -71,13 +72,33 @@ public class MainActivity extends Activity {
     private void handleIntent(Intent intent) {
         Uri data = intent != null ? intent.getData() : null;
         if (data != null && "nolphin".equals(data.getScheme())) {
-            if (Conn.parse(this, data.toString())) {
-                Toast.makeText(this, "Mit dem PC verbunden", Toast.LENGTH_SHORT).show();
-                startSync(null);
-            } else {
-                Toast.makeText(this, "Ungültiger Verbindungslink", Toast.LENGTH_LONG).show();
-            }
+            connectWith(data.toString());
         }
+    }
+
+    private String error;
+
+    private final Connector.Listener connectListener = new Connector.Listener() {
+        @Override
+        public void onSuccess(Link link) {
+            error = null;
+            Toast.makeText(MainActivity.this, "Mit dem PC verbunden", Toast.LENGTH_SHORT).show();
+            startSync(null);
+            update();
+        }
+
+        @Override
+        public void onFailure(String message) {
+            error = message;
+            update();
+        }
+    };
+
+    /** Link lesen, am PC prüfen und erst dann speichern. */
+    private void connectWith(String text) {
+        error = null;
+        statusView.setText("Prüfe die Verbindung zum PC …");
+        Connector.connect(this, text, connectListener);
     }
 
     private void startSync(String action) {
@@ -131,10 +152,11 @@ public class MainActivity extends Activity {
                 if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
                     text = cm.getPrimaryClip().getItemAt(0).coerceToText(MainActivity.this);
                 }
-                if (text != null && Conn.parse(MainActivity.this, text.toString())) {
-                    startSync(null);
+                if (text != null) {
+                    connectWith(text.toString());
                 } else {
-                    Toast.makeText(MainActivity.this, "In der Zwischenablage ist kein Nolphin-Link", Toast.LENGTH_LONG).show();
+                    error = "In der Zwischenablage ist kein Nolphin-Link";
+                    update();
                 }
             }
         });
@@ -146,12 +168,8 @@ public class MainActivity extends Activity {
         linkButton = button("Mit Link verbinden", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Conn.parse(MainActivity.this, linkField.getText().toString())) {
-                    linkField.setText("");
-                    startSync(null);
-                } else {
-                    Toast.makeText(MainActivity.this, "Ungültiger Link", Toast.LENGTH_LONG).show();
-                }
+                connectWith(linkField.getText().toString());
+                linkField.setText("");
             }
         });
         box.addView(linkButton);
@@ -175,6 +193,23 @@ public class MainActivity extends Activity {
             }
         });
         box.addView(allButton);
+        cancelButton = button("Übertragung abbrechen", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startSync(SyncService.ACTION_CANCEL);
+            }
+        });
+        box.addView(cancelButton);
+        confirmBox = new android.widget.CheckBox(this);
+        confirmBox.setText("Vor dem Laden vom PC fragen");
+        confirmBox.setChecked(Conn.confirmBeforeDownload(this));
+        confirmBox.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
+                Conn.setConfirmBeforeDownload(MainActivity.this, checked);
+            }
+        });
+        box.addView(confirmBox);
         disconnectButton = button("Verbindung trennen", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -204,11 +239,18 @@ public class MainActivity extends Activity {
             if (st.startsWith("Nicht verbunden")) {
                 st = "Verbinde mit dem PC …";
             }
-            statusView.setText(st.contains(Conn.host(this)) ? st : st + "\nPC: " + Conn.host(this));
+            String line = st.contains(Conn.host(this)) ? st : st + "\nPC: " + Conn.host(this);
+            if (!SyncService.transfer.isEmpty()) {
+                line += "\n" + SyncService.transfer;
+            }
+            statusView.setText(line);
         } else {
             statusView.setText("Nicht mit einem PC verbunden.\n"
                     + "Öffne am PC in Nolphin die Seitenleiste „Handy“, tippe hier auf „QR-Code scannen“ "
                     + "und richte die Kamera auf den Code.");
+        }
+        if (error != null) {
+            statusView.setText(statusView.getText() + "\n\n" + error);
         }
         scanButton.setText(connected ? "Neu verbinden (QR-Code scannen)" : "QR-Code scannen");
         int whenConnected = connected ? View.VISIBLE : View.GONE;
@@ -217,6 +259,8 @@ public class MainActivity extends Activity {
         allButton.setVisibility(whenConnected);
         disconnectButton.setVisibility(whenConnected);
         logView.setVisibility(whenConnected);
+        confirmBox.setVisibility(whenConnected);
+        cancelButton.setVisibility(connected && !SyncService.transfer.isEmpty() ? View.VISIBLE : View.GONE);
         pasteButton.setVisibility(whenNot);
         linkField.setVisibility(whenNot);
         linkButton.setVisibility(whenNot);

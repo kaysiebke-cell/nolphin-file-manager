@@ -27,10 +27,14 @@
 #define LIST_MAX 500
 #define TOKEN_BYTES 16
 #define IO_BUFFER 65536
+/* Ein Schlüssel gilt höchstens so lange (Sekunden); NOLPHIN_PHONE_TOKEN_LIFETIME überschreibt das für Tests. */
+#define TOKEN_LIFETIME_DEFAULT (12 * 3600)
 
 struct _NolphinPhoneServer {
 	GThreadedSocketService  *service;  /* Lebensdauer: der Server hängt am Dienst */
+	GMutex                   lock;      /* schützt token und expires */
 	gchar                   *token;
+	gint64                   expires;   /* Unix-Zeit in Sekunden, ab der der Schlüssel nicht mehr gilt */
 	guint16                  port;
 	gchar                   *inbox_path;
 	gchar                   *share_path;
@@ -61,6 +65,7 @@ server_free (gpointer data)
 		s->user_data_free (s->user_data);
 	}
 	g_free (s->token);
+	g_mutex_clear (&s->lock);
 	g_free (s->inbox_path);
 	g_free (s->share_path);
 	g_free (s);
@@ -89,6 +94,34 @@ token_equal (const gchar *a, const gchar *b)
 		diff |= (guint8) (a[i] ^ b[i]);
 	}
 	return diff == 0;
+}
+
+static gint64
+token_lifetime (void)
+{
+	const gchar *env = g_getenv ("NOLPHIN_PHONE_TOKEN_LIFETIME");
+	gint64 v = env != NULL ? g_ascii_strtoll (env, NULL, 10) : 0;
+
+	return v > 0 ? v : TOKEN_LIFETIME_DEFAULT;
+}
+
+typedef enum { TOKEN_OK, TOKEN_INVALID, TOKEN_EXPIRED } TokenState;
+
+static TokenState
+check_token (NolphinPhoneServer *s, const gchar *given)
+{
+	TokenState state;
+
+	g_mutex_lock (&s->lock);
+	if (given == NULL || !token_equal (given, s->token)) {
+		state = TOKEN_INVALID;
+	} else if (g_get_real_time () / G_USEC_PER_SEC >= s->expires) {
+		state = TOKEN_EXPIRED;
+	} else {
+		state = TOKEN_OK;
+	}
+	g_mutex_unlock (&s->lock);
+	return state;
 }
 
 static gchar *
@@ -475,6 +508,23 @@ static gint
 compare_names (gconstpointer a, gconstpointer b)
 {
 	return g_utf8_collate (*(const gchar * const *) a, *(const gchar * const *) b);
+}
+
+/* Gerätedaten für die App: prüft, dass am anderen Ende wirklich Nolphin läuft (API-Version 1). */
+static void
+handle_info (NolphinPhoneServer *s, GOutputStream *out)
+{
+	GString *json = g_string_new ("{\"app\":\"nolphin\",\"api\":1,\"name\":");
+	gint64 expires;
+
+	json_append_string (json, g_get_host_name () != NULL ? g_get_host_name () : "");
+	g_mutex_lock (&s->lock);
+	expires = s->expires;
+	g_mutex_unlock (&s->lock);
+	g_string_append_printf (json, ",\"expires\":%" G_GINT64_FORMAT ",\"maxUpload\":%" G_GINT64_FORMAT ",\"share\":%s}",
+				expires, (gint64) NOLPHIN_PHONE_MAX_UPLOAD, s->share_path != NULL ? "true" : "false");
+	send_text (out, 200, "OK", "application/json; charset=utf-8", json->str, NULL);
+	g_string_free (json, TRUE);
 }
 
 /* Eine Datei, die sich in den letzten Sekunden geändert hat, wird noch geschrieben
@@ -883,14 +933,22 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 		goto done;
 	}
 	token = g_hash_table_lookup (req.query, "t");
-	if (token == NULL || !token_equal (token, s->token)) {
+	switch (check_token (s, token)) {
+	case TOKEN_EXPIRED:
+		send_error (out, 403, "Forbidden", "expired");
+		goto done;
+	case TOKEN_INVALID:
 		send_error (out, 403, "Forbidden", _("Ungültiger oder abgelaufener Link."));
 		goto done;
+	default:
+		break;
 	}
 	touch_activity (s);
 
 	if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/") == 0) {
 		handle_index (s, out);
+	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/info") == 0) {
+		handle_info (s, out);
 	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/ls") == 0) {
 		handle_list (s, out);
 	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/wait") == 0) {
@@ -965,7 +1023,9 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 	}
 
 	s = g_new0 (NolphinPhoneServer, 1);
+	g_mutex_init (&s->lock);
 	s->token = token;
+	s->expires = g_get_real_time () / G_USEC_PER_SEC + token_lifetime ();
 	s->inbox_path = inbox_path;
 	s->share_path = share_path;
 	s->received = received;
@@ -998,10 +1058,42 @@ nolphin_phone_server_get_port (NolphinPhoneServer *server)
 	return server->port;
 }
 
-const gchar *
-nolphin_phone_server_get_token (NolphinPhoneServer *server)
+gchar *
+nolphin_phone_server_dup_token (NolphinPhoneServer *server)
 {
-	return server->token;
+	gchar *t;
+
+	g_mutex_lock (&server->lock);
+	t = g_strdup (server->token);
+	g_mutex_unlock (&server->lock);
+	return t;
+}
+
+gint64
+nolphin_phone_server_get_expires (NolphinPhoneServer *server)
+{
+	gint64 e;
+
+	g_mutex_lock (&server->lock);
+	e = server->expires;
+	g_mutex_unlock (&server->lock);
+	return e;
+}
+
+gboolean
+nolphin_phone_server_rotate_token (NolphinPhoneServer *server, GError **error)
+{
+	gchar *fresh = make_token (error);
+
+	if (fresh == NULL) {
+		return FALSE;
+	}
+	g_mutex_lock (&server->lock);
+	g_free (server->token);
+	server->token = fresh;
+	server->expires = g_get_real_time () / G_USEC_PER_SEC + token_lifetime ();
+	g_mutex_unlock (&server->lock);
+	return TRUE;
 }
 
 gint64
