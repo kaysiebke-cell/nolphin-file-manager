@@ -4,26 +4,18 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.ContentValues;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
-import android.net.Uri;
-import android.provider.MediaStore;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -37,9 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @SuppressWarnings("deprecation")
 public class ScanActivity extends Activity implements TextureView.SurfaceTextureListener, Camera.PreviewCallback {
     private static final int REQUEST_CAMERA = 11;
-    private static final int REQUEST_PHOTO = 21;
-    private static final int REQUEST_PICK = 22;
-    private Uri photoUri;
 
     private TextureView texture;
     private TextView hint;
@@ -47,6 +36,15 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
     private int frames;
     private Camera camera;
     private Camera.Size previewSize;
+    private String focusMode;
+    private final android.os.Handler focusHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable focusTick = new Runnable() {
+        @Override
+        public void run() {
+            focusNow();
+            focusHandler.postDelayed(this, 2500);
+        }
+    };
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final AtomicBoolean busy = new AtomicBoolean(false);
     private volatile boolean done;
@@ -62,6 +60,13 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
 
         texture = new TextureView(this);
         texture.setSurfaceTextureListener(this);
+        texture.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                focusNow();
+                Toast.makeText(ScanActivity.this, "Scharfstellen …", Toast.LENGTH_SHORT).show();
+            }
+        });
         root.addView(texture, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
 
@@ -84,34 +89,6 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
         dlp.bottomMargin = 200;
         root.addView(diag, dlp);
 
-        LinearLayout buttons = new LinearLayout(this);
-        buttons.setOrientation(LinearLayout.HORIZONTAL);
-        buttons.setGravity(Gravity.CENTER);
-        buttons.addView(button("Foto aufnehmen", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                takePhoto();
-            }
-        }));
-        buttons.addView(button("Bild wählen", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                pick.addCategory(Intent.CATEGORY_OPENABLE);
-                pick.setType("image/*");
-                startActivityForResult(pick, REQUEST_PICK);
-            }
-        }));
-        buttons.addView(button("Abbrechen", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish();
-            }
-        }));
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
-        lp.bottomMargin = 48;
-        root.addView(buttons, lp);
         setContentView(root);
 
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -134,117 +111,6 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
         }
     }
 
-    private Button button(String text, View.OnClickListener l) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setOnClickListener(l);
-        return b;
-    }
-
-    // ---- Foto statt Live-Bild --------------------------------------------------------------
-
-    /** Die Kamera-App des Handys macht ein scharfes Foto; so klappt es auch, wenn die Live-Vorschau nicht reicht. */
-    private void takePhoto() {
-        ContentValues cv = new ContentValues();
-        cv.put(MediaStore.Images.Media.DISPLAY_NAME, "nolphin-scan.jpg");
-        cv.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-        photoUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
-        if (photoUri == null) {
-            Toast.makeText(this, "Foto nicht möglich", Toast.LENGTH_LONG).show();
-            return;
-        }
-        Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        i.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-        try {
-            startActivityForResult(i, REQUEST_PHOTO);
-        } catch (RuntimeException e) {
-            getContentResolver().delete(photoUri, null, null);
-            photoUri = null;
-            Toast.makeText(this, "Keine Kamera-App gefunden", Toast.LENGTH_LONG).show();
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int request, int result, Intent data) {
-        super.onActivityResult(request, result, data);
-        final Uri source;
-        final boolean temporary;
-        if (request == REQUEST_PHOTO) {
-            source = photoUri;
-            temporary = true;
-            photoUri = null;
-            if (result != RESULT_OK && source != null) {
-                getContentResolver().delete(source, null, null);
-                return;
-            }
-        } else if (request == REQUEST_PICK && result == RESULT_OK && data != null) {
-            source = data.getData();
-            temporary = false;
-        } else {
-            return;
-        }
-        if (source == null) {
-            return;
-        }
-        hint.setText("Foto wird gelesen …");
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                final String text = readImage(source);
-                if (temporary) {
-                    getContentResolver().delete(source, null, null);   // das Foto bleibt nicht liegen
-                }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (text != null) {
-                            accept(text);
-                        } else {
-                            hint.setText("Im Foto wurde kein QR-Code gefunden.\nDen ganzen Code scharf und möglichst gerade aufnehmen.");
-                        }
-                    }
-                });
-            }
-        }, "nolphin-photo").start();
-    }
-
-    /** Liest ein Foto (auf höchstens etwa 2600 Punkte verkleinert) und sucht den QR-Code darin. */
-    private String readImage(Uri uri) {
-        try {
-            BitmapFactory.Options o = new BitmapFactory.Options();
-            o.inJustDecodeBounds = true;
-            try (InputStream in = getContentResolver().openInputStream(uri)) {
-                BitmapFactory.decodeStream(in, null, o);
-            }
-            int max = Math.max(o.outWidth, o.outHeight);
-            int sample = 1;
-            while (max / sample > 2600) {
-                sample *= 2;
-            }
-            o.inJustDecodeBounds = false;
-            o.inSampleSize = sample;
-            Bitmap b;
-            try (InputStream in = getContentResolver().openInputStream(uri)) {
-                b = BitmapFactory.decodeStream(in, null, o);
-            }
-            if (b == null) {
-                return null;
-            }
-            int w = b.getWidth(), h = b.getHeight();
-            int[] px = new int[w * h];
-            b.getPixels(px, 0, w, 0, 0, w, h);
-            b.recycle();
-            byte[] gray = new byte[w * h];
-            for (int i = 0; i < gray.length; i++) {
-                int p = px[i];
-                gray[i] = (byte) ((((p >> 16) & 255) * 3 + ((p >> 8) & 255) * 6 + (p & 255)) / 10);
-            }
-            return QrDecoder.decodeMultiScale(gray, w, h);
-        } catch (Exception | OutOfMemoryError e) {
-            return null;
-        }
-    }
-
     // ---- Kamera ----------------------------------------------------------------------------
 
     private void openCamera(SurfaceTexture surface) {
@@ -256,9 +122,29 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
             Camera.Parameters p = camera.getParameters();
             previewSize = bestSize(p.getSupportedPreviewSizes());
             p.setPreviewSize(previewSize.width, previewSize.height);
+            // Barcode-Szene (wenn vorhanden): Nahfokus und Kontrast für Codes
+            List<String> scenes = p.getSupportedSceneModes();
+            if (scenes != null && scenes.contains(Camera.Parameters.SCENE_MODE_BARCODE)) {
+                p.setSceneMode(Camera.Parameters.SCENE_MODE_BARCODE);
+            }
             List<String> focus = p.getSupportedFocusModes();
-            if (focus != null && focus.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
-                p.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+            focusMode = null;
+            if (focus != null) {
+                if (focus.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
+                    focusMode = Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE;
+                } else if (focus.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
+                    focusMode = Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO;
+                } else if (focus.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
+                    focusMode = Camera.Parameters.FOCUS_MODE_AUTO;
+                }
+            }
+            if (focusMode != null) {
+                p.setFocusMode(focusMode);
+            }
+            if (p.getMaxNumFocusAreas() > 0) {
+                java.util.ArrayList<Camera.Area> areas = new java.util.ArrayList<>();
+                areas.add(new Camera.Area(new android.graphics.Rect(-300, -300, 300, 300), 1000));   // Bildmitte
+                p.setFocusAreas(areas);
             }
             p.setPreviewFormat(android.graphics.ImageFormat.NV21);
             camera.setParameters(p);
@@ -268,6 +154,8 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
             camera.setPreviewCallback(this);
             fitPreview();
             camera.startPreview();
+            camera.cancelAutoFocus();   // startet den fortlaufenden Fokus
+            startFocusLoop();
         } catch (IOException | RuntimeException e) {
             Toast.makeText(this, "Kamera nicht verfügbar", Toast.LENGTH_LONG).show();
             closeCamera();
@@ -319,7 +207,30 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
         });
     }
 
+    /** Löst den Autofokus aus (alle paar Sekunden und beim Antippen des Bildes). */
+    private void focusNow() {
+        Camera c = camera;
+        if (c == null || focusMode == null) {
+            return;
+        }
+        try {
+            c.autoFocus(new Camera.AutoFocusCallback() {
+                @Override
+                public void onAutoFocus(boolean success, Camera cam) {
+                }
+            });
+        } catch (RuntimeException ignored) {
+        }
+    }
+
+    private void startFocusLoop() {
+        focusHandler.removeCallbacks(focusTick);
+        // Bei festem Auto-Modus muss der Fokus regelmäßig neu angestoßen werden; fortlaufende Modi auch zur Sicherheit
+        focusHandler.postDelayed(focusTick, 1500);
+    }
+
     private void closeCamera() {
+        focusHandler.removeCallbacks(focusTick);
         if (camera != null) {
             camera.setPreviewCallback(null);
             try {
@@ -389,10 +300,10 @@ public class ScanActivity extends Activity implements TextureView.SurfaceTexture
         if (done || verifying || !lastRejected.isEmpty()) {
             return;
         }
-        if (finders >= 3) {
-            hint.setText("QR-Code erkannt, bitte ruhig halten …\n(etwas näher oder weiter weg, bis er scharf ist)");
+        if (QrDecoder.lastTriple) {
+            hint.setText("QR-Code im Bild, aber noch unscharf.\nAbstand ändern (etwa 20 bis 30 cm), ruhig halten, aufs Bild tippen zum Scharfstellen");
         } else {
-            hint.setText("Richte die Kamera auf den QR-Code am PC\n(Nolphin, Seitenleiste „Handy“), etwa eine Handbreit entfernt");
+            hint.setText("Richte die Kamera auf den QR-Code am PC\n(Nolphin, Seitenleiste „Handy“). Zum Scharfstellen aufs Bild tippen");
         }
     }
 

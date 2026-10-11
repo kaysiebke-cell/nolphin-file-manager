@@ -15,6 +15,8 @@ final class QrDecoder {
 
     /** Anzahl der Suchmuster im zuletzt gelesenen Bild; für die Anzeige im Scanner ("Code erkannt"). */
     static volatile int lastFinderCount;
+    /** Wurde im zuletzt gelesenen Bild ein stimmiges Dreieck aus drei Suchmustern gefunden (der Code ist im Bild)? */
+    static volatile boolean lastTriple;
 
     /**
      * Wie decode (), versucht es bei Misserfolg mit auf die Hälfte und ein Viertel verkleinertem Bild.
@@ -23,6 +25,7 @@ final class QrDecoder {
     static String decodeMultiScale(byte[] gray, int w, int h) {
         String text = decode(gray, w, h);
         int best = lastFinderCount;
+        boolean triple = lastTriple;
         for (int f = 2; text == null && f <= 4; f *= 2) {
             int nw = w / f, nh = h / f;
             if (nw < 80 || nh < 80) {
@@ -30,8 +33,10 @@ final class QrDecoder {
             }
             text = decode(downscale(gray, w, h, f), nw, nh);
             best = Math.max(best, lastFinderCount);
+            triple |= lastTriple;
         }
         lastFinderCount = best;
+        lastTriple = triple;
         return text;
     }
 
@@ -72,6 +77,7 @@ final class QrDecoder {
         boolean[] dark = binarize(gray, w, h);
         List<double[]> finders = findFinders(dark, w, h);
         lastFinderCount = finders.size();
+        lastTriple = false;
         if (finders.size() < 3) {
             return null;
         }
@@ -248,6 +254,7 @@ final class QrDecoder {
         }
         // Rechts oben ist die Ecke, die im Uhrzeigersinn (Bild: y nach unten) vor der linken unteren liegt.
         double cross = (a[0] - tl[0]) * (b[1] - tl[1]) - (a[1] - tl[1]) * (b[0] - tl[0]);
+        lastTriple = true;
         double[] tr = cross > 0 ? a : b;
         double[] bl = cross > 0 ? b : a;
 

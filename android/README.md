@@ -8,10 +8,10 @@ Nur das Android-Framework, **keine Bibliotheken**, kein Gradle. Mindestens Andro
 
 1. Klicken Sie in Nolphin in der Seitenleiste auf **Handy** und scannen Sie den QR-Code mit der Kamera des Handys.
 2. **Erster Scan:** Die Seite im Handy-Browser bietet die App zum Installieren an. Laden Sie sie und erlauben Sie die Installation (Warnungen von Chrome, Play Protect oder Mi Protect sind bei Apps außerhalb des Play Store normal).
-3. **Verbinden:** Öffnen Sie die App, tippen Sie auf **QR-Code scannen** und richten Sie die Kamera auf den QR-Code am PC. Die App liest ihn mit einem **eigenen QR-Leser** (`QrDecoder.java`, ohne Bibliothek und ohne Google-Dienste). Alternativ scannen Sie mit der Kamera des Handys oder fügen den Link aus der Zwischenablage ein.
+3. **Verbinden:** Öffnen Sie die App, tippen Sie auf **QR-Code scannen** und richten Sie die Kamera auf den QR-Code am PC. Die App liest ihn mit einem **eigenen QR-Leser** (`QrDecoder.java`, ohne Bibliothek und ohne Google-Dienste). Zum Scharfstellen tippen Sie aufs Bild. Alternativ scannen Sie mit der Kamera des Handys: Die Seite öffnet dann die App und verbindet sie.
 4. Der Schlüssel im Code gilt, solange der Austausch am PC läuft; nach einem Neustart von Nolphin scannen Sie einfach erneut.
 
-Die App lädt neue Dateien nach `Download/Nolphin`. Beim allerersten Verbinden werden bereits vorhandene Dateien nicht geladen; „Alle Dateien vom PC laden“ holt sie nach.
+Die App lädt neue Dateien nach `Download/Nolphin`. Beim allerersten Verbinden werden bereits vorhandene Dateien nicht geladen.
 
 ## Bauen (Entwickler)
 

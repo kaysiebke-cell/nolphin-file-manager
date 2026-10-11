@@ -3,17 +3,14 @@ package org.nolphin.handy;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -25,9 +22,7 @@ public class MainActivity extends Activity {
 
     private TextView statusView;
     private TextView logView;
-    private EditText linkField;
-    private Button scanButton, sendButton, allButton, disconnectButton, pasteButton, linkButton, cancelButton;
-    private android.widget.CheckBox confirmBox;
+    private Button scanButton, sendButton, disconnectButton, cancelButton;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable refresh = new Runnable() {
         @Override
@@ -135,7 +130,8 @@ public class MainActivity extends Activity {
         statusView.setPadding(0, dp(12), 0, dp(12));
         box.addView(statusView);
 
-        scanButton = button("QR-Code scannen", new View.OnClickListener() {
+        // Nicht verbunden: nur dieser Knopf
+        scanButton = button("Mit dem PC verbinden (QR-Code scannen)", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startActivity(new Intent(MainActivity.this, ScanActivity.class));
@@ -143,38 +139,7 @@ public class MainActivity extends Activity {
         });
         box.addView(scanButton);
 
-        // Nur wenn nicht verbunden: der Link als Ersatz für den QR-Code
-        pasteButton = button("Link aus der Zwischenablage einfügen", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ClipboardManager cm = getSystemService(ClipboardManager.class);
-                CharSequence text = null;
-                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
-                    text = cm.getPrimaryClip().getItemAt(0).coerceToText(MainActivity.this);
-                }
-                if (text != null) {
-                    connectWith(text.toString());
-                } else {
-                    error = "In der Zwischenablage ist kein Nolphin-Link";
-                    update();
-                }
-            }
-        });
-        box.addView(pasteButton);
-        linkField = new EditText(this);
-        linkField.setHint("oder Link hier eintippen");
-        linkField.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
-        box.addView(linkField);
-        linkButton = button("Mit Link verbinden", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                connectWith(linkField.getText().toString());
-                linkField.setText("");
-            }
-        });
-        box.addView(linkButton);
-
-        // Nur wenn verbunden
+        // Verbunden: Dateien senden, Verbindung trennen, laufende Übertragung abbrechen
         sendButton = button("Dateien an den PC senden …", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -186,13 +151,6 @@ public class MainActivity extends Activity {
             }
         });
         box.addView(sendButton);
-        allButton = button("Alle Dateien vom PC laden", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startSync(SyncService.ACTION_ALL);
-            }
-        });
-        box.addView(allButton);
         cancelButton = button("Übertragung abbrechen", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -200,16 +158,6 @@ public class MainActivity extends Activity {
             }
         });
         box.addView(cancelButton);
-        confirmBox = new android.widget.CheckBox(this);
-        confirmBox.setText("Vor dem Laden vom PC fragen");
-        confirmBox.setChecked(Conn.confirmBeforeDownload(this));
-        confirmBox.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
-                Conn.setConfirmBeforeDownload(MainActivity.this, checked);
-            }
-        });
-        box.addView(confirmBox);
         disconnectButton = button("Verbindung trennen", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -246,24 +194,16 @@ public class MainActivity extends Activity {
             statusView.setText(line);
         } else {
             statusView.setText("Nicht mit einem PC verbunden.\n"
-                    + "Öffne am PC in Nolphin die Seitenleiste „Handy“, tippe hier auf „QR-Code scannen“ "
-                    + "und richte die Kamera auf den Code.");
+                    + "Öffne am PC in Nolphin die Seitenleiste „Handy“ und scanne den QR-Code.");
         }
         if (error != null) {
             statusView.setText(statusView.getText() + "\n\n" + error);
         }
-        scanButton.setText(connected ? "Neu verbinden (QR-Code scannen)" : "QR-Code scannen");
-        int whenConnected = connected ? View.VISIBLE : View.GONE;
-        int whenNot = connected ? View.GONE : View.VISIBLE;
-        sendButton.setVisibility(whenConnected);
-        allButton.setVisibility(whenConnected);
-        disconnectButton.setVisibility(whenConnected);
-        logView.setVisibility(whenConnected);
-        confirmBox.setVisibility(whenConnected);
+        scanButton.setVisibility(connected ? View.GONE : View.VISIBLE);
+        sendButton.setVisibility(connected ? View.VISIBLE : View.GONE);
+        disconnectButton.setVisibility(connected ? View.VISIBLE : View.GONE);
+        logView.setVisibility(connected ? View.VISIBLE : View.GONE);
         cancelButton.setVisibility(connected && !SyncService.transfer.isEmpty() ? View.VISIBLE : View.GONE);
-        pasteButton.setVisibility(whenNot);
-        linkField.setVisibility(whenNot);
-        linkButton.setVisibility(whenNot);
         logView.setText(SyncService.eventsText());
     }
 

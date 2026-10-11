@@ -138,6 +138,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Die Ursache des Live-Problems ist ohne Gerät nicht zu finden; mit einem scharfen Foto der Kamera-App entfällt die Abhängigkeit von der Live-Vorschau.
 - TEST: `android/test.sh`: 163 von 163 (neu: Fotos bis 4000×3000 Punkte, gelesen in 146 bis 440 ms). Emulator: „Bild wählen“ mit einem gedrehten, unscharfen Foto des Codes von einem laufenden Server: Code gelesen, Verbindung geprüft, „Mit dem PC verbunden“. Nicht geprüft: „Foto aufnehmen“ und die Live-Vorschau am echten Handy.
 
+## Handy-App: Fokus und schlanke Oberfläche (nach Rückmeldung mit Foto vom echten Handy)
+- REQUIREMENT: Der Live-Scanner las am echten Handy nicht; die Oberfläche war überladen (Rückmeldung des Benutzers).
+- DATEI: `android/src/org/nolphin/handy/ScanActivity.java`, `MainActivity.java`, `QrDecoder.java`, `docs/hilfe/21-handy-austausch.md`, `docs/handy-austausch-api.md`, `android/README.md`.
+- ÄNDERUNG: Ursache laut Diagnosezeile des Benutzers (Kamerabild 1920×1080, 214 Bilder gelesen, 138 Suchmuster-Kandidaten): Das Bild war **unscharf**, der Autofokus griff nicht. Jetzt: Barcode-Szene (wenn vorhanden), fortlaufender Fokus mit Rückfall auf Autofokus, Fokusbereich in der Bildmitte, `cancelAutoFocus ()` nach dem Start, Autofokus alle 2,5 s und beim Antippen des Bildes; der Hinweis „QR-Code im Bild“ erscheint nur noch bei einem echten Dreieck aus drei Suchmustern. Entfernt: alle Knöpfe im Scanner, „Foto aufnehmen“, „Bild wählen“, „Link aus der Zwischenablage einfügen“, Linkfeld, „Mit Link verbinden“, „Alle Dateien vom PC laden“, das Häkchen „Vor dem Laden fragen“, „Neu verbinden“. Startseite getrennt: ein Knopf; verbunden: „Dateien an den PC senden“ und „Verbindung trennen“ (dazu „Übertragung abbrechen“ während einer Übertragung).
+- WARUM: Der Benutzer will mit einem Handgriff verbinden; die zusätzlichen Knöpfe waren nicht verlangt.
+- TEST: `android/test.sh` 163 von 163; Emulator: Startseite (ein Knopf), Scanner (keine Knöpfe, Hinweis oben), verbunden (Status und zwei Knöpfe), kein Absturz. **Nicht geprüft: der Fokus am echten Handy** (im Emulator nicht nachstellbar).
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

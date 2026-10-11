@@ -23,18 +23,17 @@ Im Browser holt das Handy Dateien nur ab, wenn Sie sie antippen. Die kleine **No
 4. Neue Dateien landen auf dem Handy im Ordner `Download/Nolphin`, mit einer Benachrichtigung.
 5. Dateien vom Handy schicken Sie über **Teilen ▸ Nolphin (PC)** oder in der App mit **Dateien an den PC senden …**.
 
-Der Scanner hat unten zwei Ausweichwege: **Foto aufnehmen** (die Kamera-App des Handys macht ein scharfes Foto, die App liest den Code darin, das Foto wird danach gelöscht) und **Bild wählen** (ein vorhandenes Bild oder einen Screenshot des Codes). Beide lesen auch große Fotos.
-
-Geht das Scannen nicht, kopieren Sie den Link unter dem QR-Code im Panel und tippen in der App auf **Link aus der Zwischenablage einfügen** (oder tippen Sie ihn in das Feld darunter).
+Der Scanner hat keine Knöpfe. Wird das Bild unscharf, tippen Sie darauf (Scharfstellen) und halten das Handy etwa 20 bis 30 cm vom Bildschirm. Oben im Scanner steht, ob der Code im Bild ist („QR-Code im Bild, aber noch unscharf“); unten steht eine Diagnosezeile. Mit der Zurück-Taste des Handys verlassen Sie den Scanner. Alternativ scannen Sie mit der Kamera des Handys: Die Seite öffnet dann die App und verbindet sie.
 
 Der Schlüssel im QR-Code gilt, solange der Austausch am PC läuft, höchstens 12 Stunden. Nach einem Neustart von Nolphin oder nach **Neuen QR-Code erzeugen** (Knopf neben dem Link im Panel) ist der alte Code sofort ungültig; scannen Sie dann einfach den neuen. Steht in der App „Schlüssel abgelaufen“, ist das der Grund.
+
+Die Startseite der App zeigt nur, was gerade nötig ist: ohne Verbindung einen Knopf zum Scannen, mit Verbindung den Status, „Dateien an den PC senden …“ und „Verbindung trennen“.
 
 Die App prüft jeden Link, bevor sie ihn speichert: Sie akzeptiert nur Adressen aus dem eigenen Netz, fragt am PC nach, ob dort Nolphin antwortet und der Schlüssel gilt, und meldet sonst genau, was nicht stimmt.
 
 ### Übertragungen in der App
 
-- Beim Laden und Senden zeigt die App den **Fortschritt** („Lade Bild.jpg: 45 %“) und einen Knopf **Übertragung abbrechen**. Eine abgebrochene Datei wird nicht von selbst erneut geladen; mit **Alle Dateien vom PC laden** holen Sie sie nach.
-- Mit dem Häkchen **Vor dem Laden vom PC fragen** lädt die App neue Dateien nicht sofort, sondern zeigt eine Benachrichtigung „Datei vom PC bereit“ mit der Aktion **Laden**.
+- Beim Laden und Senden zeigt die App den **Fortschritt** („Lade Bild.jpg: 45 %“) und einen Knopf **Übertragung abbrechen**. Eine abgebrochene Datei wird nicht von selbst erneut geladen.
 - Bricht die Verbindung ab, löscht die App die Teildatei und versucht es weiter („PC nicht erreichbar, neuer Versuch …“).
 
 Die App gibt es nur, wenn sie beim Installieren von Nolphin gebaut wurde (siehe `android/README.md`). Sonst funktioniert der Austausch weiter im Browser.
