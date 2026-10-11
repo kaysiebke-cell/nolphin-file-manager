@@ -4,6 +4,11 @@
 <accelerator action="RenameSelectAll"/>
 <menubar name="MenuBar">
 	<menu action="File">
+		<menu action="PhoneMenu">
+			<placeholder name="Phone Send Placeholder">
+				<menuitem name="PhoneSendMenu" action="PhoneSend"/>
+			</placeholder>
+		</menu>
 		<placeholder name="New Items Placeholder">
 			<menuitem name="New Folder" action="New Folder"/>
 			<menu action="New Documents">
@@ -238,7 +243,8 @@
 	</placeholder>
 	<separator name="Advanced separator"/>
 	<menuitem name="OpenInTerminal" action="OpenInTerminal"/>
-	<menuitem name="GIDAddProject" action="GIDAddProject"/>
+	<menuitem name="PhoneSend" action="PhoneSend"/>
+        <menuitem name="GIDAddProject" action="GIDAddProject"/>
 	<menuitem name="OpenAsRoot" action="OpenAsRoot"/>
     <menuitem name="FollowSymbolicLink" action="FollowSymbolicLink"/>
     <menuitem name="OpenContainingFolder" action="OpenContainingFolder"/>

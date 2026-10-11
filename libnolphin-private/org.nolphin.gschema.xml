@@ -275,6 +275,29 @@
       <summary>Local GID project folders</summary>
       <description>Absolute paths of the local project folders shown in the "GID-Projekte" section of the side pane. Removing an entry never deletes files.</description>
     </key>
+    <key name="phone-folder" type="s">
+      <default>""</default>
+      <summary>Folder for the phone exchange</summary>
+      <description>Absolute path of the folder that contains "Vom Handy" (received files) and "Zum Handy" (files the phone can fetch). Empty means "Handy" in the home folder.</description>
+    </key>
+    <key name="phone-token-hours" type="i">
+      <default>12</default>
+      <range min="1" max="168"/>
+      <summary>Validity of the phone exchange key in hours</summary>
+      <description>After this time the key in the QR code expires and a new QR code is needed.</description>
+    </key>
+    <key name="phone-idle-minutes" type="i">
+      <default>15</default>
+      <range min="1" max="240"/>
+      <summary>Automatic stop of the phone exchange after inactivity</summary>
+      <description>Minutes without a valid request after which the phone exchange stops itself.</description>
+    </key>
+    <key name="phone-max-upload-mb" type="i">
+      <default>2048</default>
+      <range min="1" max="4096"/>
+      <summary>Largest file accepted from the phone in MiB</summary>
+      <description>Larger uploads from the phone are refused.</description>
+    </key>
     <key name="preview-enabled" type="b">
       <default>true</default>
       <summary>Enable file previews in the info panel</summary>

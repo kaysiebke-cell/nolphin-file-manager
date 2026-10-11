@@ -36,4 +36,5 @@ void            menu_set_show_thumbnails_action (gboolean value, NolphinWindow *
 void            toolbar_set_create_folder_button (gboolean value, NolphinWindowPane *pane);
 void            menu_set_view_selection (guint       action_id,
                                          NolphinWindow *window);
+void            nolphin_window_set_phone_running (NolphinWindow *window, gboolean running);
 #endif /* NOLPHIN_WINDOW_PANE_H */

@@ -36,6 +36,7 @@
 #include "nolphin-application.h"
 #include "nolphin-tools.h"
 #include "nolphin-workspace-panel.h"
+#include "nolphin-phone.h"
 #include "nolphin-connect-server-dialog.h"
 #include "nolphin-file-management-properties.h"
 #include "nolphin-help.h"
@@ -273,6 +274,66 @@ action_tool_sync_callback (GtkAction *action, gpointer user_data)
 	folder = tools_current_folder (window);
 	nolphin_workspace_panel_show_sync (nolphin_window_get_workspace_panel (window), window, folder);
 	g_object_unref (folder);
+}
+
+static void
+action_phone_callback (GtkAction *action, gpointer user_data)
+{
+	NolphinWindow *window;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	nolphin_workspace_panel_show_phone (nolphin_window_get_workspace_panel (window), window, TRUE);
+}
+
+static GtkWidget *
+phone_page_of (gpointer user_data)
+{
+	NolphinWindow *window;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return NULL;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	return gtk_stack_get_child_by_name (GTK_STACK (nolphin_window_get_workspace_panel (window)), "phone");
+}
+
+static void
+action_phone_rotate_callback (GtkAction *action, gpointer user_data)
+{
+	nolphin_phone_page_rotate (phone_page_of (user_data));
+}
+
+static void
+action_phone_stop_callback (GtkAction *action, gpointer user_data)
+{
+	nolphin_phone_page_stop (phone_page_of (user_data));
+}
+
+/* Schaltet "Neuen QR-Code erzeugen" und "Austausch beenden" ein, solange der Austausch läuft. */
+void
+nolphin_window_set_phone_running (NolphinWindow *window, gboolean running)
+{
+	GtkActionGroup *group;
+	GtkAction *action;
+
+	if (window == NULL || NOLPHIN_IS_DESKTOP_WINDOW (window)) {
+		return;
+	}
+	group = nolphin_window_get_main_action_group (window);
+	if (group == NULL) {
+		return;
+	}
+	action = gtk_action_group_get_action (group, "Phone Rotate");
+	if (action != NULL) {
+		gtk_action_set_sensitive (action, running);
+	}
+	action = gtk_action_group_get_action (group, "Phone Stop");
+	if (action != NULL) {
+		gtk_action_set_sensitive (action, running);
+	}
 }
 
 static void
@@ -1948,6 +2009,19 @@ static const GtkActionEntry main_entries[] = {
   /* label, accelerator */       N_("_Stapelverarbeitung …"), NULL,
   /* tooltip */                  N_("Eine Aktion auf die gewählten Dateien anwenden (mit Vorschau)"),
                                  G_CALLBACK (action_tool_rules_callback) },
+  /* name, stock id, label */  { "PhoneMenu", NULL, N_("_Handy") },
+  /* name, stock id */         { "Phone Exchange", NULL,
+  /* label, accelerator */       N_("_Austausch öffnen …"), NULL,
+  /* tooltip */                  N_("Bilder und Dateien mit dem Handy über das WLAN austauschen (QR-Code, keine App nötig)"),
+                                 G_CALLBACK (action_phone_callback) },
+  /* name, stock id */         { "Phone Rotate", NULL,
+  /* label, accelerator */       N_("Neuen _QR-Code erzeugen"), NULL,
+  /* tooltip */                  N_("Erzeugt einen neuen QR-Code; der alte wird sofort ungültig"),
+                                 G_CALLBACK (action_phone_rotate_callback) },
+  /* name, stock id */         { "Phone Stop", NULL,
+  /* label, accelerator */       N_("Austausch _beenden"), NULL,
+  /* tooltip */                  N_("Beendet den Handy-Austausch; der Schlüssel im QR-Code wird ungültig"),
+                                 G_CALLBACK (action_phone_stop_callback) },
   /* name, stock id */         { "Tool Sync", NULL,
   /* label, accelerator */       N_("Ordner _vergleichen / synchronisieren …"), NULL,
   /* tooltip */                  N_("Zwei Ordner vergleichen und einseitig über rsync abgleichen (mit Vorschau)"),
@@ -2622,6 +2696,10 @@ nolphin_window_initialize_menus (NolphinWindow *window)
 	gtk_action_group_add_actions (action_group,
 				      main_entries, G_N_ELEMENTS (main_entries),
 				      window);
+
+	/* Handy: "Neuen QR-Code erzeugen" und "Austausch beenden" sind erst möglich, wenn der Austausch läuft */
+	gtk_action_set_sensitive (gtk_action_group_get_action (action_group, "Phone Rotate"), FALSE);
+	gtk_action_set_sensitive (gtk_action_group_get_action (action_group, "Phone Stop"), FALSE);
 
       /* if root then hide menu items that do not work */
     if (nolphin_user_is_root () && !nolphin_treating_root_as_normal ()) {

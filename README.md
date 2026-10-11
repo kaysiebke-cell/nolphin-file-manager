@@ -50,6 +50,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](docs/bau
 * **Metadaten:** **Bewertung (Sterne), Tags und Kommentar** direkt im Info-Panel.
 * **Git direkt im Dateimanager:** Overlay-Symbole an den Dateien (hinzugefügt, geändert, unversioniert), Panel für Status, Speichern, Server-Abgleich, Verlauf und Unterschiede.
 * **Archive:** Komprimieren, Entpacken, Prüfen und – im **Archiv-Manager** – Inhalt auflisten sowie Dateien hinzufügen, ersetzen und entfernen.
+* **Handy-Austausch in beide Richtungen:** Ein Klick auf „Handy“ in der Seitenleiste (oder Datei ▸ Handy-Austausch) startet den Austausch: rechts erscheint ein QR-Code, in der Hauptansicht der Ordner `~/Handy`. Das Handy scannt den Code und lädt Bilder und Dateien im Browser hoch (`Vom Handy`); Dateien aufs Handy ziehen Sie auf „Handy“ oder wählen Rechtsklick ▸ „An Handy senden“ (Ordner `Handy`). Ohne Zusatzprogramm; eine kleine Android-App (`android/`, ohne Bibliotheken) empfängt Dateien vom PC von selbst: der erste Scan des QR-Codes bietet sie zum Installieren an, danach scannt man den Code in der App (eigener QR-Leser, ohne Bibliothek) und sie ist verbunden (eigener kleiner Server im lokalen Netz, Schlüssel im Link, nicht verschlüsselt, nur fürs eigene WLAN).
 * **Werkzeuge:** Ordner **vergleichen und synchronisieren** (rsync, löscht nie), **Regeln anwenden**, **Duplikate finden**, **Versionen** einer Datei speichern und wiederherstellen.
 * **Suche mit Operatoren:** im Dateinamen UND, ODER, NICHT, „exakt“ und Platzhalter, dazu reguläre Ausdrücke.
 * **Mehrere Bereiche:** geteilte Ansicht mit bis zu vier Bereichen und **Arbeitsbereiche**, die Reiter, Teilung und Fenstergröße speichern.
@@ -72,7 +73,9 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](docs/bau
 | --- | ----- | ------ |
 | 1 | [Bauen und Installieren](docs/bauen-und-installieren.md) | Voraussetzungen, Bauen, Tests, Installation |
 | 2 | [Der rechte Arbeitsbereich](docs/arbeitsbereich.md) | Panels für Vorschau, Eigenschaften, Archive, Terminal, Git und mehr – mit Bildern |
-| 3 | [Funktionen im Detail](docs/funktionen.md) | Dateiverwaltung, Archive, Git, Werkzeuge, Suche, GID-Projekte, Sicherheit |
+| 3 | [Funktionen im Detail](docs/funktionen.md) | Dateiverwaltung, Archive, Git, Werkzeuge, Suche, Handy-Austausch, GID-Projekte, Sicherheit |
+| 3a | [Handy-Austausch: Analyse](docs/handy-austausch-analyse.md) | Ist-Zustand, Vergleich mit LocalSend, Warpinator und PairDrop, Verbindungsablauf, Sicherheit, Tests |
+| 3b | [Handy-Austausch: Schnittstelle](docs/handy-austausch-api.md) | Verbindungslink und QR-Format, Wege, Fehlercodes, Verhalten der App |
 | 4 | [Einstellungen und Anpassung](docs/einstellungen.md) | Einstellungsseiten, Layout-Editor, Export und Import |
 | 5 | [Andere Desktops: XFCE und MATE](docs/andere-desktops.md) | Optionale Bibliotheken, Symbol-Ersatz, Teststand, bekannte Grenzen |
 | 6 | [Nolphin und Nemo](docs/nolphin-und-nemo.md) | Vergleich und Einrichtung als Nemo-Ersatz |

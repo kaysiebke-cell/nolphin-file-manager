@@ -194,6 +194,16 @@ test('GID projects test',
   args: []
 )
 
+test('Phone exchange test',
+  executable('test-nolphin-phone-server',
+    [ 'test-nolphin-phone-server.c', '../src/nolphin-phone-server.c', '../src/nolphin-qr.c' ],
+    include_directories: [ rootInclude, ],
+    dependencies: [ gtk ],
+    c_args: nolphin_definitions,
+  ),
+  args: []
+)
+
 test('Thumbnailer test',
   executable('test-nolphin-thumbnailer',
     [ 'test-nolphin-thumbnailer.c' ],

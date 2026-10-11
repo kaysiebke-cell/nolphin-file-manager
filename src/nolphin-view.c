@@ -35,6 +35,7 @@
 
 #include "nolphin-actions.h"
 #include "nolphin-gid-projects.h"
+#include "nolphin-phone.h"
 #include "nolphin-workspace-panel.h"
 #include "nolphin-desktop-icon-view.h"
 #include "nolphin-error-reporting.h"
@@ -9591,6 +9592,34 @@ action_gid_add_project_callback (GtkAction *action, gpointer callback_data)
 }
 
 static void
+action_phone_send_callback (GtkAction *action, gpointer callback_data)
+{
+	NolphinView *view = NOLPHIN_VIEW (callback_data);
+	GList *selection = nolphin_view_get_selection (view);
+	GList *files = NULL, *l;
+	gchar *outbox;
+	GFile *target;
+
+	if (selection == NULL || !nolphin_phone_ensure_folders ()) {
+		nolphin_file_list_free (selection);
+		return;
+	}
+	for (l = selection; l != NULL; l = l->next) {
+		files = g_list_prepend (files, nolphin_file_get_location (NOLPHIN_FILE (l->data)));
+	}
+	files = g_list_reverse (files);
+	outbox = nolphin_phone_outbox_path ();
+	target = g_file_new_for_path (outbox);
+	/* kopieren, nie verschieben: das Original bleibt, wo es ist */
+	nolphin_file_operations_copy (files, NULL, target,
+				      GTK_WINDOW (gtk_widget_get_toplevel (GTK_WIDGET (view))), NULL, NULL);
+	g_object_unref (target);
+	g_free (outbox);
+	g_list_free_full (files, g_object_unref);
+	nolphin_file_list_free (selection);
+}
+
+static void
 real_action_undo (NolphinView *view)
 {
 	GtkWidget *toplevel;
@@ -10516,6 +10545,10 @@ static const GtkActionEntry directory_view_entries[] = {
   /* label, accelerator */       N_("Im Terminal öffnen"), "<shift>F4",
   /* tooltip */                  N_("Terminal im gewähltem Ordner öffnen"),
 				 G_CALLBACK (action_open_in_terminal_callback) },
+  /* name, stock id */         { NOLPHIN_ACTION_PHONE_SEND, "send-to-symbolic",
+  /* label, accelerator */       N_("An Handy senden"), NULL,
+  /* tooltip */                  N_("Die gewählten Dateien in den Ordner „Handy“ kopieren; das Handy kann sie dann laden"),
+				 G_CALLBACK (action_phone_send_callback) },
   /* name, stock id */         { NOLPHIN_ACTION_GID_ADD_PROJECT, "list-add-symbolic",
   /* label, accelerator */       N_("Als GID-Projekt hinzufügen"), NULL,
   /* tooltip */                  N_("Diesen Ordner in der Seitenleiste als GID-Projekt eintragen"),
@@ -12129,6 +12162,10 @@ real_update_menus (NolphinView *view)
      * Datei (nicht nur einem Ordner) sichtbar - der Callback oeffnet dann
      * im Elternordner der Datei, das unterstuetzt er laengst. */
     gtk_action_set_visible (action, selection_count <= 1);
+
+    action = gtk_action_group_get_action (view->details->dir_action_group,
+                                         NOLPHIN_ACTION_PHONE_SEND);
+    gtk_action_set_sensitive (action, selection_count > 0);
 
     action = gtk_action_group_get_action (view->details->dir_action_group,
                                          NOLPHIN_ACTION_GID_ADD_PROJECT);
