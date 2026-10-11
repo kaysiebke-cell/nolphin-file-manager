@@ -33,7 +33,7 @@ import java.util.Set;
 
 /**
  * Hält die Verbindung zu Nolphin am PC: wartet, bis der PC eine Datei in
- * "Handy" legt, lädt sie nach Downloads/Nolphin und sendet auf Wunsch
+ * "Zum Handy" legt, lädt sie nach Downloads/Nolphin und sendet auf Wunsch
  * Dateien vom Handy an den PC.
  */
 public class SyncService extends Service {
@@ -51,12 +51,6 @@ public class SyncService extends Service {
     static volatile String status = "Nicht verbunden";
     /** Laufende Übertragung für die Anzeige, zum Beispiel "Lade Bild.jpg: 45 %"; leer, wenn keine läuft. */
     static volatile String transfer = "";
-    /** Fortschritt der laufenden Übertragung für die Anzeige (Name, erledigt, gesamt in Bytes; gesamt 0 = unbekannt). */
-    static volatile String transferName = "";
-    static volatile boolean transferDown;
-    static volatile long transferDone, transferTotal;
-    /** Dateien im Ordner „Handy“ am PC (zuletzt von /wait gemeldet). */
-    static volatile RemoteFile[] files = new RemoteFile[0];
     /** Wird gesetzt, wenn der Nutzer die laufende Übertragung abbricht. */
     private static volatile boolean cancelRequested;
     private static final ArrayDeque<String> events = new ArrayDeque<>();
@@ -185,19 +179,12 @@ public class SyncService extends Service {
             return;
         }
         lastProgress = now;
-        transferName = name;
-        transferDown = "Lade".equals(verb);
-        transferDone = done;
-        transferTotal = total;
         transfer = verb + " " + name + (total > 0 ? ": " + (done * 100 / total) + " %" : "");
         getSystemService(NotificationManager.class).notify(ID_STATE, stateNotification(status));
     }
 
     private void endTransfer() {
         transfer = "";
-        transferName = "";
-        transferDone = 0;
-        transferTotal = 0;
         cancelRequested = false;
         getSystemService(NotificationManager.class).notify(ID_STATE, stateNotification(status));
     }
@@ -274,12 +261,6 @@ public class SyncService extends Service {
         boolean first = !Conn.seeded(this);
         boolean all = forceAll;
         forceAll = false;
-        RemoteFile[] list = new RemoteFile[files.length()];
-        for (int i = 0; i < files.length(); i++) {
-            JSONObject f = files.getJSONObject(i);
-            list[i] = new RemoteFile(f.getString("n"), f.getLong("s"));
-        }
-        SyncService.files = list;
         for (int i = 0; i < files.length() && !stop; i++) {
             JSONObject f = files.getJSONObject(i);
             String name = f.getString("n");
@@ -292,7 +273,7 @@ public class SyncService extends Service {
             if (!all && seen.contains(key)) {
                 continue;
             }
-            if (!all && !Conn.autoLoad(this)) {
+            if (!all && Conn.confirmBeforeDownload(this)) {
                 if (offered.add(key)) {
                     offer(name, size);
                 }
@@ -310,28 +291,24 @@ public class SyncService extends Service {
     private void fetch(String host, String token, String name, long size, Set<String> seen) {
         String key = name + "|" + size;
         cancelRequested = false;
-        Uri saved = null;
+        boolean ok;
         try {
-            saved = download(host, token, name);
+            ok = download(host, token, name);
         } finally {
             boolean wasCancelled = cancelRequested;
             endTransfer();
             if (wasCancelled) {
                 seen.add(key);   // abgebrochen: nicht von selbst erneut laden
                 Conn.saveSeen(this, seen);
-                Store.addHistory(this, true, name, size, false, "abgebrochen");
                 notifyFile("Laden abgebrochen", name);
                 return;
             }
         }
-        if (saved != null) {
+        if (ok) {
             seen.add(key);
             Conn.saveSeen(this, seen);
-            Store.setUri(this, key, saved.toString());
-            Store.addHistory(this, true, name, size, true, "");
             notifyFile("Vom PC empfangen", name);
         } else {
-            Store.addHistory(this, true, name, size, false, "fehlgeschlagen");
             notifyFile("Laden fehlgeschlagen", name);
         }
     }
@@ -374,7 +351,7 @@ public class SyncService extends Service {
         return String.format(Locale.ROOT, "%.1f MB", b / 1048576.0);
     }
 
-    private Uri download(String host, String token, String name) {
+    private boolean download(String host, String token, String name) {
         Uri target = null;
         try {
             URL url = new URL("http://" + host + "/dl?t=" + Uri.encode(token) + "&n=" + Uri.encode(name));
@@ -383,17 +360,17 @@ public class SyncService extends Service {
             c.setReadTimeout(30000);
             if (c.getResponseCode() != 200) {
                 c.disconnect();
-                return null;
+                return false;
             }
             ContentValues cv = new ContentValues();
             cv.put(MediaStore.Downloads.DISPLAY_NAME, name);
             cv.put(MediaStore.Downloads.MIME_TYPE, mimeOf(name));
-            cv.put(MediaStore.Downloads.RELATIVE_PATH, "Download/" + Conn.folder(this));
+            cv.put(MediaStore.Downloads.RELATIVE_PATH, "Download/Nolphin");
             cv.put(MediaStore.Downloads.IS_PENDING, 1);
             target = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
             if (target == null) {
                 c.disconnect();
-                return null;
+                return false;
             }
             long total = c.getContentLengthLong();
             try (InputStream in = c.getInputStream(); OutputStream out = getContentResolver().openOutputStream(target)) {
@@ -412,12 +389,12 @@ public class SyncService extends Service {
             cv.clear();
             cv.put(MediaStore.Downloads.IS_PENDING, 0);
             getContentResolver().update(target, cv, null, null);
-            return target;
+            return true;
         } catch (Exception e) {
             if (target != null) {
                 getContentResolver().delete(target, null, null);
             }
-            return null;
+            return false;
         }
     }
 
@@ -447,7 +424,6 @@ public class SyncService extends Service {
         for (Uri u : uris) {
             String name = displayName(u);
             java.io.File temp = null;
-            long sentSize = 0;
             try {
                 // Immer erst zwischenspeichern: Anbieter nennen die Größe oft falsch oder gar nicht
                 // (zum Beispiel die Galerie von MIUI), der Server braucht aber die genaue Länge.
@@ -459,7 +435,6 @@ public class SyncService extends Service {
                     copy(src, dst);
                 }
                 long size = temp.length();
-                sentSize = size;
                 InputStream in = new java.io.FileInputStream(temp);
                 URL url = new URL("http://" + host + "/up?t=" + Uri.encode(token) + "&n=" + Uri.encode(name));
                 HttpURLConnection c = (HttpURLConnection) url.openConnection();
@@ -486,22 +461,17 @@ public class SyncService extends Service {
                 int code = c.getResponseCode();
                 c.disconnect();
                 if (code == 200) {
-                    Store.addHistory(this, false, name, sentSize, true, "");
                     notifyFile("An den PC gesendet", name);
                 } else if (code == 403) {
-                    Store.addHistory(this, false, name, sentSize, false, "Schlüssel abgelaufen");
                     notifyFile("Senden fehlgeschlagen", name + ": Schlüssel abgelaufen, QR-Code neu scannen");
                 } else {
-                    Store.addHistory(this, false, name, sentSize, false, "PC antwortet mit Fehler " + code);
                     notifyFile("Senden fehlgeschlagen", name + ": PC antwortet mit Fehler " + code);
                 }
             } catch (Exception e) {
                 if (cancelRequested) {
-                    Store.addHistory(this, false, name, sentSize, false, "abgebrochen");
                     notifyFile("Senden abgebrochen", name);
                 } else {
                     // Den Grund nennen, damit sich der Fehler eingrenzen lässt
-                    Store.addHistory(this, false, name, sentSize, false, e.getClass().getSimpleName());
                     notifyFile("Senden fehlgeschlagen", name + ": " + e.getClass().getSimpleName()
                             + (e.getMessage() != null ? " (" + e.getMessage() + ")" : ""));
                 }

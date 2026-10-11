@@ -22,24 +22,20 @@ final class Connector {
             @Override
             public void run() {
                 String failure = null;
-                String pcName = "";
                 Link link = null;
                 try {
                     link = Link.parse(text, System.currentTimeMillis() / 1000);
                     PcCheck.Result r = PcCheck.check(link);
                     if (!r.ok) {
                         failure = r.message;
-                    } else {
-                        pcName = r.pcName;
                     }
                 } catch (Link.Invalid e) {
                     failure = e.getMessage();
                 }
                 final String msg = failure;
-                final String nameOfPc = pcName;
                 final Link ok = link;
                 if (msg == null) {
-                    Conn.save(app, ok, nameOfPc);
+                    Conn.save(app, ok);
                 }
                 main.post(new Runnable() {
                     @Override
