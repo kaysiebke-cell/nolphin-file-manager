@@ -126,6 +126,23 @@ check_token (NolphinPhoneServer *s, const gchar *given)
 	return state;
 }
 
+/* TRUE, wenn @t genau 32 Zeichen aus 0-9a-f ist (Format des Schlüssels). */
+static gboolean
+is_token (const gchar *t)
+{
+	guint i;
+
+	if (strlen (t) != 32) {
+		return FALSE;
+	}
+	for (i = 0; i < 32; i++) {
+		if (!((t[i] >= '0' && t[i] <= '9') || (t[i] >= 'a' && t[i] <= 'f'))) {
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 static gchar *
 make_token (GError **error)
 {
@@ -985,6 +1002,7 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 	GInetAddress *inet;
 	GSocketAddress *address, *effective = NULL;
 	gchar *inbox_path, *share_path = NULL, *token;
+	gboolean resumed;
 
 	g_return_val_if_fail (bind_address != NULL && inbox != NULL, NULL);
 
@@ -1010,7 +1028,9 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 		g_free (share_path);
 		return NULL;
 	}
-	token = make_token (error);
+	resumed = options != NULL && options->resume_token != NULL && is_token (options->resume_token)
+		  && options->resume_expires > g_get_real_time () / G_USEC_PER_SEC + 60;
+	token = resumed ? g_strdup (options->resume_token) : make_token (error);
 	if (token == NULL) {
 		g_free (inbox_path);
 		g_free (share_path);
@@ -1032,7 +1052,7 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 	s->lifetime = options != NULL && options->token_lifetime > 0 ? options->token_lifetime : token_lifetime_default ();
 	s->max_upload = options != NULL && options->max_upload > 0 ? options->max_upload : NOLPHIN_PHONE_MAX_UPLOAD;
 	s->token = token;
-	s->expires = g_get_real_time () / G_USEC_PER_SEC + s->lifetime;
+	s->expires = resumed ? options->resume_expires : g_get_real_time () / G_USEC_PER_SEC + s->lifetime;
 	s->inbox_path = inbox_path;
 	s->share_path = share_path;
 	s->received = received;
@@ -1042,10 +1062,18 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 
 	s->service = G_THREADED_SOCKET_SERVICE (g_threaded_socket_service_new (MAX_THREADS));
 	g_object_set_data_full (G_OBJECT (s->service), "nolphin-phone-server", s, server_free);
-	address = g_inet_socket_address_new (inet, 0);
+	address = g_inet_socket_address_new (inet, options != NULL ? options->port : 0);
+	if (options == NULL || options->port == 0
+	    || !g_socket_listener_add_address (G_SOCKET_LISTENER (s->service), address, G_SOCKET_TYPE_STREAM,
+					       G_SOCKET_PROTOCOL_DEFAULT, NULL, &effective, NULL)) {
+		g_object_unref (address);
+		address = g_inet_socket_address_new (inet, 0);   /* Wunschport belegt: vom System wählen lassen */
+		effective = NULL;
+	}
 	g_object_unref (inet);
-	if (!g_socket_listener_add_address (G_SOCKET_LISTENER (s->service), address, G_SOCKET_TYPE_STREAM,
-					    G_SOCKET_PROTOCOL_DEFAULT, NULL, &effective, error)) {
+	if (effective == NULL && !g_socket_listener_add_address (G_SOCKET_LISTENER (s->service), address,
+								 G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_DEFAULT,
+								 NULL, &effective, error)) {
 		g_object_unref (address);
 		s->user_data_free = NULL;      /* bei einem Fehler gehört user_data weiter dem Aufrufer */
 		g_object_unref (s->service);   /* gibt über server_free auch s frei */

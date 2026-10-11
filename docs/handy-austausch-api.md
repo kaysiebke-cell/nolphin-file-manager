@@ -34,7 +34,8 @@ Der Server erzwingt den Ablauf unabhängig davon (siehe `403`). Der Link darf h�
 
 - Ein Schlüssel gilt höchstens **12 Stunden** (`TOKEN_LIFETIME_DEFAULT`). Für Tests lässt sich das mit der Umgebungsvariable `NOLPHIN_PHONE_TOKEN_LIFETIME` (Sekunden) verkürzen.
 - **Widerruf:** „Neuen QR-Code erzeugen“ im Panel (oder `nolphin_phone_server_rotate_token ()`) erzeugt einen neuen Schlüssel mit neuer Ablaufzeit. Der alte ist sofort ungültig.
-- **Beenden** des Austauschs beendet den Server; der Schlüssel existiert nicht weiter. Jeder Start erzeugt einen neuen Schlüssel.
+- **Merken über einen Neustart:** Adresse, Port und Schlüssel stehen in `~/.config/nolphin/phone-session` (nur für den Benutzer lesbar), solange der Schlüssel gilt. Startet Nolphin den Austausch erneut, nimmt es sie wieder auf; das Handy verbindet sich dann von selbst, ohne neuen QR-Code. Ist der Port belegt, die Adresse eine andere oder der Schlüssel abgelaufen, entsteht ein neuer Schlüssel.
+- **Beenden** (Knopf oder Menü) und „Neuen QR-Code erzeugen“ widerrufen die gemerkte Sitzung; die Datei wird gelöscht beziehungsweise ersetzt. Schließen von Nolphin oder die Selbstabschaltung widerrufen sie nicht.
 - **Selbstabschaltung:** 15 Minuten ohne gültige Anfrage beenden den Server. Eine verbundene App hält ihn durch `GET /wait` am Leben.
 
 ## Wege

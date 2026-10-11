@@ -159,6 +159,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Rückmeldung des Benutzers (zu kompliziert, ständiges Neuinstallieren).
 - TEST: Nolphin gebaut und installiert, Ordner `~/Handy` verwendet. Emulator: App 2.1 verbunden mit einem Server, der 2.2 liefert: Karte „Neue Version 2.2“, Erlaubnis-Seite, Installationsfrage, danach Version 2.2 installiert, Daten erhalten. Nicht geprüft: am echten Handy; der Ordnerwechsel gegen den echten Server mit der App.
 
+## Handy-Austausch: Sitzung über Neustarts merken
+- REQUIREMENT: Das Handy soll nach einem Neustart von Nolphin ohne neuen QR-Code wieder verbunden sein (Benutzer: „hier kommt nichts an“, ständiges Neu-Scannen).
+- DATEI: `src/nolphin-phone-server.c/.h` (Optionen `port`, `resume_token`, `resume_expires`), `src/nolphin-phone.c` (`~/.config/nolphin/phone-session`, Modus 0600), `docs/handy-austausch-api.md`.
+- ÄNDERUNG: Port und Schlüssel werden bis zum Ablauf (Vorgabe 12 Stunden) wieder verwendet. „Beenden“ und „Neuer QR-Code“ widerrufen. Sicherheitsfolge: Ein Schlüssel lebt über einen Neustart hinaus, aber nie länger als sein Ablauf; die Datei ist nur für den Benutzer lesbar.
+- WARUM: Sonst bricht die Verbindung bei jedem Neustart, weil sich Port und Schlüssel ändern.
+- TEST: Programm gegen den Server: gleicher Port, gleicher Schlüssel und gleicher Ablauf nach Neustart; abgelaufener oder kaputter Schlüssel wird nicht übernommen. Nolphin baut ohne Fehler. Nicht geprüft: Ablauf mit dem echten Panel und echtem Handy. Der Vertrag verlangt für Änderungen am Sicherheitsverhalten eine Freigabe, die für diese Änderung noch aussteht.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

@@ -30,6 +30,9 @@ typedef void (*NolphinPhoneReceivedFunc) (const gchar *saved_name,
 typedef struct {
 	gint64  token_lifetime;   /* Gültigkeit des Schlüssels in Sekunden (Vorgabe 12 Stunden) */
 	goffset max_upload;       /* größte angenommene Datei in Bytes */
+	guint16 port;             /* gewünschter Port (0: vom System wählen; ist er belegt, wird ein anderer gewählt) */
+	const gchar *resume_token;  /* früherer Schlüssel (32 Hex-Zeichen) oder NULL: dann wird ein neuer erzeugt */
+	gint64  resume_expires;   /* Ablauf des früheren Schlüssels (Unix-Zeit); nur gültig, wenn noch in der Zukunft */
 } NolphinPhoneServerOptions;
 
 /* Startet den Server auf @bind_address (IPv4, Port wird vom System gewählt).
