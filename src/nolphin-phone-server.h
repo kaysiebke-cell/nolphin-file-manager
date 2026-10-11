@@ -23,8 +23,14 @@ typedef void (*NolphinPhoneReceivedFunc) (const gchar *saved_name,
 					  goffset      size,
 					  gpointer     user_data);
 
-/* Höchste angenommene Dateigröße eines Uploads (2 GiB). */
+/* Vorgabe für die größte angenommene Datei eines Uploads (2 GiB); einstellbar über GSettings. */
 #define NOLPHIN_PHONE_MAX_UPLOAD ((goffset) 2 * 1024 * 1024 * 1024)
+
+/* Einstellbare Werte (aus GSettings); 0 bedeutet Vorgabe. */
+typedef struct {
+	gint64  token_lifetime;   /* Gültigkeit des Schlüssels in Sekunden (Vorgabe 12 Stunden) */
+	goffset max_upload;       /* größte angenommene Datei in Bytes */
+} NolphinPhoneServerOptions;
 
 /* Startet den Server auf @bind_address (IPv4, Port wird vom System gewählt).
  * @user_data_free wird aufgerufen, sobald kein Arbeitsthread @user_data mehr
@@ -36,6 +42,7 @@ NolphinPhoneServer *nolphin_phone_server_start (const gchar              *bind_a
 						NolphinPhoneReceivedFunc  received,
 						gpointer                  user_data,
 						GDestroyNotify            user_data_free,
+						const NolphinPhoneServerOptions *options,
 						GError                  **error);
 
 guint16      nolphin_phone_server_get_port          (NolphinPhoneServer *server);

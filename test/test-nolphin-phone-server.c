@@ -226,11 +226,11 @@ run_tests (gpointer unused)
 		g_free (link);
 	}
 
-	check (nolphin_phone_server_start ("kein-ip", inbox_file, NULL, NULL, NULL, NULL, &error) == NULL && error != NULL,
+	check (nolphin_phone_server_start ("kein-ip", inbox_file, NULL, NULL, NULL, NULL, NULL, &error) == NULL && error != NULL,
 	       "ungültige Adresse wird abgelehnt");
 	g_clear_error (&error);
 
-	server = nolphin_phone_server_start ("127.0.0.1", inbox_file, share_file, on_received, NULL, NULL, &error);
+	server = nolphin_phone_server_start ("127.0.0.1", inbox_file, share_file, on_received, NULL, NULL, NULL, &error);
 	if (server == NULL) {
 		g_printerr ("FAIL: Server startet nicht: %s\n", error->message);
 		exit_code = 1;
@@ -527,7 +527,7 @@ run_tests (gpointer unused)
 		guint16 sp;
 
 		g_setenv ("NOLPHIN_PHONE_TOKEN_LIFETIME", "2", TRUE);
-		shortlived = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, &error);
+		shortlived = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, NULL, &error);
 		g_unsetenv ("NOLPHIN_PHONE_TOKEN_LIFETIME");
 		check (shortlived != NULL, "Server mit kurzer Schlüsselzeit startet");
 		if (shortlived != NULL) {
@@ -544,6 +544,28 @@ run_tests (gpointer unused)
 			nolphin_phone_server_stop (shortlived);
 			g_free (tk);
 			g_free (tq);
+		}
+	}
+
+	/* Einstellungen: eigene Gültigkeit und Grenze */
+	{
+		NolphinPhoneServerOptions opt = { 5, 1024 };
+		NolphinPhoneServer *small = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, &opt, &error);
+
+		check (small != NULL, "Server mit eigenen Einstellungen startet");
+		if (small != NULL) {
+			gchar *tk2 = nolphin_phone_server_dup_token (small);
+			gchar *tq2 = g_strdup_printf ("/up?t=%s&n=zu-gross.bin", tk2);
+			gchar big_body[2048];
+
+			memset (big_body, 'x', sizeof big_body);
+			r = post (nolphin_phone_server_get_port (small), tq2, big_body, sizeof big_body);
+			check (status_of (r) == 413, "Datei über der eingestellten Grenze: 413");
+			g_free (r);
+			g_free (tq2);
+			g_free (tk2);
+			check (nolphin_phone_server_get_expires (small) - g_get_real_time () / G_USEC_PER_SEC <= 5, "eingestellte Gültigkeit von 5 Sekunden");
+			nolphin_phone_server_stop (small);
 		}
 	}
 

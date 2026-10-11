@@ -16,7 +16,11 @@ GtkWidget *nolphin_phone_page_new  (NolphinWindow *window);
  * startet bei @autostart den Austausch, falls er noch nicht läuft. */
 void       nolphin_phone_page_open (GtkWidget *page, gboolean autostart);
 
-/* Feste Ordner: ~/Handy mit "Vom Handy" (Eingang) und "Zum Handy" (Ausgang).
+/* Für die Menüeinträge „Neuen QR-Code erzeugen“ und „Austausch beenden“. */
+void       nolphin_phone_page_rotate (GtkWidget *page);
+void       nolphin_phone_page_stop   (GtkWidget *page);
+
+/* Ordner: Basis aus GSettings (Vorgabe ~/Handy) mit "Vom Handy" (Eingang) und "Zum Handy" (Ausgang).
  * Die Pfade sind neu zugewiesen und mit g_free () freizugeben. */
 gchar     *nolphin_phone_base_path    (void);
 gchar     *nolphin_phone_inbox_path   (void);

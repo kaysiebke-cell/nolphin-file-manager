@@ -117,6 +117,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Anforderungen aus dem Plan (Token zeitlich begrenzen und widerrufen, Eingaben in Android validieren, Fortschritt und Abbruch, Fehlerfälle). Das LocalSend-Protokoll wurde bewusst nicht übernommen (HTTPS mit Zertifikat, Multicast, Flutter-Modelle; keine Fremdabhängigkeit).
 - TEST: `meson test` (26 Tests), `android/test.sh` (154 QR-Prüfungen, 34 Linkprüfungen), Emulator Android 14 gegen den echten Server (siehe `docs/handy-austausch-analyse.md`, Abschnitt „Tests“). Nicht geprüft: Live-Kamera und Linux → Android am echten Handy, Aktion „Laden“ in der Benachrichtigung.
 
+## Handy-Austausch: Menüleiste und Einstellungen (nach Prüfung gegen den Vertrag)
+- REQUIREMENT: Abschnitt 11.1 (jede bedienbare Funktion in der Menüleiste, nicht mögliche Einträge ausgegraut) und Abschnitt 31 (keine fest codierte Konfiguration).
+- DATEI: `gresources/nolphin-shell-ui.xml`, `gresources/nolphin-directory-view-ui.xml`, `src/nolphin-window-menus.c/.h`, `src/nolphin-view.c`, `src/nolphin-phone.c/.h`, `src/nolphin-phone-server.c/.h`, `libnolphin-private/org.nolphin.gschema.xml`, `libnolphin-private/nolphin-global-preferences.h`, `test/test-nolphin-phone-server.c`, `docs/hilfe/21-handy-austausch.md`.
+- ÄNDERUNG: Untermenü Datei ▸ Handy mit „Austausch öffnen …“, „An Handy senden“, „Neuen QR-Code erzeugen“, „Austausch beenden“ (dieselben GActions wie Kontextmenü und Panel; die letzten beiden ausgegraut, solange der Austausch nicht läuft; „An Handy senden“ ausgegraut ohne Auswahl, nicht mehr im Hintergrund-Kontextmenü). GSettings-Schlüssel `phone-folder`, `phone-token-hours`, `phone-idle-minutes`, `phone-max-upload-mb`; der Server bekommt die Werte über `NolphinPhoneServerOptions`.
+- WARUM: Verstöße gegen die Abschnitte 11.1 und 31.
+- TEST: `meson test` (26 von 26, darunter neue Prüfungen für eigene Gültigkeit und Dateigrenze). Echte Anwendung (Xephyr, eigener D-Bus): Menü zeigt alle vier Einträge; ohne laufenden Austausch sind die letzten drei ausgegraut; Öffnen, Neuer QR-Code (Statusmeldung) und Beenden (Knopf wieder „Starten“, Einträge wieder ausgegraut) über das Menü; „An Handy senden“ bei gewähltem Objekt aktiv. Nicht geprüft: Änderung der GSettings-Werte in der laufenden Anwendung, kein Einstellungsdialog für die vier Schlüssel (nur gsettings/dconf).
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

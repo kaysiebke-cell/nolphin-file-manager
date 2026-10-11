@@ -35,6 +35,8 @@ struct _NolphinPhoneServer {
 	GMutex                   lock;      /* schützt token und expires */
 	gchar                   *token;
 	gint64                   expires;   /* Unix-Zeit in Sekunden, ab der der Schlüssel nicht mehr gilt */
+	gint64                   lifetime;  /* Gültigkeit eines Schlüssels in Sekunden */
+	goffset                  max_upload;/* größte angenommene Datei in Bytes */
 	guint16                  port;
 	gchar                   *inbox_path;
 	gchar                   *share_path;
@@ -97,7 +99,7 @@ token_equal (const gchar *a, const gchar *b)
 }
 
 static gint64
-token_lifetime (void)
+token_lifetime_default (void)
 {
 	const gchar *env = g_getenv ("NOLPHIN_PHONE_TOKEN_LIFETIME");
 	gint64 v = env != NULL ? g_ascii_strtoll (env, NULL, 10) : 0;
@@ -522,7 +524,7 @@ handle_info (NolphinPhoneServer *s, GOutputStream *out)
 	expires = s->expires;
 	g_mutex_unlock (&s->lock);
 	g_string_append_printf (json, ",\"expires\":%" G_GINT64_FORMAT ",\"maxUpload\":%" G_GINT64_FORMAT ",\"share\":%s}",
-				expires, (gint64) NOLPHIN_PHONE_MAX_UPLOAD, s->share_path != NULL ? "true" : "false");
+				expires, (gint64) s->max_upload, s->share_path != NULL ? "true" : "false");
 	send_text (out, 200, "OK", "application/json; charset=utf-8", json->str, NULL);
 	g_string_free (json, TRUE);
 }
@@ -790,8 +792,11 @@ handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutpu
 		send_error (out, 411, "Length Required", _("Die Dateigröße fehlt (Content-Length)."));
 		return;
 	}
-	if (r->content_length > NOLPHIN_PHONE_MAX_UPLOAD) {
-		send_error (out, 413, "Payload Too Large", _("Die Datei ist zu groß (höchstens 2 GiB)."));
+	if (r->content_length > s->max_upload) {
+		gchar *msg = g_strdup_printf (_("Die Datei ist zu groß (höchstens %" G_GINT64_FORMAT " MiB)."), (gint64) (s->max_upload / (1024 * 1024)));
+
+		send_error (out, 413, "Payload Too Large", msg);
+		g_free (msg);
 		return;
 	}
 	name = nolphin_phone_sanitize_name (raw_name);
@@ -974,7 +979,7 @@ done:
 NolphinPhoneServer *
 nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *share,
 			    NolphinPhoneReceivedFunc received, gpointer user_data,
-			    GDestroyNotify user_data_free, GError **error)
+			    GDestroyNotify user_data_free, const NolphinPhoneServerOptions *options, GError **error)
 {
 	NolphinPhoneServer *s;
 	GInetAddress *inet;
@@ -1024,8 +1029,10 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 
 	s = g_new0 (NolphinPhoneServer, 1);
 	g_mutex_init (&s->lock);
+	s->lifetime = options != NULL && options->token_lifetime > 0 ? options->token_lifetime : token_lifetime_default ();
+	s->max_upload = options != NULL && options->max_upload > 0 ? options->max_upload : NOLPHIN_PHONE_MAX_UPLOAD;
 	s->token = token;
-	s->expires = g_get_real_time () / G_USEC_PER_SEC + token_lifetime ();
+	s->expires = g_get_real_time () / G_USEC_PER_SEC + s->lifetime;
 	s->inbox_path = inbox_path;
 	s->share_path = share_path;
 	s->received = received;
@@ -1091,7 +1098,7 @@ nolphin_phone_server_rotate_token (NolphinPhoneServer *server, GError **error)
 	g_mutex_lock (&server->lock);
 	g_free (server->token);
 	server->token = fresh;
-	server->expires = g_get_real_time () / G_USEC_PER_SEC + token_lifetime ();
+	server->expires = g_get_real_time () / G_USEC_PER_SEC + server->lifetime;
 	g_mutex_unlock (&server->lock);
 	return TRUE;
 }

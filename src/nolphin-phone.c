@@ -13,6 +13,8 @@
 #include "nolphin-phone-server.h"
 #include "nolphin-qr.h"
 #include "nolphin-tools.h"
+#include "nolphin-window-menus.h"
+#include <libnolphin-private/nolphin-global-preferences.h>
 
 #include <glib/gi18n.h>
 #include <arpa/inet.h>
@@ -20,8 +22,12 @@
 #include <net/if.h>
 #include <string.h>
 
-/* Ohne Anfrage vom Handy schaltet sich der Server nach dieser Zeit ab. */
-#define IDLE_LIMIT_SECONDS (15 * 60)
+/* Einstellungen (GSettings, Abschnitt 31); ohne Einstellungen gelten diese Vorgaben. */
+static gint
+setting_int (const gchar *key, gint fallback)
+{
+	return nolphin_preferences != NULL ? g_settings_get_int (nolphin_preferences, key) : fallback;
+}
 
 enum { COL_TIME, COL_NAME, COL_SIZE, COL_N };
 
@@ -32,6 +38,14 @@ enum { COL_TIME, COL_NAME, COL_SIZE, COL_N };
 gchar *
 nolphin_phone_base_path (void)
 {
+	if (nolphin_preferences != NULL) {
+		gchar *configured = g_settings_get_string (nolphin_preferences, NOLPHIN_PREFERENCES_PHONE_FOLDER);
+
+		if (configured != NULL && g_path_is_absolute (configured)) {
+			return configured;
+		}
+		g_free (configured);
+	}
 	return g_build_filename (g_get_home_dir (), _("Handy"), NULL);
 }
 
@@ -206,6 +220,7 @@ phone_update_ui (PhonePage *d)
 	gtk_widget_set_sensitive (d->address_combo, !running);
 	gtk_widget_set_sensitive (d->copy_button, running);
 	gtk_widget_set_sensitive (d->rotate_button, running);
+	nolphin_window_set_phone_running (d->window, running);
 	gtk_widget_queue_draw (d->qr_area);
 }
 
@@ -282,16 +297,23 @@ on_idle_check (gpointer data)
 {
 	PhonePage *d = data;
 	gint64 idle;
+	gint minutes;
 
 	if (d->server == NULL) {
 		d->timeout_id = 0;
 		return G_SOURCE_REMOVE;
 	}
 	idle = (g_get_monotonic_time () - nolphin_phone_server_get_last_activity (d->server)) / G_USEC_PER_SEC;
-	if (idle >= IDLE_LIMIT_SECONDS) {
+	minutes = setting_int (NOLPHIN_PREFERENCES_PHONE_IDLE_MINUTES, 15);
+	if (idle >= (gint64) minutes * 60) {
 		d->timeout_id = 0;
-		phone_stop (d, _("Automatisch beendet: 15 Minuten lang keine Anfrage vom Handy."));
-		phone_notify (_("Handy-Austausch beendet"), _("Es kam 15 Minuten lang keine Anfrage vom Handy."));
+		gchar *text = g_strdup_printf (_("Es kam %d Minuten lang keine Anfrage vom Handy."), minutes);
+		gchar *status = g_strdup_printf (_("Automatisch beendet: %s"), text);
+
+		phone_stop (d, status);
+		phone_notify (_("Handy-Austausch beendet"), text);
+		g_free (text);
+		g_free (status);
 		return G_SOURCE_REMOVE;
 	}
 	return G_SOURCE_CONTINUE;
@@ -374,8 +396,14 @@ phone_start (PhonePage *d)
 		g_free (address);
 		return;
 	}
-	d->server = nolphin_phone_server_start (address, d->inbox, d->share, on_file_received,
-						shared_ref (d->shared), shared_unref, &error);
+	{
+		NolphinPhoneServerOptions options;
+
+		options.token_lifetime = (gint64) setting_int (NOLPHIN_PREFERENCES_PHONE_TOKEN_HOURS, 12) * 3600;
+		options.max_upload = (goffset) setting_int (NOLPHIN_PREFERENCES_PHONE_MAX_UPLOAD_MB, 2048) * 1024 * 1024;
+		d->server = nolphin_phone_server_start (address, d->inbox, d->share, on_file_received,
+							shared_ref (d->shared), shared_unref, &options, &error);
+	}
 	if (d->server == NULL) {
 		shared_unref (d->shared);   /* der Server hat user_data bei einem Fehler nicht übernommen */
 		phone_stop (d, error->message);
@@ -583,5 +611,27 @@ nolphin_phone_page_open (GtkWidget *page, gboolean autostart)
 		nolphin_window_go_to (d->window, folder);
 		g_object_unref (folder);
 		g_free (base);
+	}
+}
+
+/* Menü Datei ▸ Handy ▸ Neuen QR-Code erzeugen */
+void
+nolphin_phone_page_rotate (GtkWidget *page)
+{
+	PhonePage *d = page != NULL ? g_object_get_data (G_OBJECT (page), "phone-data") : NULL;
+
+	if (d != NULL) {
+		on_rotate_clicked (NULL, d);
+	}
+}
+
+/* Menü Datei ▸ Handy ▸ Austausch beenden */
+void
+nolphin_phone_page_stop (GtkWidget *page)
+{
+	PhonePage *d = page != NULL ? g_object_get_data (G_OBJECT (page), "phone-data") : NULL;
+
+	if (d != NULL && d->server != NULL) {
+		phone_stop (d, NULL);
 	}
 }

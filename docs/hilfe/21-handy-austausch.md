@@ -6,7 +6,7 @@ Bilder und Dateien in **beide Richtungen** zwischen Handy und PC austauschen, ü
 
 ## Verbinden
 
-1. Klicken Sie in der Seitenleiste unter **Mein Rechner** auf **Handy** (oder wählen Sie **Datei ▸ Handy-Austausch …**).
+1. Klicken Sie in der Seitenleiste unter **Mein Rechner** auf **Handy** (oder wählen Sie **Datei ▸ Handy ▸ Austausch öffnen …**).
 2. Nolphin startet den Austausch, zeigt rechts den **QR-Code** und öffnet in der Hauptansicht den Ordner `~/Handy`.
 3. Scannen Sie den QR-Code mit der Kamera des Handys. Handy und PC müssen im selben WLAN sein.
 4. **Beenden** schließt den Austausch.
@@ -36,6 +36,23 @@ Die App prüft jeden Link, bevor sie ihn speichert: Sie akzeptiert nur Adressen 
 - Bricht die Verbindung ab, löscht die App die Teildatei und versucht es weiter („PC nicht erreichbar, neuer Versuch …“).
 
 Die App gibt es nur, wenn sie beim Installieren von Nolphin gebaut wurde (siehe `android/README.md`). Sonst funktioniert der Austausch weiter im Browser.
+
+## Menü
+
+Unter **Datei ▸ Handy** gibt es vier Einträge: **Austausch öffnen …**, **An Handy senden** (nur bei gewählten Dateien), **Neuen QR-Code erzeugen** und **Austausch beenden** (die beiden letzten nur, solange der Austausch läuft).
+
+## Einstellungen
+
+Die Werte stehen in GSettings (`org.nolphin.preferences`) und lassen sich mit `gsettings` oder dconf ändern:
+
+| Schlüssel | Bedeutung | Vorgabe |
+| --------- | --------- | ------- |
+| `phone-folder` | Ordner mit „Vom Handy“ und „Zum Handy“ (leer: `~/Handy`) | leer |
+| `phone-token-hours` | Gültigkeit des Schlüssels in Stunden (1 bis 168) | 12 |
+| `phone-idle-minutes` | Selbstabschaltung ohne Anfrage in Minuten (1 bis 240) | 15 |
+| `phone-max-upload-mb` | größte Datei vom Handy in MiB (1 bis 4096) | 2048 |
+
+Die Werte gelten beim nächsten Start des Austauschs.
 
 ## Die beiden Ordner
 

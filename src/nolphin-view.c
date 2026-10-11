@@ -12165,7 +12165,7 @@ real_update_menus (NolphinView *view)
 
     action = gtk_action_group_get_action (view->details->dir_action_group,
                                          NOLPHIN_ACTION_PHONE_SEND);
-    gtk_action_set_visible (action, selection_count > 0);
+    gtk_action_set_sensitive (action, selection_count > 0);
 
     action = gtk_action_group_get_action (view->details->dir_action_group,
                                          NOLPHIN_ACTION_GID_ADD_PROJECT);
