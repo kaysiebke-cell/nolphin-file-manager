@@ -277,6 +277,7 @@ public class MainActivity extends Activity implements Host {
         super.onResume();
         if (Conn.connected(this)) {
             startSync(null, null);   // nach einem Neustart des Handys wieder aufnehmen
+            Updater.check(getApplicationContext());
         }
         if (current >= 0) {
             screens[current].onShow();

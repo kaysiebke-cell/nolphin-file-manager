@@ -52,7 +52,7 @@ final class HomeScreen implements Screen {
         List<Store.Entry> recent = Store.history(c);
         String sig = connected + "|" + Conn.pcName(c) + "|" + Conn.host(c) + "|" + host.error() + "|" + active
                 + "|" + SyncService.files.length + "|" + (recent.isEmpty() ? 0 : recent.get(0).time) + "|"
-                + SyncService.status;
+                + SyncService.status + "|" + Updater.availableName + "|" + Updater.message;
         if (!sig.equals(signature)) {
             signature = sig;
             build(connected, active, recent);
@@ -137,6 +137,22 @@ final class HomeScreen implements Screen {
             }
             col.addView(steps);
             return;
+        }
+
+        // Neue Version der App am PC
+        if (Updater.availableName != null) {
+            LinearLayout card = Ui.card(c);
+            card.addView(Ui.label(c, "Neue Version " + Updater.availableName, 16, Ui.text(c), true));
+            card.addView(Ui.label(c, Updater.message.isEmpty()
+                    ? "Nolphin am PC hat eine neuere Handy-App. Deine Verbindung bleibt erhalten." : Updater.message,
+                    13, Ui.dim(c), false));
+            card.addView(Ui.button(c, "Aktualisieren", true, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Updater.install(host.activity());
+                }
+            }));
+            col.addView(card);
         }
 
         // Laufende Übertragung

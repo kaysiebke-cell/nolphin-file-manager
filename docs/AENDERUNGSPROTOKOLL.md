@@ -152,6 +152,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Wunsch des Benutzers nach einer richtigen App.
 - TEST: `android/test.sh` 163 von 163; Emulator (Android 14) gegen den echten Server: Startseite getrennt und verbunden, Liste, Laden einer Datei, Fotoraster, Senden eines Fotos (liegt im Eingangsordner), Verlauf, Einstellungen, Dunkelmodus, kein Absturz. Nicht geprüft: neue Oberfläche am echten Handy, Berechtigungsdialog, Vorschaubilder echter Dateien, Scanner-Optik (unverändert).
 
+## Handy-Austausch: ein Ordner und Aktualisieren in der App
+- REQUIREMENT: Einfachere Ordner („Handy“ statt zwei Unterordner) und Updates der App ohne Deinstallieren (Benutzer, 11. Oktober 2026).
+- DATEI: `src/nolphin-phone.c/.h`, `src/nolphin-view.c`, `src/nolphin-places-sidebar.c`, `android/src/org/nolphin/handy/Updater.java`, `HomeScreen.java`, `MainActivity.java`, `AndroidManifest.xml` (Version 2.1, `REQUEST_INSTALL_PACKAGES`), Hilfe und API-Doku.
+- ÄNDERUNG: Ausgang ist `~/Handy` selbst (nur Dateien, Unterordner nicht), Eingang bleibt `~/Handy/Vom Handy`. App prüft `/apk`, zeigt „Neue Version“ und installiert über den Paketinstaller.
+- WARUM: Rückmeldung des Benutzers (zu kompliziert, ständiges Neuinstallieren).
+- TEST: Nolphin gebaut und installiert, Ordner `~/Handy` verwendet. Emulator: App 2.1 verbunden mit einem Server, der 2.2 liefert: Karte „Neue Version 2.2“, Erlaubnis-Seite, Installationsfrage, danach Version 2.2 installiert, Daten erhalten. Nicht geprüft: am echten Handy; der Ordnerwechsel gegen den echten Server mit der App.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

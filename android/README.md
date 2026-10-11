@@ -23,6 +23,10 @@ Nur das Android-Framework, **keine Bibliotheken**, kein Gradle. Mindestens Andro
 
 Die App lädt neue Dateien nach `Download/Nolphin`. Beim allerersten Verbinden werden bereits vorhandene Dateien nicht geladen.
 
+## Aktualisieren
+
+Hat Nolphin am PC eine neuere App (höhere `versionCode`), zeigt die Startseite „Neue Version“. Ein Tipp auf **Aktualisieren** installiert sie über die alte, ohne Deinstallieren; die Verbindung bleibt. Beim ersten Mal erlaubt man der App einmal „Apps installieren“. Neue Version bereitstellen: `android/build.sh`, danach Nolphin installieren (`sudo ninja -C build install`) oder die APK nach `~/.local/share/nolphin/phone/` kopieren. Die `versionCode` im Manifest muss steigen.
+
 ## Bauen (Entwickler)
 
 Voraussetzungen: JDK (`javac`, `keytool`) und das Android-SDK (`android.jar`, `aapt2`, `d8`, `zipalign`, `apksigner`).
