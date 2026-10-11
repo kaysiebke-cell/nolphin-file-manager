@@ -129,7 +129,7 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - DATEI: `android/build.sh`, `android/README.md`, `docs/DEPENDENCIES.md`, Vertragsabschnitte 61.7 und 61.8.
 - ÄNDERUNG: Freigegeben: Android-Werkzeuge (JDK, Android SDK, `secret-tool`), Vertragsabschnitte 61.7 und 61.8, Verzeichnis `android/`, Handy-Panel. Das Passwort des Signaturschlüssels wird im Systemschlüsselbund abgelegt (`secret-tool`); die frühere Klartextdatei wird übernommen und mit `shred` gelöscht; Passwörter laufen über Umgebungsvariablen, nie über die Kommandozeile.
 - WARUM: Abschnitt 53.4 (keine Passwörter im Klartext) und 50.1 (Werkzeuge nur nach Freigabe).
-- TEST: Skript mit `bash -n` geprüft; der Lauf mit `secret-tool` steht aus, weil das Paket `libsecret-tools` noch nicht installiert ist.
+- TEST: `libsecret-tools` vom Benutzer installiert. `android/build.sh` übernahm das Passwort in den Schlüsselbund, löschte die Klartextdatei (`handy.keystore.pass` existiert nicht mehr), baute und signierte die APK; `secret-tool lookup` liefert das Passwort. Schlüssel unverändert, die neue APK lässt sich über die alte installieren.
 
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
