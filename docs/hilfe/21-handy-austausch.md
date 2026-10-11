@@ -6,7 +6,7 @@ Bilder und Dateien in **beide Richtungen** zwischen Handy und PC austauschen, ü
 
 ## Verbinden
 
-1. Klicken Sie in der Seitenleiste unter **Mein Rechner** auf **Handy** (oder wählen Sie **Datei ▸ Handy ▸ Austausch öffnen …**).
+1. Klicken Sie in der Seitenleiste unter **Mein Rechner** auf **Handy**, um den Ordner zu öffnen, und wählen Sie **Datei ▸ Handy ▸ Austausch öffnen …** für QR-Code und Link.
 2. Nolphin startet den Austausch, zeigt rechts den **QR-Code** und öffnet in der Hauptansicht den Ordner `~/Handy`.
 3. Scannen Sie den QR-Code mit der Kamera des Handys. Handy und PC müssen im selben WLAN sein.
 4. **Beenden** schließt den Austausch.

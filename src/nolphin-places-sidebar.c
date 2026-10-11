@@ -942,7 +942,7 @@ update_places (NolphinPlacesSidebar *sidebar)
 
     /* Handy: Der Eintrag zeigt auf den Ausgangsordner "~/Handy". Dateien, die
      * man darauf zieht, werden dorthin kopiert und kann das Handy laden. Ein Klick öffnet
-     * stattdessen den Handy-Austausch (siehe open_selected_bookmark). */
+     * den Ordner; der Handy-Austausch liegt unter Datei ▸ Handy-Austausch. */
     {
         GtkIconTheme *theme = gtk_icon_theme_get_default ();
         const gchar *phone_icon = gtk_icon_theme_has_icon (theme, "phone-symbolic") ? "phone-symbolic" :
@@ -2553,12 +2553,7 @@ open_selected_bookmark (NolphinPlacesSidebar *sidebar,
 
 	gtk_tree_model_get (model, iter, PLACES_SIDEBAR_COLUMN_URI, &uri, -1);
 
-	if (uri != NULL && is_phone_uri (uri)) {
-		/* kein Ordner: Handy-Austausch im rechten Arbeitsbereich öffnen und starten */
-		nolphin_workspace_panel_show_phone (nolphin_window_get_workspace_panel (sidebar->window),
-						    sidebar->window, TRUE);
-		g_free (uri);
-	} else if (uri != NULL) {
+	if (uri != NULL) {
 		DEBUG ("Activating bookmark %s", uri);
 
 		location = g_file_new_for_uri (uri);
