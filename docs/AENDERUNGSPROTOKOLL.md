@@ -90,10 +90,10 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 
 ## Handy-Austausch
 - REQUIREMENT: Austausch mit dem Handy über WLAN ohne Fremdabhängigkeit (Spezifikation 2.6, Abschnitt 61).
-- DATEI: `src/nolphin-qr.c/.h`, `src/nolphin-phone-server.c/.h`, `src/nolphin-phone.c/.h`, `test/test-nolphin-phone-server.c`, Panel, Menü, Meson.
-- ÄNDERUNG: Eigener QR-Encoder und HTTP-Server (GIO), Panel im rechten Arbeitsbereich, Menüeintrag Datei ▸ Handy-Austausch ….
-- WARUM: Kein KDE Connect und keine Handy-App; der QR-Code ersetzt die Adresseingabe.
-- TEST: Meson-Test `Phone exchange test`, QR-Abgleich mit `qrcode` (Version 1, 3 bis 6, alle Masken), isolierte Instanz mit `curl` (Details in der Spezifikation, 61.5 und 61.6). Nicht getestet: echte Handy-Kamera und echter Handy-Browser.
+- DATEI: `src/nolphin-qr.c/.h`, `src/nolphin-phone-server.c/.h`, `src/nolphin-phone.c/.h`, `test/test-nolphin-phone-server.c`, `src/nolphin-places-sidebar.c`, Panel, Menü, Meson, `docs/hilfe/21-handy-austausch.md`, `docs/bilder/panel-handy.png`.
+- ÄNDERUNG: Eigener QR-Encoder und HTTP-Server (GIO). Eintrag „Handy“ in der Seitenleiste (Mein Rechner): Klick öffnet das Panel, startet den Austausch und zeigt in der Hauptansicht den Eingangsordner. Panel: Status, Starten/Beenden, QR-Code, Link, Liste der empfangenen Dateien; Eingangsordner, Freigabeordner, Netzwerkadresse und Sicherheitshinweis eingeklappt unter „Einstellungen“. Zusätzlich Datei ▸ Handy-Austausch ….
+- WARUM: Kein KDE Connect und keine Handy-App; der QR-Code ersetzt die Adresseingabe. Auf Rückmeldung des Benutzers: der Einstieg gehört in die Seitenleiste, empfangene Dateien sollen dort sichtbar sein, das Panel war mit Text überladen.
+- TEST: Meson-Test `Phone exchange test`, QR-Abgleich mit `qrcode` (Version 1, 3 bis 6, alle Masken), isolierte Instanz mit `curl`; echter Upload von einem Handy (Bild kam im Eingangsordner an). Nicht getestet: Download aufs Handy, Kamera-Scan mit anderen Geräten, mehrere Netzwerkschnittstellen, dunkles Theme.
 
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.

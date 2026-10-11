@@ -53,7 +53,6 @@ typedef struct {
 	GtkWidget *qr_area;
 	GtkWidget *url_entry;
 	GtkWidget *copy_button;
-	GtkWidget *open_button;
 	GtkListStore *store;
 } PhonePage;
 
@@ -344,8 +343,8 @@ phone_start (PhonePage *d)
 	d->has_qr = nolphin_qr_encode (url, -1, &d->qr);
 	gtk_entry_set_text (GTK_ENTRY (d->url_entry), url);
 	gtk_label_set_text (GTK_LABEL (d->status),
-			    d->has_qr ? _("Läuft. Scanne den QR-Code mit der Kamera des Handys. Handy und PC müssen im selben WLAN sein.")
-				      : _("Läuft. Der QR-Code konnte nicht erzeugt werden; öffne den Link unten im Browser des Handys."));
+			    d->has_qr ? _("Läuft. QR-Code mit der Handy-Kamera scannen (gleiches WLAN).")
+				      : _("Läuft. QR-Code nicht möglich, öffne den Link im Handy-Browser."));
 	d->timeout_id = g_timeout_add_seconds (30, on_idle_check, d);
 	phone_update_ui (d);
 	g_free (url);
@@ -435,18 +434,6 @@ on_copy_clicked (GtkButton *button, gpointer data)
 }
 
 static void
-on_open_inbox (GtkButton *button, gpointer data)
-{
-	PhonePage *d = data;
-
-	if (g_file_query_exists (d->inbox, NULL)) {
-		nolphin_window_go_to (d->window, d->inbox);
-	} else {
-		gtk_label_set_text (GTK_LABEL (d->status), _("Der Eingangsordner existiert noch nicht. Er wird beim Starten angelegt."));
-	}
-}
-
-static void
 phone_page_free (gpointer data)
 {
 	PhonePage *d = data;
@@ -523,10 +510,7 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_box_pack_start (GTK_BOX (outer), nolphin_tools_back_button_new (window), FALSE, FALSE, 0);
 	gtk_box_pack_start (GTK_BOX (outer), nolphin_tools_heading_new (_("Handy-Austausch")), FALSE, FALSE, 0);
 
-	intro = gtk_label_new (_("Tauscht Bilder und Dateien mit dem Handy über das WLAN. Scanne den QR-Code mit der Kamera des Handys. "
-				 "Auf dem Handy öffnet sich eine Seite im Browser; eine App ist nicht nötig. "
-				 "Der Link enthält einen Schlüssel, nur wer ihn kennt, kommt hinein. Die Verbindung ist nicht verschlüsselt: "
-				 "nur im eigenen Netz verwenden."));
+	intro = gtk_label_new (_("Der Link enthält einen Schlüssel. Die Verbindung ist nicht verschlüsselt: nur im eigenen WLAN verwenden."));
 	gtk_label_set_line_wrap (GTK_LABEL (intro), TRUE);
 	gtk_label_set_xalign (GTK_LABEL (intro), 0.0);
 	gtk_style_context_add_class (gtk_widget_get_style_context (intro), "dim-label");
@@ -554,6 +538,7 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_box_pack_start (GTK_BOX (settings), label, FALSE, FALSE, 0);
 	d->address_combo = gtk_combo_box_text_new ();
 	gtk_box_pack_start (GTK_BOX (settings), d->address_combo, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (settings), intro, FALSE, FALSE, 0);
 
 	d->qr_area = gtk_drawing_area_new ();
 	gtk_widget_set_size_request (d->qr_area, 240, 240);
@@ -592,15 +577,10 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_container_add (GTK_CONTAINER (tree_scroller), tree);
 	gtk_box_pack_start (GTK_BOX (outer), tree_scroller, TRUE, TRUE, 0);
 
-	d->open_button = gtk_button_new_with_label (_("Eingangsordner öffnen"));
-	gtk_widget_set_halign (d->open_button, GTK_ALIGN_START);
-	g_signal_connect (d->open_button, "clicked", G_CALLBACK (on_open_inbox), d);
-	gtk_box_pack_start (GTK_BOX (outer), d->open_button, FALSE, FALSE, 0);
-
 	expander = gtk_expander_new (_("Einstellungen"));
+	gtk_expander_set_expanded (GTK_EXPANDER (expander), FALSE);
 	gtk_container_add (GTK_CONTAINER (expander), settings);
 	gtk_box_pack_start (GTK_BOX (outer), expander, FALSE, FALSE, 0);
-	gtk_box_pack_start (GTK_BOX (outer), intro, FALSE, FALSE, 0);
 
 	scroller = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroller), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -622,8 +602,14 @@ nolphin_phone_page_open (GtkWidget *page, gboolean autostart)
 		return;
 	}
 	phone_refresh_addresses (d);
-	if (autostart && d->server == NULL &&
-	    gtk_combo_box_get_active (GTK_COMBO_BOX (d->address_combo)) >= 0) {
+	if (!autostart) {
+		return;
+	}
+	if (d->server == NULL && gtk_combo_box_get_active (GTK_COMBO_BOX (d->address_combo)) >= 0) {
 		phone_start (d);
+	}
+	/* Die Hauptansicht zeigt den Eingangsordner: dort landen die Dateien vom Handy. */
+	if (g_file_query_exists (d->inbox, NULL)) {
+		nolphin_window_go_to (d->window, d->inbox);
 	}
 }

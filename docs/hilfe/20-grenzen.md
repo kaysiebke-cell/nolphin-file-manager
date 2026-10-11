@@ -8,6 +8,7 @@ Nolphin ist Entwicklungssoftware. Diese Seite sagt offen, was (noch) nicht geht.
 - **PDF und Medien:** Die Angaben kommen über die Programme `pdfinfo`, `pdftocairo` und `gst-discoverer-1.0`, nicht über Bibliotheken.
 - **Regeln:** werden nur von Hand angewendet und nicht gespeichert.
 - **Versionskontrolle:** Overlays gibt es nur für Git, nicht für SVN oder Mercurial.
+- **Handy-Austausch:** nicht verschlüsselt (nur im eigenen WLAN), keine Ordneransicht des Handys, Ordnerwahl wird nicht gespeichert.
 - **Netzwerk:** SFTP, FTP und WebDAV hängen von den GVfs-Diensten Ihres Systems ab und sind nicht mit allen Servern geprüft.
 
 ## Häufige Fragen
