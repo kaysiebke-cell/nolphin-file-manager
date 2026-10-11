@@ -50,6 +50,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](docs/bau
 * **Metadaten:** **Bewertung (Sterne), Tags und Kommentar** direkt im Info-Panel.
 * **Git direkt im Dateimanager:** Overlay-Symbole an den Dateien (hinzugefügt, geändert, unversioniert), Panel für Status, Speichern, Server-Abgleich, Verlauf und Unterschiede.
 * **Archive:** Komprimieren, Entpacken, Prüfen und – im **Archiv-Manager** – Inhalt auflisten sowie Dateien hinzufügen, ersetzen und entfernen.
+* **Handy-Austausch:** Datei ▸ Handy-Austausch zeigt einen QR-Code; das Handy scannt ihn und tauscht Bilder und Dateien im Browser aus, ohne App und ohne Zusatzprogramm (eigener kleiner Server im lokalen Netz, Schlüssel im Link, nicht verschlüsselt, nur fürs eigene WLAN).
 * **Werkzeuge:** Ordner **vergleichen und synchronisieren** (rsync, löscht nie), **Regeln anwenden**, **Duplikate finden**, **Versionen** einer Datei speichern und wiederherstellen.
 * **Suche mit Operatoren:** im Dateinamen UND, ODER, NICHT, „exakt“ und Platzhalter, dazu reguläre Ausdrücke.
 * **Mehrere Bereiche:** geteilte Ansicht mit bis zu vier Bereichen und **Arbeitsbereiche**, die Reiter, Teilung und Fenstergröße speichern.

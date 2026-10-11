@@ -88,6 +88,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Der Hochladen-Dialog gehört dem aufrufenden Programm; ein GTK-Modul ist der Weg, ihn von außen zu ergänzen, ohne einen eigenen Portal-Dienst zu bauen.
 - TEST: In einem getrennten Display (Xephyr): Dialog mit Modul über `GTK_MODULES`, `settings.ini` und `GTK3_MODULES` (ohne Hilfsvariablen für den Modulpfad), Vorschau von Bild und Textdatei. Fehler beim ersten Wurf: In C-Programmen lädt GTK das Modul in `gtk_init()` vor der ersten Widget-Klasse, `g_signal_lookup("map")` lieferte 0 und der Haken fehlte (mein Python-Test hatte das verdeckt, `zenity` hat es gezeigt); behoben mit `g_type_class_ref (GTK_TYPE_WIDGET)` und erneut mit `zenity` geprüft. Zweiter Fehler: `xdg-desktop-portal-gtk` setzt selbst ein einfaches `GtkImage` als Vorschau; das Modul überging solche Dialoge. Nun wird ein `GtkImage`-Vorschau-Widget ersetzt, das alte bleibt referenziert (ohne das stürzt der Dienst im eigenen Handler ab, `gtk_image_set_from_pixbuf` auf freigegebenem Widget). Im echten Portal-Dialog geprüft (OpenFile über D-Bus): Vorschau für Ordner und Bild erscheint. Nicht getestet: Chrome selbst (nutzt je nach Einstellung den GTK-Dialog oder den Portal-Dialog) und Nolphins eigene Dialoge in der Oberfläche.
 
+## Handy-Austausch
+- REQUIREMENT: Austausch mit dem Handy über WLAN ohne Fremdabhängigkeit (Spezifikation 2.6, Abschnitt 61).
+- DATEI: `src/nolphin-qr.c/.h`, `src/nolphin-phone-server.c/.h`, `src/nolphin-phone.c/.h`, `test/test-nolphin-phone-server.c`, Panel, Menü, Meson.
+- ÄNDERUNG: Eigener QR-Encoder und HTTP-Server (GIO), Panel im rechten Arbeitsbereich, Menüeintrag Datei ▸ Handy-Austausch ….
+- WARUM: Kein KDE Connect und keine Handy-App; der QR-Code ersetzt die Adresseingabe.
+- TEST: Meson-Test `Phone exchange test`, QR-Abgleich mit `qrcode` (Version 1, 3 bis 6, alle Masken), isolierte Instanz mit `curl` (Details in der Spezifikation, 61.5 und 61.6). Nicht getestet: echte Handy-Kamera und echter Handy-Browser.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

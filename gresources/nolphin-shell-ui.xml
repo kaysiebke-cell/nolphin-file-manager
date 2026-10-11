@@ -19,6 +19,7 @@
 		<separator/>
 		<placeholder name="Location Placeholder"/>
 		<menuitem name="Connect to Server" action="Connect to Server"/>
+		<menuitem name="Phone Exchange" action="Phone Exchange"/>
 		<menu action="WorkspacesMenu">
 			<menuitem name="Workspace Save" action="Workspace Save"/>
 			<menuitem name="Workspace Load" action="Workspace Load"/>

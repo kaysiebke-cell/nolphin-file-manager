@@ -276,6 +276,18 @@ action_tool_sync_callback (GtkAction *action, gpointer user_data)
 }
 
 static void
+action_phone_callback (GtkAction *action, gpointer user_data)
+{
+	NolphinWindow *window;
+
+	if (NOLPHIN_IS_DESKTOP_WINDOW (user_data)) {
+		return;
+	}
+	window = NOLPHIN_WINDOW (user_data);
+	nolphin_workspace_panel_show_phone (nolphin_window_get_workspace_panel (window), window);
+}
+
+static void
 action_tool_duplicates_callback (GtkAction *action, gpointer user_data)
 {
 	NolphinWindow *window;
@@ -1948,6 +1960,10 @@ static const GtkActionEntry main_entries[] = {
   /* label, accelerator */       N_("_Stapelverarbeitung …"), NULL,
   /* tooltip */                  N_("Eine Aktion auf die gewählten Dateien anwenden (mit Vorschau)"),
                                  G_CALLBACK (action_tool_rules_callback) },
+  /* name, stock id */         { "Phone Exchange", NULL,
+  /* label, accelerator */       N_("_Handy-Austausch …"), NULL,
+  /* tooltip */                  N_("Bilder und Dateien mit dem Handy über das WLAN austauschen (QR-Code, keine App nötig)"),
+                                 G_CALLBACK (action_phone_callback) },
   /* name, stock id */         { "Tool Sync", NULL,
   /* label, accelerator */       N_("Ordner _vergleichen / synchronisieren …"), NULL,
   /* tooltip */                  N_("Zwei Ordner vergleichen und einseitig über rsync abgleichen (mit Vorschau)"),
