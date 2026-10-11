@@ -601,6 +601,116 @@ handle_list (NolphinPhoneServer *s, GOutputStream *out)
 	g_string_free (json, TRUE);
 }
 
+/* Löst einen Unterordner (relativ zum Ausgangsordner, mit "/" getrennt) auf. Erlaubt sind nur
+ * normale Namen (keine "..", keine versteckten Namen) und echte Ordner (keine Verknüpfungen),
+ * damit die App nie aus dem Ausgangsordner hinauskommt. Gibt NULL zurück, wenn der Weg nicht gilt. */
+static gchar *
+resolve_subdir (NolphinPhoneServer *s, const gchar *rel)
+{
+	gchar **parts;
+	gchar *path;
+	gint i;
+
+	if (s->share_path == NULL) {
+		return NULL;
+	}
+	path = g_strdup (s->share_path);
+	if (rel == NULL || rel[0] == '\0') {
+		return path;
+	}
+	parts = g_strsplit (rel, "/", -1);
+	for (i = 0; parts[i] != NULL; i++) {
+		gchar *safe, *next;
+		gboolean ok;
+		GStatBuf st;
+
+		if (parts[i][0] == '\0') {
+			continue;
+		}
+		safe = nolphin_phone_sanitize_name (parts[i]);
+		ok = strcmp (safe, parts[i]) == 0 && parts[i][0] != '.';
+		g_free (safe);
+		if (!ok) {
+			g_free (path);
+			path = NULL;
+			break;
+		}
+		next = g_build_filename (path, parts[i], NULL);
+		g_free (path);
+		path = next;
+		if (g_lstat (path, &st) != 0 || !S_ISDIR (st.st_mode)) {
+			g_free (path);
+			path = NULL;
+			break;
+		}
+	}
+	g_strfreev (parts);
+	return path;
+}
+
+/* GET /dir?p=<Unterordner>: Ordner und Dateien eines Unterordners für die Ordneransicht der App.
+ * Antwort: {"dirs":[{"n":"Name"}],"files":[{"n":"Name","s":Größe}]}. */
+static void
+handle_dir (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
+{
+	gchar *dirpath = resolve_subdir (s, g_hash_table_lookup (r->query, "p"));
+	GString *dirs = g_string_new (NULL);
+	GString *files = g_string_new (NULL);
+	GPtrArray *names = g_ptr_array_new_with_free_func (g_free);
+	GDir *dir;
+	const gchar *name;
+	gint64 now = g_get_real_time () / G_USEC_PER_SEC;
+	guint i;
+
+	if (dirpath == NULL) {
+		send_error (out, 404, "Not Found", _("Nicht gefunden."));
+		goto out;
+	}
+	dir = g_dir_open (dirpath, 0, NULL);
+	while (dir != NULL && (name = g_dir_read_name (dir)) != NULL && names->len < LIST_MAX) {
+		if (name[0] != '.' && g_utf8_validate (name, -1, NULL)) {
+			g_ptr_array_add (names, g_strdup (name));
+		}
+	}
+	if (dir != NULL) {
+		g_dir_close (dir);
+	}
+	g_ptr_array_sort (names, compare_names);
+	for (i = 0; i < names->len; i++) {
+		gchar *path = g_build_filename (dirpath, g_ptr_array_index (names, i), NULL);
+		GStatBuf st;
+
+		if (g_lstat (path, &st) == 0 && S_ISDIR (st.st_mode)) {
+			if (dirs->len > 0) {
+				g_string_append_c (dirs, ',');
+			}
+			g_string_append (dirs, "{\"n\":");
+			json_append_string (dirs, g_ptr_array_index (names, i));
+			g_string_append_c (dirs, '}');
+		} else if (g_lstat (path, &st) == 0 && S_ISREG (st.st_mode) &&
+			   now - (gint64) MAX (st.st_mtime, st.st_ctime) >= BUSY_SECONDS) {
+			if (files->len > 0) {
+				g_string_append_c (files, ',');
+			}
+			g_string_append (files, "{\"n\":");
+			json_append_string (files, g_ptr_array_index (names, i));
+			g_string_append_printf (files, ",\"s\":%" G_GINT64_FORMAT "}", (gint64) st.st_size);
+		}
+		g_free (path);
+	}
+	{
+		gchar *body = g_strdup_printf ("{\"dirs\":[%s],\"files\":[%s]}", dirs->str, files->str);
+
+		send_text (out, 200, "OK", "application/json; charset=utf-8", body, NULL);
+		g_free (body);
+	}
+out:
+	g_free (dirpath);
+	g_ptr_array_free (names, TRUE);
+	g_string_free (dirs, TRUE);
+	g_string_free (files, TRUE);
+}
+
 /* Wartepunkt für die App: antwortet, sobald sich die Liste gegenüber dem
  * Stand "v" ändert, spätestens nach WAIT_SECONDS. Antwort: {"v":"<Stand>","files":[…]}. */
 #define WAIT_SECONDS 20
@@ -724,7 +834,7 @@ static void
 handle_download (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 {
 	const gchar *name = g_hash_table_lookup (r->query, "n");
-	gchar *safe, *path, *escaped, *extra;
+	gchar *safe, *path, *base, *escaped, *extra;
 	GStatBuf st;
 	gint fd;
 
@@ -740,7 +850,14 @@ handle_download (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 		return;
 	}
 	g_free (safe);
-	path = g_build_filename (s->share_path, name, NULL);
+	/* Optional "p": Unterordner, aus dem die Datei kommt (Ordneransicht der App) */
+	base = resolve_subdir (s, g_hash_table_lookup (r->query, "p"));
+	if (base == NULL) {
+		send_error (out, 404, "Not Found", _("Nicht gefunden."));
+		return;
+	}
+	path = g_build_filename (base, name, NULL);
+	g_free (base);
 	fd = g_open (path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW, 0);
 	g_free (path);
 	if (fd < 0 || fstat (fd, &st) != 0 || !S_ISREG (st.st_mode)) {
@@ -973,6 +1090,8 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 		handle_info (s, out);
 	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/ls") == 0) {
 		handle_list (s, out);
+	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/dir") == 0) {
+		handle_dir (s, &req, out);
 	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/wait") == 0) {
 		handle_wait (s, &req, out);
 	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/apk") == 0) {

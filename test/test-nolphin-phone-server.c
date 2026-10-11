@@ -221,6 +221,18 @@ run_tests (gpointer unused)
 		g_file_set_contents (p, "hallo vom pc", -1, NULL);
 		g_file_set_contents (hidden, "geheim", -1, NULL);
 		check (symlink ("/etc/passwd", link) == 0, "Testvorbereitung: Symlink");
+		{
+			gchar *sub = g_build_filename (share, "Unter ordner", NULL);
+			gchar *b = g_build_filename (sub, "b.txt", NULL);
+			gchar *dirlink = g_build_filename (share, "etclink", NULL);
+
+			g_mkdir_with_parents (sub, 0755);
+			g_file_set_contents (b, "hallo aus dem Unterordner", -1, NULL);
+			check (symlink ("/etc", dirlink) == 0, "Testvorbereitung: Ordner-Symlink");
+			g_free (sub);
+			g_free (b);
+			g_free (dirlink);
+		}
 		g_free (p);
 		g_free (hidden);
 		g_free (link);
@@ -425,6 +437,43 @@ run_tests (gpointer unused)
 			g_free (target);
 			g_free (msg);
 		}
+	}
+
+	/* Ordneransicht: /dir und /dl mit Unterordner, ohne Ausbruch aus dem Ausgangsordner */
+	target = g_strdup_printf ("/dir?%s", token_q);
+	r = get (port, target);
+	check (status_of (r) == 200 && strstr (r, "\"dirs\":[{\"n\":\"Unter ordner\"}") != NULL && strstr (r, "a.txt") != NULL &&
+	       strstr (r, "etclink") == NULL && strstr (r, "versteckt") == NULL, "/dir: Ordner und Dateien, ohne Ordner-Symlink");
+	g_free (r);
+	g_free (target);
+	target = g_strdup_printf ("/dir?%s&p=Unter%%20ordner", token_q);
+	r = get (port, target);
+	check (status_of (r) == 200 && strstr (r, "b.txt") != NULL && strstr (r, "a.txt") == NULL, "/dir: Inhalt des Unterordners");
+	g_free (r);
+	g_free (target);
+	target = g_strdup_printf ("/dl?%s&p=Unter%%20ordner&n=b.txt", token_q);
+	r = get (port, target);
+	check (status_of (r) == 200 && g_str_has_suffix (r, "hallo aus dem Unterordner"), "/dl mit Unterordner liefert die Datei");
+	g_free (r);
+	g_free (target);
+	{
+		const gchar *bad[] = { "..", "..%2F..", "etclink", "%2Fetc", "Unter%20ordner%2F..%2F..", ".versteckt", "fehlt", NULL };
+
+		for (i = 0; bad[i] != NULL; i++) {
+			gchar *msg = g_strdup_printf ("/dir mit p='%s' wird abgelehnt (404)", bad[i]);
+
+			target = g_strdup_printf ("/dir?%s&p=%s", token_q, bad[i]);
+			r = get (port, target);
+			check (status_of (r) == 404 && strstr (r, "passwd") == NULL, msg);
+			g_free (r);
+			g_free (target);
+			g_free (msg);
+		}
+		target = g_strdup_printf ("/dl?%s&p=etclink&n=passwd", token_q);
+		r = get (port, target);
+		check (status_of (r) == 404 && strstr (r, "root:") == NULL, "/dl über Ordner-Symlink wird abgelehnt");
+		g_free (r);
+		g_free (target);
 	}
 
 	/* Wartepunkt der App: sofort mit Stand, bei bekanntem Stand erst bei Änderung */
