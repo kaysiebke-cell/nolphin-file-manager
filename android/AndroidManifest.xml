@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- Der Austausch läuft unverschlüsselt (HTTP) im eigenen WLAN. -->
     <application
@@ -36,6 +38,12 @@
                 <data android:scheme="nolphin" android:host="connect" />
             </intent-filter>
         </activity>
+
+        <!-- Scannt den QR-Code von Nolphin mit der Kamera (eigener QR-Leser, keine Bibliothek). -->
+        <activity
+            android:name=".ScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
         <!-- Eintrag im Teilen-Menü: Dateien an den PC senden. -->
         <activity

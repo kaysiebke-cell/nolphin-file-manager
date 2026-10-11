@@ -3,6 +3,7 @@ package org.nolphin.handy;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -112,6 +113,12 @@ public class MainActivity extends Activity {
         statusView.setPadding(0, dp(12), 0, dp(12));
         box.addView(statusView);
 
+        box.addView(button("QR-Code scannen", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, ScanActivity.class));
+            }
+        }));
         box.addView(button("Dateien an den PC senden …", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -141,8 +148,24 @@ public class MainActivity extends Activity {
             }
         }));
 
+        box.addView(button("Link aus der Zwischenablage einfügen", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ClipboardManager cm = getSystemService(ClipboardManager.class);
+                CharSequence text = null;
+                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                    text = cm.getPrimaryClip().getItemAt(0).coerceToText(MainActivity.this);
+                }
+                if (text != null && Conn.parse(MainActivity.this, text.toString())) {
+                    startSync(null);
+                } else {
+                    Toast.makeText(MainActivity.this, "In der Zwischenablage ist kein Nolphin-Link", Toast.LENGTH_LONG).show();
+                }
+            }
+        }));
+
         linkField = new EditText(this);
-        linkField.setHint("Link vom PC (falls der QR-Code nicht geht)");
+        linkField.setHint("oder Link hier eintippen");
         linkField.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
         box.addView(linkField);
         box.addView(button("Mit Link verbinden", new View.OnClickListener() {
@@ -170,7 +193,7 @@ public class MainActivity extends Activity {
     private void update() {
         String host = Conn.host(this);
         statusView.setText(host == null
-                ? "Nicht verbunden.\nScanne am PC in Nolphin (Seitenleiste „Handy“) den QR-Code."
+                ? "Nicht verbunden.\nTippe auf „QR-Code scannen“ und richte die Kamera auf den QR-Code am PC (Nolphin, Seitenleiste „Handy“)."
                 : SyncService.status + "\nPC: " + host);
         logView.setText(SyncService.eventsText());
     }

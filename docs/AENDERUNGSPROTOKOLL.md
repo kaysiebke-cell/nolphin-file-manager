@@ -102,6 +102,13 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - WARUM: Auf Wunsch des Benutzers; ohne Empfänger auf dem Handy ist „PC → Handy“ nur eine Einbahnstraße.
 - TEST: Meson-Test (Wartepunkt, `/apk`, frische Dateien); Android-Emulator (Android 14): Installation, Verbinden per `nolphin://`-Link, Datei am PC ablegen kommt von selbst an (Inhalt identisch), Alt-Bestand wird nicht geladen, Senden über das Teilen-Menü kommt am PC an (identisch), Intent-Link der Seite öffnet die App. Nicht geprüft: Chrome auf einem echten Handy (Installation der APK, automatisches Öffnen), Verhalten im Standby, Android-Versionen außer 14.
 
+## Handy-App: QR-Scanner in der App
+- REQUIREMENT: Die App muss sich selbst mit dem PC verbinden können. Nach dem Installieren sagte sie nur „Scanne den QR-Code“, hatte aber keine Scan-Funktion (Rückmeldung des Benutzers mit Screenshots vom Handy).
+- DATEI: `android/src/org/nolphin/handy/QrDecoder.java` (neu), `ScanActivity.java` (neu), `MainActivity.java`, `AndroidManifest.xml` (Kamera), `android/test.sh`, `android/test/` (neu), Hilfe und Doku.
+- ÄNDERUNG: Eigener QR-Leser in reinem Java (Suchmuster, Perspektive über Ausrichtungsmuster, Formatinfo, Reed-Solomon mit Fehlerkorrektur), Scanner-Bildschirm mit der Kamera des Handys (Camera-API des Frameworks, keine Bibliothek, keine Google-Dienste) mit Anzeige „Code erkannt“. Startseite der App: „QR-Code scannen“ zuerst, dazu „Link aus der Zwischenablage einfügen“ und ein Feld zum Eintippen.
+- WARUM: Ohne Scanner kam die App nach der Installation nicht mit dem PC in Verbindung. Eine fertige Scan-Bibliothek kam wegen der Vorgabe „keine Fremdabhängigkeit“ nicht in Frage.
+- TEST: `android/test.sh`: 154 Prüfungen auf dem PC (Codes vom C-Encoder, gedreht, verzerrt, unscharf, verrauscht; Rauschen und leeres Bild liefern nichts; Screenshot aus der Doku; ein echtes dunkles, unscharfes Handyfoto des Codes, das der Benutzer geschickt hat, wird korrekt gelesen, auch im ganzen Bild 1080×2400 in 0,4 s). Emulator: Startseite, Scanner-Bildschirm mit laufender Kamera und richtigem Seitenverhältnis. Nicht geprüft: Lesen mit der Live-Kamera eines echten Handys (im Emulator ohne Fenster lässt sich die virtuelle Kamera nicht auf das Plakat richten), Lesegeschwindigkeit auf dem Handy, Warnungen anderer Hersteller bei der Installation.
+
 ## Übersetzung
 - REQUIREMENT: Deutsche Oberfläche.
 - DATEI: `po/de.po`, `po/nolphin.pot`, `po/POTFILES.in`, `action-layout-editor/nolphin_action_layout_editor.py`.

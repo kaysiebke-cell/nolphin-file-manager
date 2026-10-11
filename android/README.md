@@ -6,9 +6,10 @@ Nur das Android-Framework, **keine Bibliotheken**, kein Gradle. Mindestens Andro
 
 ## Einrichten (Anwender)
 
-1. Klicken Sie in Nolphin in der Seitenleiste auf **Handy** und scannen Sie den QR-Code mit der Kamera.
-2. **Erster Scan:** Die Seite im Handy-Browser bietet die App zum Installieren an. Laden Sie sie, erlauben Sie die Installation und scannen Sie den QR-Code noch einmal.
-3. **Jeder weitere Scan** öffnet die App und verbindet sie mit dem PC. Der Schlüssel im Code gilt, solange der Austausch am PC läuft; nach einem Neustart scannen Sie einfach erneut.
+1. Klicken Sie in Nolphin in der Seitenleiste auf **Handy** und scannen Sie den QR-Code mit der Kamera des Handys.
+2. **Erster Scan:** Die Seite im Handy-Browser bietet die App zum Installieren an. Laden Sie sie und erlauben Sie die Installation (Warnungen von Chrome, Play Protect oder Mi Protect sind bei Apps außerhalb des Play Store normal).
+3. **Verbinden:** Öffnen Sie die App, tippen Sie auf **QR-Code scannen** und richten Sie die Kamera auf den QR-Code am PC. Die App liest ihn mit einem **eigenen QR-Leser** (`QrDecoder.java`, ohne Bibliothek und ohne Google-Dienste). Alternativ scannen Sie mit der Kamera des Handys oder fügen den Link aus der Zwischenablage ein.
+4. Der Schlüssel im Code gilt, solange der Austausch am PC läuft; nach einem Neustart von Nolphin scannen Sie einfach erneut.
 
 Die App lädt neue Dateien nach `Download/Nolphin`. Beim allerersten Verbinden werden bereits vorhandene Dateien nicht geladen; „Alle Dateien vom PC laden“ holt sie nach.
 
@@ -20,4 +21,6 @@ Voraussetzungen: JDK (`javac`, `keytool`) und das Android-SDK (`android.jar`, `a
 android/build.sh
 ```
 
-Ergebnis: `android/build/nolphin-handy.apk`. Beim ersten Lauf entsteht ein Signaturschlüssel in `~/.config/nolphin/` (nicht im Repository). Liegt die APK vor dem Installieren von Nolphin da, wird sie nach `<datadir>/nolphin/phone/` mitinstalliert und der Handy-Austausch bietet sie zum Laden an. Ohne APK läuft alles weiter im Handy-Browser.
+Ergebnis: `android/build/nolphin-handy.apk`.
+
+Der QR-Leser lässt sich ohne Handy prüfen (`android/test.sh`): Er liest Codes des C-Encoders von Nolphin, gedreht, verzerrt, unscharf und verrauscht gezeichnet, einen Bildschirmfoto-Ausschnitt und ein echtes, dunkles und unscharfes Handyfoto des Codes. Beim ersten Lauf entsteht ein Signaturschlüssel in `~/.config/nolphin/` (nicht im Repository). Liegt die APK vor dem Installieren von Nolphin da, wird sie nach `<datadir>/nolphin/phone/` mitinstalliert und der Handy-Austausch bietet sie zum Laden an. Ohne APK läuft alles weiter im Handy-Browser.

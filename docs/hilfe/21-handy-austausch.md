@@ -17,10 +17,13 @@ Der Link steht unter dem QR-Code und lässt sich mit dem Knopf daneben kopieren,
 
 Im Browser holt das Handy Dateien nur ab, wenn Sie sie antippen. Die kleine **Nolphin-Handy-App** ist der Empfänger auf dem Handy: Was Sie am PC in „Zum Handy“ legen, kommt von selbst an.
 
-1. **Erster Scan:** Scannen Sie den QR-Code. Die Seite im Handy-Browser bietet die App zum Installieren an. Laden Sie sie, erlauben Sie die Installation und scannen Sie den Code noch einmal.
-2. **Jeder weitere Scan** öffnet die App und verbindet sie mit dem PC. Es ist keine Eingabe nötig.
-3. Neue Dateien landen auf dem Handy im Ordner `Download/Nolphin`, mit einer Benachrichtigung.
-4. Dateien vom Handy schicken Sie über **Teilen ▸ Nolphin (PC)** oder in der App mit **Dateien an den PC senden …**.
+1. **Erster Scan:** Scannen Sie den QR-Code mit der Kamera des Handys. Die Seite im Handy-Browser bietet die App zum Installieren an. Laden Sie sie und erlauben Sie die Installation (siehe unten, „Warnungen bei der Installation“).
+2. **Verbinden in der App:** Öffnen Sie die Nolphin-Handy-App und tippen Sie auf **QR-Code scannen**. Richten Sie die Kamera auf den QR-Code am PC. Die App liest ihn selbst, es ist keine Eingabe nötig. Danach steht dort „Verbunden“.
+3. **Jeder weitere Scan** geht genauso, oder mit der Kamera des Handys: Die Seite öffnet dann die App und verbindet sie.
+4. Neue Dateien landen auf dem Handy im Ordner `Download/Nolphin`, mit einer Benachrichtigung.
+5. Dateien vom Handy schicken Sie über **Teilen ▸ Nolphin (PC)** oder in der App mit **Dateien an den PC senden …**.
+
+Geht das Scannen nicht, kopieren Sie den Link unter dem QR-Code im Panel und tippen in der App auf **Link aus der Zwischenablage einfügen** (oder tippen Sie ihn in das Feld darunter).
 
 Der Schlüssel im QR-Code gilt, solange der Austausch am PC läuft. Nach einem Neustart von Nolphin scannen Sie den Code einfach erneut. Steht in der App „Schlüssel abgelaufen“, ist das der Grund.
 
@@ -67,6 +70,10 @@ Beide Wege **kopieren**. Das Original bleibt, wo es ist. Mit der App kommt die D
 | Die Kamera erkennt den Code nicht | Link kopieren und im Browser des Handys eintippen. |
 | Der Upload bricht ab | Prüfen Sie, ob Platz im Ordner `Vom Handy` ist. Einzelne Dateien dürfen höchstens 2 GiB groß sein. |
 | Der PC hat mehrere Netzwerke | Dann erscheint im Panel eine Auswahl der Netzwerkadresse. Wählen Sie die des WLANs, in dem das Handy ist. |
+
+## Warnungen bei der Installation
+
+Die App kommt nicht aus dem Play Store. Deshalb warnen Chrome, Google Play Protect und je nach Hersteller weitere Schutzprogramme (zum Beispiel „Mi Protect“ bei Xiaomi), bevor sie sich installieren lässt. Das ist normal. Bestätigen Sie mit **Trotzdem herunterladen** und beim Schutzprogramm mit **Überspringen** oder **Installieren**. Die App ist klein (rund 20 KB), enthält keine Bibliotheken und ihr Quelltext liegt im Verzeichnis `android/` von Nolphin.
 
 ## Grenzen
 
