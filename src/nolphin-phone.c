@@ -496,15 +496,17 @@ on_file_received (const gchar *name, goffset size, gpointer user_data)
 }
 
 /* Verbindungslink, Format Version 2:
- *   https://<Adresse>:<Port>/?t=<Schlüssel, 32 Hex-Zeichen>&v=2&f=<Fingerabdruck, 22 Zeichen base64url>
- * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). Der Ablauf (e=) steht nicht
- * mehr im Link: Er würde den QR-Code über die größte darstellbare Größe treiben, und der Server prüft ihn ohnehin. */
+ *   nolphin://<Adresse>:<Port>/?t=<Schlüssel, 32 Hex-Zeichen>&v=2&f=<Fingerabdruck, 22 Zeichen base64url>
+ * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). Mit dem Schema nolphin:// öffnet die
+ * Kamera des Handys direkt die App (kein Browser, keine Zertifikatswarnung); die App verbindet sich dann verschlüsselt
+ * über https mit genau dem Zertifikat dieses Fingerabdrucks. Der Ablauf (e=) steht nicht mehr im Link: Er würde den
+ * QR-Code über die größte darstellbare Größe treiben, und der Server prüft ihn ohnehin. */
 static void
 phone_refresh_url (PhonePage *d)
 {
 	gchar *token = nolphin_phone_server_dup_token (d->server);
 	gchar *fp = nolphin_phone_server_dup_fingerprint (d->server);
-	gchar *url = g_strdup_printf ("https://%s:%u/?t=%s&v=2&f=%s", d->address,
+	gchar *url = g_strdup_printf ("nolphin://%s:%u/?t=%s&v=2&f=%s", d->address,
 				      nolphin_phone_server_get_port (d->server), token, fp);
 
 	d->has_qr = nolphin_qr_encode (url, -1, &d->qr);
@@ -567,7 +569,7 @@ phone_start (PhonePage *d)
 	session_save (d->address, d->server);
 	phone_refresh_url (d);
 	gtk_label_set_text (GTK_LABEL (d->status),
-			    d->has_qr ? _("Läuft, verschlüsselt. In der Handy-App „QR-Code scannen“ wählen und diesen Code scannen (gleiches WLAN).")
+			    d->has_qr ? _("Läuft, verschlüsselt. QR-Code mit der Handy-Kamera oder in der Handy-App („QR-Code scannen“) scannen (gleiches WLAN).")
 				      : _("Läuft, verschlüsselt. Ein QR-Code ist nicht möglich: Kopiere den Link in die Handy-App."));
 	d->timeout_id = g_timeout_add_seconds (30, on_idle_check, d);
 	phone_update_ui (d);
