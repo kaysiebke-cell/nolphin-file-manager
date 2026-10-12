@@ -569,8 +569,8 @@ phone_start (PhonePage *d)
 	session_save (d->address, d->server);
 	phone_refresh_url (d);
 	gtk_label_set_text (GTK_LABEL (d->status),
-			    d->has_qr ? _("Läuft, verschlüsselt. In der Handy-App „QR-Code scannen und verbinden“ wählen und den Code gerade scannen (gleiches WLAN). Zeigt die Kamera-App den Link nur als Text, „Text kopieren“ wählen und in der App „Link aus der Zwischenablage einfügen“.")
-				      : _("Läuft, verschlüsselt. Ein QR-Code ist nicht möglich: Kopiere den Link in die Handy-App."));
+			    d->has_qr ? _("Läuft, verschlüsselt. In der Handy-App „QR-Code scannen“ tippen und den Code scannen.")
+				      : _("Läuft, verschlüsselt. Ein QR-Code ist nicht möglich: Link in die Handy-App einfügen."));
 	d->timeout_id = g_timeout_add_seconds (30, on_idle_check, d);
 	phone_update_ui (d);
 }
@@ -729,7 +729,7 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_box_pack_start (GTK_BOX (outer), tree_scroller, TRUE, TRUE, 0);
 
 	hint = gtk_label_new (_("Aufs Handy: Dateien auf „Handy“ in der Seitenleiste ziehen oder Rechtsklick ▸ An Handy senden. "
-				"Die Verbindung ist verschlüsselt. Zeige den QR-Code nur deinem eigenen Handy: Er enthält den Schlüssel."));
+				"Den QR-Code nur dem eigenen Handy zeigen."));
 	gtk_label_set_line_wrap (GTK_LABEL (hint), TRUE);
 	gtk_label_set_xalign (GTK_LABEL (hint), 0.0);
 	gtk_style_context_add_class (gtk_widget_get_style_context (hint), "dim-label");
