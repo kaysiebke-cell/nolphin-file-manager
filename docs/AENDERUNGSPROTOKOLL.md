@@ -196,3 +196,10 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - ÄNDERUNG: `docs/handy-austausch-api.md` hat unter der Einleitung einen kurzen Hinweis „Optionale Erweiterung“ mit Link, drei Sätzen und dem verkleinerten Titelbild (als Link). `docs/funktionen.md` nennt die App als „optionale Erweiterung“. In der `README.md` nennt der Highlight-Punkt zuerst den Weg ohne App und verweist auf die Schnittstellen-Doku; ein zuerst eingefügter eigener Abschnitt mit dem Titelbild wurde wieder entfernt.
 - WARUM: Nolphin braucht die App nicht; sie soll auffindbar sein, aber nicht wie ein Bestandteil wirken.
 - TEST: Nur Dokumentation, kein Code geändert. Die Darstellung in der GID-Vorschau von Nolphin wurde nicht angesehen.
+
+## Entwicklungsstand: Handy-App aktualisiert
+- REQUIREMENT: Der Entwicklungsstand der Handy-App war veraltet („TEILWEISE“, App 2.0).
+- DATEI: `docs/entwicklungsstand.md`.
+- ÄNDERUNG: Der Eintrag nennt jetzt Version 4.26 als optionale Erweiterung und trennt, was am echten Handy geprüft wurde, was nur am PC automatisch getestet ist und was nicht geprüft wurde.
+- WARUM: Die Angaben stammten aus dem Stand vom 11. Oktober 2026 und passten nicht mehr zur App.
+- TEST: Nur Dokumentation. Die Angaben beruhen auf den Läufen von `nolphin-handy/test.sh` und den Prüfungen am echten Handy vom 12. Oktober 2026.
