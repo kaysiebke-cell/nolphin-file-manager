@@ -729,7 +729,7 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_box_pack_start (GTK_BOX (outer), tree_scroller, TRUE, TRUE, 0);
 
 	hint = gtk_label_new (_("Aufs Handy: Dateien auf „Handy“ in der Seitenleiste ziehen oder Rechtsklick ▸ An Handy senden. "
-				"Nur im eigenen WLAN, nicht verschlüsselt."));
+				"Die Verbindung ist verschlüsselt. Zeige den QR-Code nur deinem eigenen Handy: Er enthält den Schlüssel."));
 	gtk_label_set_line_wrap (GTK_LABEL (hint), TRUE);
 	gtk_label_set_xalign (GTK_LABEL (hint), 0.0);
 	gtk_style_context_add_class (gtk_widget_get_style_context (hint), "dim-label");
