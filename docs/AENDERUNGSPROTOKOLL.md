@@ -191,8 +191,8 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - TEST: `meson test` (26 von 26). Die Seitenleiste selbst nach der Installation nicht angesehen.
 
 ## Handy-App als optionale Erweiterung verlinkt
-- REQUIREMENT: Die Handy-App ist eine optionale Erweiterung des Dateimanagers. Kleine, unauffällige Verlinkung und Beschreibung.
-- DATEI: `README.md`, `docs/funktionen.md`, `docs/bilder/handy-erweiterung.png`.
-- ÄNDERUNG: Der Highlight-Punkt „Handy-Austausch“ nennt jetzt zuerst den Weg ohne App und verweist auf einen kleinen Abschnitt „Optional: Nolphin Handy für Android“ mit dem Titelbild des Projekts (verkleinert, als Link) und drei Sätzen. In `docs/funktionen.md` ist der Absatz zur App als „optionale Erweiterung“ umgeschrieben und nennt, was die App kann.
-- WARUM: Nolphin braucht die App nicht; sie sollte nicht wie ein Bestandteil wirken, aber auffindbar sein.
+- REQUIREMENT: Die Handy-App ist eine optionale Erweiterung des Dateimanagers. Kleine, unauffällige Verlinkung und Beschreibung mit dem Titelbild, in der Doku-Datei der Schnittstelle und nicht in der Haupt-README.
+- DATEI: `docs/handy-austausch-api.md`, `docs/funktionen.md`, `README.md`, `docs/bilder/handy-erweiterung.png`.
+- ÄNDERUNG: `docs/handy-austausch-api.md` hat unter der Einleitung einen kurzen Hinweis „Optionale Erweiterung“ mit Link, drei Sätzen und dem verkleinerten Titelbild (als Link). `docs/funktionen.md` nennt die App als „optionale Erweiterung“. In der `README.md` nennt der Highlight-Punkt zuerst den Weg ohne App und verweist auf die Schnittstellen-Doku; ein zuerst eingefügter eigener Abschnitt mit dem Titelbild wurde wieder entfernt.
+- WARUM: Nolphin braucht die App nicht; sie soll auffindbar sein, aber nicht wie ein Bestandteil wirken.
 - TEST: Nur Dokumentation, kein Code geändert. Die Darstellung in der GID-Vorschau von Nolphin wurde nicht angesehen.

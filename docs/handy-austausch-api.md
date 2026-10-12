@@ -4,6 +4,10 @@
 
 Diese Schnittstelle bietet Nolphin am PC an, und die Android-App verwendet sie. Der Browser des Handys nutzt dieselben Wege. Quelle der Wahrheit ist `src/nolphin-phone-server.c`.
 
+> **Optionale Erweiterung:** Die Android-App **[Nolphin Handy](https://github.com/kaysiebke-cell/nolphin-handy)** ist ein eigenes Projekt (reines Android-Framework, keine Bibliotheken). Nolphin braucht sie nicht, der Austausch läuft auch im Browser des Handys. Die App verbindet sich per QR-Code, lädt Dateien vom PC, sendet Dateien und ganze Ordner an den PC und ist zugleich ein Dateimanager fürs Handy.
+>
+> [![Nolphin Handy: Nolphin am PC, davor die App auf dem Handy, hell und dunkel](bilder/handy-erweiterung.png)](https://github.com/kaysiebke-cell/nolphin-handy)
+
 ## Grundlagen
 
 - HTTP/1.1, **unverschlüsselt**, nur im eigenen Netz (siehe [Sicherheit](handy-austausch-analyse.md#sicherheit)).

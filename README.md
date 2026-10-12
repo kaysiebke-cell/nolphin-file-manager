@@ -50,7 +50,7 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](docs/bau
 * **Metadaten:** **Bewertung (Sterne), Tags und Kommentar** direkt im Info-Panel.
 * **Git direkt im Dateimanager:** Overlay-Symbole an den Dateien (hinzugefügt, geändert, unversioniert), Panel für Status, Speichern, Server-Abgleich, Verlauf und Unterschiede.
 * **Archive:** Komprimieren, Entpacken, Prüfen und – im **Archiv-Manager** – Inhalt auflisten sowie Dateien hinzufügen, ersetzen und entfernen.
-* **Handy-Austausch in beide Richtungen:** Ein Klick auf „Handy“ in der Seitenleiste (oder Datei ▸ Handy-Austausch) startet den Austausch: rechts erscheint ein QR-Code, in der Hauptansicht der Ordner `~/Handy`. Das Handy scannt den Code und lädt Bilder und Dateien im Browser hoch (`Vom Handy`); Dateien aufs Handy ziehen Sie auf „Handy“ oder wählen Rechtsklick ▸ „An Handy senden“ (Ordner `Handy`). Dafür ist **keine App nötig**. Eine Android-App gibt es als [optionale Erweiterung](#optional-nolphin-handy-für-android).
+* **Handy-Austausch in beide Richtungen:** Ein Klick auf „Handy“ in der Seitenleiste (oder Datei ▸ Handy-Austausch) startet den Austausch: rechts erscheint ein QR-Code, in der Hauptansicht der Ordner `~/Handy`. Das Handy scannt den Code und lädt Bilder und Dateien im Browser hoch (`Vom Handy`); Dateien aufs Handy ziehen Sie auf „Handy“ oder wählen Rechtsklick ▸ „An Handy senden“ (Ordner `Handy`). Dafür ist **keine App nötig**. Eine Android-App gibt es als optionale Erweiterung (siehe [Schnittstelle](docs/handy-austausch-api.md)).
 * **Werkzeuge:** Ordner **vergleichen und synchronisieren** (rsync, löscht nie), **Regeln anwenden**, **Duplikate finden**, **Versionen** einer Datei speichern und wiederherstellen.
 * **Suche mit Operatoren:** im Dateinamen UND, ODER, NICHT, „exakt“ und Platzhalter, dazu reguläre Ausdrücke.
 * **Mehrere Bereiche:** geteilte Ansicht mit bis zu vier Bereichen und **Arbeitsbereiche**, die Reiter, Teilung und Fenstergröße speichern.
@@ -64,14 +64,6 @@ Voraussetzungen, Installation und Tests: siehe [Bauen und Installieren](docs/bau
 * **Sicherheit:** Prüfsummen, GPG-Verschlüsselung, ACL-Verwaltung.
 * **Papierkorb-Automatik** und **gespeicherte Dateiauswahlen**.
 * **Nemo-Grundlagen:** Tabs, Symbol-, Listen- und Kompaktansicht, Fortschritt, Rückgängig, Netzwerk über GVfs.
-
----
-
-### Optional: Nolphin Handy für Android
-
-[![Nolphin Handy: Nolphin am PC, davor die App auf dem Handy, hell und dunkel](docs/bilder/handy-erweiterung.png)](https://github.com/kaysiebke-cell/nolphin-handy)
-
-Der Handy-Austausch läuft auch ohne App im Browser des Handys. Wer mehr will, nimmt die kleine Zusatz-App **[Nolphin Handy](https://github.com/kaysiebke-cell/nolphin-handy)** (eigenes Projekt, reines Android-Framework, keine Bibliotheken): Sie verbindet sich per QR-Code mit Nolphin, lädt Dateien vom PC, sendet Dateien und ganze Ordner an den PC und ist zugleich ein Dateimanager für das Handy (Kopieren, Verschieben, Umbenennen, ZIP, Papierkorb, Speicheranalyse). Nolphin selbst braucht sie nicht.
 
 ---
 
