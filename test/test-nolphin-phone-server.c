@@ -373,6 +373,29 @@ run_tests (gpointer unused)
 		}
 	}
 
+	/* leerer Ordner über /mkdir */
+	target = g_strdup_printf ("/mkdir?%s&d=Leer%%2FTief", token_q);
+	r = post (port, target, "", 0);
+	check (status_of (r) == 200 && g_file_test (g_build_filename (inbox, "Leer/Tief", NULL), G_FILE_TEST_IS_DIR), "mkdir: leerer Unterordner angelegt");
+	g_free (r);
+	r = post (port, target, "", 0);
+	check (status_of (r) == 200, "mkdir: bestehender Ordner ist kein Fehler");
+	g_free (r);
+	g_free (target);
+	target = g_strdup_printf ("/mkdir?%s&d=..%%2Fdraussen", token_q);
+	r = post (port, target, "", 0);
+	check (status_of (r) == 400 && !g_file_test (g_build_filename (root, "draussen", NULL), G_FILE_TEST_EXISTS), "mkdir: ungültiger Name abgelehnt");
+	g_free (r);
+	g_free (target);
+	target = g_strdup_printf ("/mkdir?%s", token_q);
+	r = post (port, target, "", 0);
+	check (status_of (r) == 400, "mkdir: ohne Ordnername abgelehnt");
+	g_free (r);
+	g_free (target);
+	r = post (port, "/mkdir?t=falsch&d=x", "", 0);
+	check (status_of (r) == 403, "mkdir: falscher Schlüssel abgelehnt");
+	g_free (r);
+
 	/* größerer Upload über mehrere Lesevorgänge */
 	big = g_malloc (3 * 1024 * 1024);
 	for (i = 0; i < 3 * 1024 * 1024; i++) {

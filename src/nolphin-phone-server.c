@@ -989,6 +989,26 @@ ensure_subdir (const gchar *base, const gchar *rel)
 	return path;
 }
 
+/* POST /mkdir?d=Ordner/Unter: legt einen (leeren) Ordner im Eingangsordner an, wie bei /up mit "d". */
+static void
+handle_mkdir (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
+{
+	const gchar *raw_dir = g_hash_table_lookup (r->query, "d");
+	gchar *target;
+
+	if (raw_dir == NULL || raw_dir[0] == '\0') {
+		send_error (out, 400, "Bad Request", _("Der Ordnername fehlt."));
+		return;
+	}
+	target = ensure_subdir (s->inbox_path, raw_dir);
+	if (target == NULL) {
+		send_error (out, 400, "Bad Request", _("Ungültiger Ordnername."));
+		return;
+	}
+	g_free (target);
+	send_text (out, 200, "OK", "application/json; charset=utf-8", "{\"ok\":true}", NULL);
+}
+
 static void
 handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutputStream *out,
 	       const gchar *body, gsize body_have)
@@ -1210,6 +1230,8 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 		handle_download (s, &req, out);
 	} else if (strcmp (req.method, "POST") == 0 && strcmp (req.path, "/up") == 0) {
 		handle_upload (s, &req, in, out, buf + head_len, have - head_len);
+	} else if (strcmp (req.method, "POST") == 0 && strcmp (req.path, "/mkdir") == 0) {
+		handle_mkdir (s, &req, out);
 	} else {
 		send_error (out, 404, "Not Found", _("Nicht gefunden."));
 	}

@@ -88,6 +88,10 @@ Der Name wird bereinigt: nur der letzte Pfadteil (`/` und `\` trennen), Steuerze
 
 Antwort bei Erfolg: `200` mit `{"ok":true,"name":"<endgültiger Name>"}`.
 
+### `POST /mkdir?t=…&d=<Ordner>`
+
+Legt einen (leeren) Unterordner im Eingangsordner an, mit denselben Regeln für `d` wie bei `/up`. Ein bestehender Ordner ist kein Fehler. Antwort: `200` mit `{"ok":true}`, bei ungültigem oder fehlendem Namen `400`. Die App nutzt das für leere Ordner; ob der PC es kann, steht in `/info` als `"folders":true`.
+
 ### `GET /apk?t=…`
 
 Liefert die Handy-App (`application/vnd.android.package-archive`), falls sie installiert ist. Suchreihenfolge: Umgebungsvariable `NOLPHIN_PHONE_APK`, `~/.local/share/nolphin/phone/nolphin-handy.apk`, `<datadir>/nolphin/phone/`, die Systemdatenverzeichnisse. Sonst `404`.
@@ -103,7 +107,7 @@ Die Seite für den Browser des Handys (Hochladen, Liste zum Herunterladen, App-A
 | 400 | alle | kaputte Anfrage, Kopfzeilen über 16 KiB |
 | 403 | alle | Schlüssel fehlt, falsch oder widerrufen (Text „Der Link ist ungültig oder wurde widerrufen.“) oder **abgelaufen** (Text „Der Link ist abgelaufen.“) |
 | 404 | `/dl`, `/apk`, sonstige | Datei nicht vorhanden oder nicht erlaubt, unbekannter Weg |
-| 400 | `/up` | ungültiger Ordnername in `d` |
+| 400 | `/up`, `/mkdir` | ungültiger oder fehlender Ordnername in `d` |
 | 411 | `/up` | `Content-Length` fehlt |
 | 413 | `/up` | Datei größer als 2 GiB |
 | 500 | `/up` | Schreibfehler, Datei kann nicht abgelegt werden |
