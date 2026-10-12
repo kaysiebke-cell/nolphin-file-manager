@@ -952,6 +952,7 @@ update_places (NolphinPlacesSidebar *sidebar)
                                   gtk_icon_theme_has_icon (theme, "smartphone-symbolic") ? "smartphone-symbolic" :
                                   "network-wireless-symbolic";
         gchar *phone_uri = phone_outbox_uri ();
+        gboolean have_phone = phone_uri != NULL;
 
         if (phone_uri != NULL) {
             g_free (sidebar->phone_uri);
@@ -964,6 +965,24 @@ update_places (NolphinPlacesSidebar *sidebar)
                                    _("Bilder und Dateien mit dem Handy austauschen. Dateien hierher ziehen, um sie aufs Handy zu schicken."), 0, FALSE,
                                    cat_iter);
             g_free (phone_uri);
+        }
+        /* Direkt darunter der Eingangsordner ~/Handy/Vom Handy: dorthin kommt alles, was vom Handy gesendet wird */
+        {
+            gchar *inbox = nolphin_phone_inbox_path ();
+            gchar *inbox_uri = g_filename_to_uri (inbox, NULL, NULL);
+            const gchar *inbox_icon = gtk_icon_theme_has_icon (theme, "folder-download-symbolic") ? "folder-download-symbolic" :
+                                      "folder-symbolic";
+
+            if (have_phone && inbox_uri != NULL) {
+                cat_iter = add_place (sidebar, PLACES_BUILT_IN,
+                                       SECTION_COMPUTER,
+                                       _("Vom Handy"), inbox_icon,
+                                       inbox_uri, NULL, NULL, NULL, 0,
+                                       _("Dateien, Fotos und Ordner, die vom Handy gesendet wurden."), 0, FALSE,
+                                       cat_iter);
+            }
+            g_free (inbox_uri);
+            g_free (inbox);
         }
     }
 

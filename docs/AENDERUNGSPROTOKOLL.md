@@ -182,3 +182,10 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - ÄNDERUNG: Der App-Quelltext liegt nur noch im Projekt `nolphin-handy` (GitHub kaysiebke-cell/nolphin-handy). Der PC-Teil (`nolphin-phone*.c/.h`) bleibt hier. Der Build installiert die APK weiter mit, wenn `../nolphin-handy/build/nolphin-handy.apk` vorhanden ist.
 - WARUM: Zwei Kopien des App-Codes liefen auseinander.
 - TEST: `meson setup` in einem frischen Ordner (Konfiguration ohne Fehler). Kein vollständiger Build und keine Tests ausgeführt.
+
+## Seitenleiste: Eintrag „Vom Handy“
+- REQUIREMENT: Klare Ordner für den Handy-Austausch, ohne mehrere Ordner mit verschiedenen Namen.
+- DATEI: `src/nolphin-places-sidebar.c`.
+- ÄNDERUNG: Unter „Handy“ (`~/Handy`, Dateien fürs Handy) gibt es einen zweiten Eintrag „Vom Handy“ (`~/Handy/Vom Handy`, alles, was vom Handy gesendet wird). Der alte, leere Ordner `~/Handy-Eingang` wird nicht benutzt.
+- WARUM: Der Eingangsordner lag nur als Unterordner in „Handy“ und war nicht direkt auffindbar.
+- TEST: `meson test` (26 von 26). Die Seitenleiste selbst nach der Installation nicht angesehen.
