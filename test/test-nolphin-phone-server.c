@@ -238,6 +238,31 @@ run_tests (gpointer unused)
 		g_free (link);
 	}
 
+	/* Persönlicher Ordner (r=home): eigener Testordner statt des echten ~ */
+	{
+		gchar *home = g_build_filename (root, "heim", NULL);
+		gchar *bilder = g_build_filename (home, "Bilder", NULL);
+		gchar *foto = g_build_filename (bilder, "foto.jpg", NULL);
+		gchar *secret = g_build_filename (home, ".ssh", NULL);
+		gchar *key = g_build_filename (secret, "id_test", NULL);
+		gchar *hlink = g_build_filename (home, "etc-link", NULL);
+		gchar *flink = g_build_filename (bilder, "pw-link", NULL);
+
+		g_mkdir_with_parents (bilder, 0755);
+		g_mkdir_with_parents (secret, 0755);
+		g_file_set_contents (foto, "bilddaten", -1, NULL);
+		g_file_set_contents (key, "privater-schluessel", -1, NULL);
+		check (symlink ("/etc", hlink) == 0 && symlink ("/etc/passwd", flink) == 0, "Testvorbereitung: Symlinks im persönlichen Ordner");
+		g_setenv ("NOLPHIN_PHONE_HOME", home, TRUE);
+		g_free (home);
+		g_free (bilder);
+		g_free (foto);
+		g_free (secret);
+		g_free (key);
+		g_free (hlink);
+		g_free (flink);
+	}
+
 	check (nolphin_phone_server_start ("kein-ip", inbox_file, NULL, NULL, NULL, NULL, NULL, &error) == NULL && error != NULL,
 	       "ungültige Adresse wird abgelehnt");
 	g_clear_error (&error);
@@ -476,6 +501,68 @@ run_tests (gpointer unused)
 		g_free (target);
 	}
 
+	/* Persönlicher Ordner: nur mit Schlüssel, nur lesen, ohne Ausbruch, ohne Verstecktes */
+	r = get (port, "/dir?r=home");
+	check (status_of (r) == 403, "r=home ohne Schlüssel: 403");
+	g_free (r);
+	target = g_strdup_printf ("/dir?%s&r=home", token_q);
+	r = get (port, target);
+	check (status_of (r) == 200 && strstr (r, "\"n\":\"Bilder\"") != NULL && strstr (r, ".ssh") == NULL &&
+	       strstr (r, "etc-link") == NULL, "r=home: Standardordner sichtbar, ohne versteckte Ordner und Symlinks");
+	g_free (r);
+	g_free (target);
+	target = g_strdup_printf ("/dir?%s&r=home&p=Bilder", token_q);
+	r = get (port, target);
+	check (status_of (r) == 200 && strstr (r, "foto.jpg") != NULL && strstr (r, "pw-link") == NULL, "r=home: Inhalt von Bilder");
+	g_free (r);
+	g_free (target);
+	target = g_strdup_printf ("/dl?%s&r=home&p=Bilder&n=foto.jpg", token_q);
+	r = get (port, target);
+	check (status_of (r) == 200 && g_str_has_suffix (r, "bilddaten") && strstr (r, "attachment") != NULL, "r=home: Download einer Datei");
+	g_free (r);
+	g_free (target);
+	{
+		const gchar *bad_dir[] = { "..", "..%2F..", "etc-link", ".ssh", "%2Fetc", "Bilder%2F..%2F..", NULL };
+		const gchar *bad_roots[] = { "etc", "%2F", "..", "HOME", NULL };
+
+		for (i = 0; bad_dir[i] != NULL; i++) {
+			gchar *msg = g_strdup_printf ("r=home mit p='%s' wird abgelehnt (404)", bad_dir[i]);
+
+			target = g_strdup_printf ("/dir?%s&r=home&p=%s", token_q, bad_dir[i]);
+			r = get (port, target);
+			check (status_of (r) == 404 && strstr (r, "passwd") == NULL && strstr (r, "id_test") == NULL, msg);
+			g_free (r);
+			g_free (target);
+			g_free (msg);
+		}
+		for (i = 0; bad_roots[i] != NULL; i++) {
+			gchar *msg = g_strdup_printf ("unbekannte Wurzel r='%s' wird abgelehnt (404)", bad_roots[i]);
+
+			target = g_strdup_printf ("/dir?%s&r=%s", token_q, bad_roots[i]);
+			r = get (port, target);
+			check (status_of (r) == 404, msg);
+			g_free (r);
+			g_free (target);
+			g_free (msg);
+		}
+		{
+			const gchar *bad_dl[] = { "&p=.ssh&n=id_test", "&p=Bilder&n=pw-link", "&p=etc-link&n=passwd", "&n=..%2F.ssh%2Fid_test", NULL };
+
+			for (i = 0; bad_dl[i] != NULL; i++) {
+				gchar *msg = g_strdup_printf ("/dl r=home%s wird abgelehnt (404)", bad_dl[i]);
+
+				target = g_strdup_printf ("/dl?%s&r=home%s", token_q, bad_dl[i]);
+				r = get (port, target);
+				check (status_of (r) == 404 && strstr (r, "root:") == NULL && strstr (r, "privater") == NULL, msg);
+				g_free (r);
+				g_free (target);
+				g_free (msg);
+			}
+		}
+	}
+	target = g_strdup_printf ("/dir?%s&r=home&p=Bilder", token_q);
+	g_free (target);
+
 	/* Wartepunkt der App: sofort mit Stand, bei bekanntem Stand erst bei Änderung */
 	{
 		gchar *version, *q;
@@ -532,7 +619,7 @@ run_tests (gpointer unused)
 	target = g_strdup_printf ("/info?%s", token_q);
 	r = get (port, target);
 	check (status_of (r) == 200 && strstr (r, "\"app\":\"nolphin\"") != NULL && strstr (r, "\"api\":1") != NULL &&
-	       strstr (r, "\"expires\":") != NULL && strstr (r, "\"share\":true") != NULL, "info: App, API-Version, Ablauf");
+	       strstr (r, "\"expires\":") != NULL && strstr (r, "\"share\":true") != NULL && strstr (r, "\"home\":true") != NULL, "info: App, API-Version, Ablauf, persönlicher Ordner");
 	g_free (r);
 	g_free (target);
 	r = get (port, "/info?t=falsch");

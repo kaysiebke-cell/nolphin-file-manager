@@ -175,3 +175,10 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 
 ## Entfernt
 - `src/nolphin-properties-window.{c,h}` (Eigenschaften laufen im Panel).
+
+## Handy-App in eigenes Projekt ausgelagert
+- REQUIREMENT: Handy-App und Dateimanager getrennt halten; hier nur das Nötigste.
+- DATEI: `android/` (entfernt), `docs/meson.build`, `docs/bauen-und-installieren.md`, `docs/DEPENDENCIES.md`, `README.md`.
+- ÄNDERUNG: Der App-Quelltext liegt nur noch im Projekt `nolphin-handy` (GitHub kaysiebke-cell/nolphin-handy). Der PC-Teil (`nolphin-phone*.c/.h`) bleibt hier. Der Build installiert die APK weiter mit, wenn `../nolphin-handy/build/nolphin-handy.apk` vorhanden ist.
+- WARUM: Zwei Kopien des App-Codes liefen auseinander.
+- TEST: `meson setup` in einem frischen Ordner (Konfiguration ohne Fehler). Kein vollständiger Build und keine Tests ausgeführt.

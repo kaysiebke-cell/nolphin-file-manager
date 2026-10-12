@@ -23,10 +23,10 @@ Stand: 11.10.2026. Alles in der Spalte „Beleg“ wurde geprüft; Nicht-Geprüf
 | GET | `/` | Seite für den Handy-Browser |
 | GET | `/info` | Name, Version der Schnittstelle, Ablauf, Größtgröße |
 | GET | `/ls` | flache Dateiliste von `~/Handy` |
-| GET | `/dir?p=` | Ordner und Dateien eines Unterordners (neu) |
+| GET | `/dir?r=&p=` | Ordner und Dateien eines Unterordners; `r=home` = persönlicher Ordner |
 | GET | `/wait` | Wartepunkt der App (Long-Poll, 20 s) |
 | GET | `/apk` | Handy-App zum Aktualisieren |
-| GET | `/dl?n=&p=` | Datei herunterladen, `p` optional (Unterordner, neu) |
+| GET | `/dl?r=&n=&p=` | Datei herunterladen, `p` optional (Unterordner), `r=home` = persönlicher Ordner |
 | POST | `/up?n=` | Datei hochladen, Ziel `~/Handy/Vom Handy` |
 
 Jede Anfrage braucht den Schlüssel `t`. Details in [handy-austausch-api.md](handy-austausch-api.md).

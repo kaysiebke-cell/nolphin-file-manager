@@ -40,6 +40,7 @@ struct _NolphinPhoneServer {
 	guint16                  port;
 	gchar                   *inbox_path;
 	gchar                   *share_path;
+	gchar                   *home_path;  /* persönlicher Ordner, abrufbar mit r=home (nur lesen) */
 	NolphinPhoneReceivedFunc received;
 	gpointer                 user_data;
 	GDestroyNotify           user_data_free;
@@ -71,6 +72,7 @@ server_free (gpointer data)
 	g_mutex_clear (&s->lock);
 	g_free (s->inbox_path);
 	g_free (s->share_path);
+	g_free (s->home_path);
 	g_free (s);
 }
 
@@ -540,7 +542,7 @@ compare_names (gconstpointer a, gconstpointer b)
 static void
 handle_info (NolphinPhoneServer *s, GOutputStream *out)
 {
-	GString *json = g_string_new ("{\"app\":\"nolphin\",\"api\":1,\"name\":");
+	GString *json = g_string_new ("{\"app\":\"nolphin\",\"api\":1,\"home\":true,\"name\":");
 	gint64 expires;
 
 	json_append_string (json, g_get_host_name () != NULL ? g_get_host_name () : "");
@@ -608,20 +610,20 @@ handle_list (NolphinPhoneServer *s, GOutputStream *out)
 	g_string_free (json, TRUE);
 }
 
-/* Löst einen Unterordner (relativ zum Ausgangsordner, mit "/" getrennt) auf. Erlaubt sind nur
+/* Löst einen Unterordner (relativ zu @base, mit "/" getrennt) auf. Erlaubt sind nur
  * normale Namen (keine "..", keine versteckten Namen) und echte Ordner (keine Verknüpfungen),
- * damit die App nie aus dem Ausgangsordner hinauskommt. Gibt NULL zurück, wenn der Weg nicht gilt. */
+ * damit die App nie aus @base hinauskommt. Gibt NULL zurück, wenn der Weg nicht gilt. */
 static gchar *
-resolve_subdir (NolphinPhoneServer *s, const gchar *rel)
+resolve_in (const gchar *base, const gchar *rel)
 {
 	gchar **parts;
 	gchar *path;
 	gint i;
 
-	if (s->share_path == NULL) {
+	if (base == NULL) {
 		return NULL;
 	}
-	path = g_strdup (s->share_path);
+	path = g_strdup (base);
 	if (rel == NULL || rel[0] == '\0') {
 		return path;
 	}
@@ -655,12 +657,29 @@ resolve_subdir (NolphinPhoneServer *s, const gchar *rel)
 	return path;
 }
 
-/* GET /dir?p=<Unterordner>: Ordner und Dateien eines Unterordners für die Ordneransicht der App.
+/* Wurzel einer Anfrage: ohne "r" der Ausgangsordner („Zum Handy“), mit r=home der persönliche Ordner.
+ * Jeder andere Wert gilt nicht (NULL). Das Ergebnis gehört dem Aufrufer. */
+static gchar *
+request_base (NolphinPhoneServer *s, const Request *r)
+{
+	const gchar *root = g_hash_table_lookup (r->query, "r");
+
+	if (root == NULL || root[0] == '\0') {
+		return g_strdup (s->share_path);
+	}
+	if (strcmp (root, "home") == 0) {
+		return g_strdup (s->home_path);
+	}
+	return NULL;
+}
+
+/* GET /dir?r=<home>&p=<Unterordner>: Ordner und Dateien eines Unterordners für die Ordneransicht der App.
  * Antwort: {"dirs":[{"n":"Name"}],"files":[{"n":"Name","s":Größe}]}. */
 static void
 handle_dir (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 {
-	gchar *dirpath = resolve_subdir (s, g_hash_table_lookup (r->query, "p"));
+	gchar *base = request_base (s, r);
+	gchar *dirpath = resolve_in (base, g_hash_table_lookup (r->query, "p"));
 	GString *dirs = g_string_new (NULL);
 	GString *files = g_string_new (NULL);
 	GPtrArray *names = g_ptr_array_new_with_free_func (g_free);
@@ -712,6 +731,7 @@ handle_dir (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 		g_free (body);
 	}
 out:
+	g_free (base);
 	g_free (dirpath);
 	g_ptr_array_free (names, TRUE);
 	g_string_free (dirs, TRUE);
@@ -859,7 +879,12 @@ handle_download (NolphinPhoneServer *s, const Request *r, GOutputStream *out)
 	}
 	g_free (safe);
 	/* Optional "p": Unterordner, aus dem die Datei kommt (Ordneransicht der App) */
-	base = resolve_subdir (s, g_hash_table_lookup (r->query, "p"));
+	{
+		gchar *root = request_base (s, r);
+
+		base = resolve_in (root, g_hash_table_lookup (r->query, "p"));
+		g_free (root);
+	}
 	if (base == NULL) {
 		send_error (out, 404, "Not Found", _("Nicht gefunden."));
 		return;
@@ -1182,6 +1207,8 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 	s->expires = resumed ? options->resume_expires : g_get_real_time () / G_USEC_PER_SEC + s->lifetime;
 	s->inbox_path = inbox_path;
 	s->share_path = share_path;
+	/* NOLPHIN_PHONE_HOME nur für Tests */
+	s->home_path = g_strdup (g_getenv ("NOLPHIN_PHONE_HOME") != NULL ? g_getenv ("NOLPHIN_PHONE_HOME") : g_get_home_dir ());
 	s->received = received;
 	s->user_data = user_data;
 	s->user_data_free = user_data_free;

@@ -74,6 +74,10 @@ Die App schickt den zuletzt erhaltenen `v` mit. Jede Anfrage zählt als Aktivit�
 
 Lädt eine Datei aus dem Ausgangsordner. `n` ist der Dateiname, prozentkodiert (UTF-8). Antwort `200` mit `Content-Length`, `Content-Type: application/octet-stream` und `Content-Disposition: attachment`. Der Name muss **genau** so im Ordner stehen (keine Pfade, keine Änderung durch die Bereinigung, nicht mit Punkt beginnend), sonst `404`. Verknüpfungen und Nicht-Dateien liefern `404`. Der Inhalt wird in Stücken von 64 KiB gesendet, nicht im Ganzen geladen.
 
+### `GET /dir?t=…&r=home&p=<Unterordner>` und `GET /dl?t=…&r=home&p=<Unterordner>&n=<Name>` (persönlicher Ordner)
+
+Mit `r=home` gelten `/dir` und `/dl` für den **persönlichen Ordner** (`~`, für Tests `NOLPHIN_PHONE_HOME`) statt für „Zum Handy“, nur lesend. Ohne `r` bleibt alles wie bisher. Jeder andere Wert von `r` liefert `404`. Es gelten dieselben Schutzregeln wie für den Ausgangsordner: Schlüssel, privates Netz, nur Namen ohne `..` und ohne führenden Punkt (versteckte Dateien und Ordner wie `.ssh` sind weder sichtbar noch ladbar), nur echte Ordner und normale Dateien, keine Symbolischen Verknüpfungen (`O_NOFOLLOW`). `GET /info` meldet die Fähigkeit mit `"home":true`; Apps prüfen das, weil ältere Versionen `r` ignorieren würden.
+
 ### `POST /up?t=…&n=<Name>`
 
 Lädt eine Datei in den Eingangsordner „Vom Handy“ hoch. Der Körper sind die Rohdaten der Datei, `Content-Length` ist Pflicht.
