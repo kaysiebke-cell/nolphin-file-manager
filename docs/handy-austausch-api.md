@@ -49,7 +49,7 @@ Der Server erzwingt den Ablauf unabhängig davon (siehe `403`). Der Link darf h�
 Prüft Schlüssel und Gegenstelle.
 
 ```json
-{"app":"nolphin","api":1,"name":"kaysiebke-ThinkPad","expires":1791769130,"maxUpload":2147483648,"share":true}
+{"app":"nolphin","api":1,"name":"mein-laptop","expires":1700000000,"maxUpload":2147483648,"share":true}
 ```
 
 `api` ist die Version der Schnittstelle (hier 1), `expires` die Ablaufzeit des Schlüssels, `maxUpload` die größte erlaubte Datei in Bytes, `share` sagt, ob ein Ausgangsordner (`~/Handy`) vorhanden ist, `folders`, ob `/up` das Feld `d` (Unterordner) versteht.
@@ -136,7 +136,7 @@ Kopfzeilen 16 KiB, 30 s Zeitgrenze je Verbindung, 8 gleichzeitige Arbeitsthreads
 ## Beispiele
 
 ```bash
-URL='http://192.168.178.20:43913'; T='4d6d1633ec8ca225aaeb5ddfbc5a1b6d'
+URL='http://192.168.1.10:40000'; T='0123456789abcdef0123456789abcdef'
 curl "$URL/info?t=$T"                                   # Prüfen
 curl "$URL/ls?t=$T"                                     # Liste
 curl -o foto.jpg "$URL/dl?t=$T&n=foto.jpg"              # Laden

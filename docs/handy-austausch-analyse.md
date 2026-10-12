@@ -89,7 +89,7 @@ Die vorhandene Schnittstelle genügt für Dateiübertragungen in beide Richtunge
 Der Plan nennt als Beispiel ein JSON-Objekt. Der QR-Code enthält stattdessen einen **Link**, weil die Kamera des Handys einen Link öffnen kann: Beim ersten Scan landet man so auf der Seite von Nolphin, die die App zum Installieren anbietet. Ein JSON-Text würde von der Kamera nur als Text angezeigt. Die Felder sind dieselben wie im Vorschlag: Adresse, Port, Schlüssel, Ablaufzeit, dazu die Version.
 
 ```
-http://192.168.178.20:43913/?t=4d6d1633ec8ca225aaeb5ddfbc5a1b6d&v=1&e=1791769130
+http://192.168.1.10:40000/?t=0123456789abcdef0123456789abcdef&v=1&e=1700000000
 ```
 
 ## Verbindungsablauf

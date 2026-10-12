@@ -203,3 +203,10 @@ Unter TEST steht nur, was tatsächlich ausgeführt wurde: **Meson** = automatisc
 - ÄNDERUNG: Der Eintrag nennt jetzt Version 4.26 als optionale Erweiterung und trennt, was am echten Handy geprüft wurde, was nur am PC automatisch getestet ist und was nicht geprüft wurde.
 - WARUM: Die Angaben stammten aus dem Stand vom 11. Oktober 2026 und passten nicht mehr zur App.
 - TEST: Nur Dokumentation. Die Angaben beruhen auf den Läufen von `nolphin-handy/test.sh` und den Prüfungen am echten Handy vom 12. Oktober 2026.
+
+## Doku: echte Verbindungsdaten aus Beispielen entfernt
+- REQUIREMENT: In der öffentlichen Doku sollen keine echten Verbindungslinks, Schlüssel oder Rechnernamen stehen.
+- DATEI: `docs/handy-austausch-analyse.md`, `docs/handy-austausch-api.md`, `docs/bilder/panel-handy.png`.
+- ÄNDERUNG: Der Beispiel-Link (Adresse, Port, Schlüssel, Ablaufzeit), der Beispielbefehl und die Beispielantwort mit dem Rechnernamen sind durch erfundene Platzhalter ersetzt (`192.168.1.10:40000`, `0123456789abcdef…`, `mein-laptop`). Im Bild `panel-handy.png` ist der echte QR-Code durch einen erfundenen ersetzt (mit dem Nolphin-Encoder aus demselben Platzhalter-Link erzeugt, enthält nichts Echtes), und die Link-Zeile zeigt den Platzhalter.
+- WARUM: Die Werte stammten aus einer echten Sitzung vom 11. Oktober 2026. Der Schlüssel war nur für diese Sitzung gültig und ist abgelaufen, soll aber nicht öffentlich stehen. Frühere Stände bleiben in der Git-Geschichte.
+- TEST: Mit `grep` in der Doku nach der Adresse, dem Schlüssel und dem Rechnernamen gesucht: keine Treffer mehr. Das Bild wurde angesehen; der QR-Code entstand aus dem Platzhalter-Text und nicht aus der Sitzung. Der Quelltext enthält nur erfundene Testwerte.
