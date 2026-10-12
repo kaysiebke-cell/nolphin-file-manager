@@ -569,7 +569,7 @@ phone_start (PhonePage *d)
 	session_save (d->address, d->server);
 	phone_refresh_url (d);
 	gtk_label_set_text (GTK_LABEL (d->status),
-			    d->has_qr ? _("Läuft, verschlüsselt. QR-Code mit der Handy-Kamera oder in der Handy-App („QR-Code scannen“) scannen (gleiches WLAN).")
+			    d->has_qr ? _("Läuft, verschlüsselt. In der Handy-App „QR-Code scannen und verbinden“ wählen und den Code gerade scannen (gleiches WLAN). Zeigt die Kamera-App den Link nur als Text, „Text kopieren“ wählen und in der App „Link aus der Zwischenablage einfügen“.")
 				      : _("Läuft, verschlüsselt. Ein QR-Code ist nicht möglich: Kopiere den Link in die Handy-App."));
 	d->timeout_id = g_timeout_add_seconds (30, on_idle_check, d);
 	phone_update_ui (d);
@@ -688,7 +688,7 @@ nolphin_phone_page_new (NolphinWindow *window)
 	gtk_box_pack_start (GTK_BOX (outer), d->address_box, FALSE, FALSE, 0);
 
 	d->qr_area = gtk_drawing_area_new ();
-	gtk_widget_set_size_request (d->qr_area, 240, 240);
+	gtk_widget_set_size_request (d->qr_area, 320, 320);   /* 6 Bildpunkte je Feld bei Version 6: besser lesbar für die Kamera */
 	gtk_widget_set_halign (d->qr_area, GTK_ALIGN_CENTER);
 	g_signal_connect (d->qr_area, "draw", G_CALLBACK (on_qr_draw), d);
 	gtk_box_pack_start (GTK_BOX (outer), d->qr_area, FALSE, FALSE, 0);
