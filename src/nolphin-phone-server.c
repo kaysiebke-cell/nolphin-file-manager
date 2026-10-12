@@ -1,16 +1,18 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 8; tab-width: 8 -*- */
 /*
- * nolphin-phone-server.c: kleiner HTTP-Server für den Handy-Austausch
+ * nolphin-phone-server.c: kleiner HTTPS-Server für den Handy-Austausch
  *
- * Ablauf: Das Handy öffnet http://<PC>:<Port>/?t=<Schlüssel>. Die Seite
- * lädt Dateien per POST /up hoch und listet/lädt Dateien des Freigabe-
- * ordners über GET /ls und GET /dl. Jede Anfrage braucht den Schlüssel.
- * Verbindungen werden in Arbeitsthreads bearbeitet (GThreadedSocketService).
+ * Ablauf: Die Handy-App verbindet sich über TLS mit https://<PC>:<Port>/?t=<Schlüssel> und prüft dabei den
+ * Fingerabdruck des Zertifikats aus dem QR-Code. Sie lädt Dateien per POST /up hoch und listet/lädt Dateien
+ * des Freigabeordners über GET /ls, /dir und GET /dl. Jede Anfrage braucht den Schlüssel. Es gibt keinen
+ * unverschlüsselten Weg und keine Webseite für den Browser. Verbindungen werden in Arbeitsthreads
+ * bearbeitet (GThreadedSocketService).
  */
 
 #include <config.h>
 
 #include "nolphin-phone-server.h"
+#include "nolphin-phone-tls.h"
 
 #include <glib/gi18n.h>
 #include <glib/gstdio.h>
@@ -35,6 +37,11 @@ struct _NolphinPhoneServer {
 	GMutex                   lock;      /* schützt token und expires */
 	gchar                   *token;
 	gint64                   expires;   /* Unix-Zeit in Sekunden, ab der der Schlüssel nicht mehr gilt */
+	gchar                   *bind_address;  /* IPv4-Adresse, für die das Zertifikat gilt */
+	GTlsCertificate         *tls_cert;  /* geschützt durch lock; gehört zu cert_pem/key_pem */
+	gchar                   *cert_pem;
+	gchar                   *key_pem;
+	gchar                   *fingerprint;
 	gint64                   lifetime;  /* Gültigkeit eines Schlüssels in Sekunden */
 	goffset                  max_upload;/* größte angenommene Datei in Bytes */
 	guint16                  port;
@@ -69,6 +76,14 @@ server_free (gpointer data)
 		s->user_data_free (s->user_data);
 	}
 	g_free (s->token);
+	g_free (s->bind_address);
+	g_clear_object (&s->tls_cert);
+	g_free (s->cert_pem);
+	if (s->key_pem != NULL) {
+		memset (s->key_pem, 0, strlen (s->key_pem));   /* privaten Schlüssel nicht im Speicher liegen lassen */
+	}
+	g_free (s->key_pem);
+	g_free (s->fingerprint);
 	g_mutex_clear (&s->lock);
 	g_free (s->inbox_path);
 	g_free (s->share_path);
@@ -436,99 +451,6 @@ send_error (GOutputStream *out, gint status, const gchar *reason, const gchar *m
 static gchar *find_apk (void);
 
 /* --- Seite ------------------------------------------------------------------------ */
-
-#define PAGE_HTML \
-"<!doctype html><html><head><meta charset=\"utf-8\">" \
-"<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" \
-"<title>Nolphin</title><style>" \
-":root{color-scheme:light dark;font-family:system-ui,sans-serif}" \
-"body{margin:0 auto;padding:16px;max-width:640px}" \
-"h1{font-size:1.3rem}h2{font-size:1.05rem;margin-top:1.6rem}" \
-"label.btn{display:inline-block;padding:12px 18px;border-radius:10px;background:#2b7de9;color:#fff;font-size:1rem}" \
-"ul{list-style:none;padding:0}li{padding:8px 0;border-bottom:1px solid #8884;word-break:break-all}" \
-".ok{color:#2a9d3f}.err{color:#d33}" \
-"</style></head>" \
-"<body data-done=\"@@DONE@@\" data-failed=\"@@FAILED@@\" data-nofiles=\"@@NOFILES@@\" data-share=\"@@SHARE@@\" data-apk=\"@@APK@@\">" \
-"<h1>Nolphin</h1>" \
-"<h2>@@UPLOAD@@</h2>" \
-"<p><label class=\"btn\">@@CHOOSE@@<input id=\"f\" type=\"file\" multiple hidden></label></p>" \
-"<ul id=\"up\"></ul>" \
-"<div id=\"appbox\" hidden><h2>@@APPTITLE@@</h2><p><a id=\"appc\">@@APPCONNECT@@</a></p><p><a id=\"appg\">@@APPGET@@</a></p><p><a id=\"appstay\" href=\"#\">@@APPSTAY@@</a></p></div>" \
-"<div id=\"dlbox\"><h2>@@DOWNLOAD@@</h2><ul id=\"dl\"></ul></div>" \
-"<script>" \
-"(function(){" \
-"var T=new URLSearchParams(location.search).get('t')||'',d=document.body.dataset,q=encodeURIComponent(T);" \
-"function add(ul,text){var e=document.createElement('li');e.textContent=text;ul.appendChild(e);return e;}" \
-"function size(n){return n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';}" \
-"function send(file,done){" \
-"var row=add(document.getElementById('up'),file.name+' …'),x=new XMLHttpRequest();" \
-"x.open('POST','/up?t='+q+'&n='+encodeURIComponent(file.name));" \
-"x.upload.onprogress=function(e){if(e.lengthComputable)row.textContent=file.name+' '+Math.round(e.loaded*100/e.total)+' %';};" \
-"x.onload=function(){if(x.status==200){row.textContent=file.name+' – '+d.done;row.className='ok';}" \
-"else{row.textContent=file.name+' – '+d.failed+' ('+x.status+')';row.className='err';}done();};" \
-"x.onerror=function(){row.textContent=file.name+' – '+d.failed;row.className='err';done();};" \
-"x.send(file);}" \
-"if(d.apk==='1'){var box=document.getElementById('appbox');box.hidden=false;" \
-"var apk=location.protocol+'//'+location.host+'/apk?t='+q;" \
-"var go='intent://connect?host='+encodeURIComponent(location.host)+'&t='+q+" \
-"'#Intent;scheme=nolphin;package=org.nolphin.handy;S.browser_fallback_url='+encodeURIComponent(apk)+';end';" \
-"document.getElementById('appc').href=go;document.getElementById('appg').href=apk;" \
-"var stay=false;try{stay=localStorage.getItem('nolphin-browser')==='1';}catch(e){}" \
-"document.getElementById('appstay').onclick=function(){try{localStorage.setItem('nolphin-browser','1');}catch(e){}" \
-"box.hidden=true;return false;};" \
-"if(!stay)setTimeout(function(){location.href=go;},400);}" \
-"function list(){if(d.share!=='1'){document.getElementById('dlbox').hidden=true;return;}" \
-"fetch('/ls?t='+q).then(function(r){return r.json();}).then(function(items){" \
-"var ul=document.getElementById('dl'),sig=JSON.stringify(items);if(ul.dataset.sig===sig)return;ul.dataset.sig=sig;ul.textContent='';" \
-"if(!items.length)add(ul,d.nofiles);" \
-"items.forEach(function(f){var e=add(ul,'');var a=document.createElement('a');" \
-"a.href='/dl?t='+q+'&n='+encodeURIComponent(f.n);a.textContent=f.n+' ('+size(f.s)+')';e.appendChild(a);});" \
-"}).catch(function(){});}" \
-"document.getElementById('f').onchange=function(){var files=Array.prototype.slice.call(this.files),i=0;this.value='';" \
-"(function next(){if(i<files.length)send(files[i++],next);})();};" \
-"list();setInterval(list,4000);})();" \
-"</script></body></html>"
-
-static gchar *
-replace_all (gchar *text, const gchar *key, const gchar *plain)
-{
-	gchar *escaped = g_markup_escape_text (plain, -1);
-	gchar **parts = g_strsplit (text, key, -1);
-	gchar *joined = g_strjoinv (escaped, parts);
-
-	g_strfreev (parts);
-	g_free (escaped);
-	g_free (text);
-	return joined;
-}
-
-static void
-handle_index (NolphinPhoneServer *s, GOutputStream *out)
-{
-	gchar *html = g_strdup (PAGE_HTML);
-	const gchar *csp = "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; "
-			   "script-src 'unsafe-inline'; connect-src 'self'\r\n";
-
-	html = replace_all (html, "@@DONE@@", _("fertig"));
-	html = replace_all (html, "@@FAILED@@", _("fehlgeschlagen"));
-	html = replace_all (html, "@@NOFILES@@", _("Keine Dateien freigegeben."));
-	html = replace_all (html, "@@SHARE@@", s->share_path != NULL ? "1" : "0");
-	html = replace_all (html, "@@UPLOAD@@", _("An den PC senden"));
-	html = replace_all (html, "@@CHOOSE@@", _("Dateien auswählen …"));
-	html = replace_all (html, "@@DOWNLOAD@@", _("Vom PC laden"));
-	{
-		gchar *apk = find_apk ();
-
-		html = replace_all (html, "@@APK@@", apk != NULL ? "1" : "0");
-		g_free (apk);
-	}
-	html = replace_all (html, "@@APPTITLE@@", _("Nolphin-Handy-App (optional)"));
-	html = replace_all (html, "@@APPCONNECT@@", _("Mit der App verbinden"));
-	html = replace_all (html, "@@APPGET@@", _("App herunterladen"));
-	html = replace_all (html, "@@APPSTAY@@", _("Im Browser bleiben"));
-	send_text (out, 200, "OK", "text/html; charset=utf-8", html, csp);
-	g_free (html);
-}
 
 /* --- Liste und Download ---------------------------------------------------------- */
 
@@ -1184,8 +1106,10 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 {
 	NolphinPhoneServer *s = data;
 	GSocket *socket = g_socket_connection_get_socket (connection);
-	GInputStream *in = g_io_stream_get_input_stream (G_IO_STREAM (connection));
-	GOutputStream *out = g_io_stream_get_output_stream (G_IO_STREAM (connection));
+	GTlsCertificate *cert;
+	GIOStream *tls;
+	GInputStream *in;
+	GOutputStream *out;
 	gchar *buf;
 	gsize have = 0, head_len = 0;
 	Request req = { 0 };
@@ -1195,6 +1119,22 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 		return TRUE;
 	}
 	g_socket_set_timeout (socket, IO_TIMEOUT_SECONDS);
+
+	/* Alles läuft verschlüsselt. Wer kein TLS spricht, bekommt keine Klartext-Antwort. */
+	g_mutex_lock (&s->lock);
+	cert = s->tls_cert != NULL ? g_object_ref (s->tls_cert) : NULL;
+	g_mutex_unlock (&s->lock);
+	if (cert == NULL) {
+		return TRUE;
+	}
+	tls = g_tls_server_connection_new (G_IO_STREAM (connection), cert, NULL);
+	g_object_unref (cert);
+	if (tls == NULL) {
+		return TRUE;
+	}
+	g_tls_connection_set_require_close_notify (G_TLS_CONNECTION (tls), FALSE);
+	in = g_io_stream_get_input_stream (tls);
+	out = g_io_stream_get_output_stream (tls);
 
 	buf = g_malloc (HEADER_MAX + 1);
 	if (!read_head (in, buf, &have, &head_len) || !parse_request (buf, head_len, &req)) {
@@ -1214,9 +1154,7 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 	}
 	touch_activity (s);
 
-	if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/") == 0) {
-		handle_index (s, out);
-	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/info") == 0) {
+	if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/info") == 0) {
 		handle_info (s, out);
 	} else if (strcmp (req.method, "GET") == 0 && strcmp (req.path, "/ls") == 0) {
 		handle_list (s, out);
@@ -1238,8 +1176,22 @@ on_run (GThreadedSocketService *service G_GNUC_UNUSED, GSocketConnection *connec
 done:
 	request_clear (&req);
 	g_free (buf);
+	g_io_stream_close (tls, NULL, NULL);
+	g_object_unref (tls);
 	g_io_stream_close (G_IO_STREAM (connection), NULL, NULL);
 	return TRUE;
+}
+
+/* Baut aus Zertifikat und Schlüssel (PEM) ein GTlsCertificate. */
+static GTlsCertificate *
+load_certificate (const gchar *cert_pem, const gchar *key_pem, GError **error)
+{
+	gchar *both = g_strconcat (cert_pem, "\n", key_pem, NULL);
+	GTlsCertificate *c = g_tls_certificate_new_from_pem (both, -1, error);
+
+	memset (both, 0, strlen (both));
+	g_free (both);
+	return c;
 }
 
 /* --- Öffentliche Funktionen -------------------------------------------------------- */
@@ -1253,6 +1205,8 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 	GInetAddress *inet;
 	GSocketAddress *address, *effective = NULL;
 	gchar *inbox_path, *share_path = NULL, *token;
+	gchar *cert_pem = NULL, *key_pem = NULL;
+	GTlsCertificate *tls_cert = NULL;
 	gboolean resumed;
 
 	g_return_val_if_fail (bind_address != NULL && inbox != NULL, NULL);
@@ -1279,14 +1233,6 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 		g_free (share_path);
 		return NULL;
 	}
-	resumed = options != NULL && options->resume_token != NULL && is_token (options->resume_token)
-		  && options->resume_expires > g_get_real_time () / G_USEC_PER_SEC + 60;
-	token = resumed ? g_strdup (options->resume_token) : make_token (error);
-	if (token == NULL) {
-		g_free (inbox_path);
-		g_free (share_path);
-		return NULL;
-	}
 	inet = g_inet_address_new_from_string (bind_address);
 	if (inet == NULL || g_inet_address_get_family (inet) != G_SOCKET_FAMILY_IPV4) {
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
@@ -1294,7 +1240,53 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 		g_clear_object (&inet);
 		g_free (inbox_path);
 		g_free (share_path);
-		g_free (token);
+		return NULL;
+	}
+	if (!nolphin_phone_tls_available (error)) {
+		g_object_unref (inet);
+		g_free (inbox_path);
+		g_free (share_path);
+		return NULL;
+	}
+	/* Gemerkte Sitzung weiterverwenden: Schlüssel UND Zertifikat müssen zusammen vorhanden und gültig sein,
+	 * sonst gibt es beides neu (der Fingerabdruck im QR-Code gehört zum Zertifikat). */
+	resumed = options != NULL && options->resume_token != NULL && is_token (options->resume_token)
+		  && options->resume_expires > g_get_real_time () / G_USEC_PER_SEC + 60
+		  && options->resume_cert_pem != NULL && options->resume_key_pem != NULL;
+	if (resumed) {
+		tls_cert = load_certificate (options->resume_cert_pem, options->resume_key_pem, NULL);
+		if (tls_cert != NULL) {
+			cert_pem = g_strdup (options->resume_cert_pem);
+			key_pem = g_strdup (options->resume_key_pem);
+		} else {
+			resumed = FALSE;
+		}
+	}
+	if (tls_cert == NULL) {
+		if (!nolphin_phone_tls_generate (bind_address, &cert_pem, &key_pem, error)) {
+			g_object_unref (inet);
+			g_free (inbox_path);
+			g_free (share_path);
+			return NULL;
+		}
+		tls_cert = load_certificate (cert_pem, key_pem, error);
+		if (tls_cert == NULL) {
+			g_object_unref (inet);
+			g_free (inbox_path);
+			g_free (share_path);
+			g_free (cert_pem);
+			g_free (key_pem);
+			return NULL;
+		}
+	}
+	token = resumed ? g_strdup (options->resume_token) : make_token (error);
+	if (token == NULL) {
+		g_object_unref (inet);
+		g_object_unref (tls_cert);
+		g_free (cert_pem);
+		g_free (key_pem);
+		g_free (inbox_path);
+		g_free (share_path);
 		return NULL;
 	}
 
@@ -1303,6 +1295,11 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 	s->lifetime = options != NULL && options->token_lifetime > 0 ? options->token_lifetime : token_lifetime_default ();
 	s->max_upload = options != NULL && options->max_upload > 0 ? options->max_upload : NOLPHIN_PHONE_MAX_UPLOAD;
 	s->token = token;
+	s->bind_address = g_strdup (bind_address);
+	s->tls_cert = tls_cert;
+	s->cert_pem = cert_pem;
+	s->key_pem = key_pem;
+	s->fingerprint = nolphin_phone_tls_fingerprint (tls_cert);
 	s->expires = resumed ? options->resume_expires : g_get_real_time () / G_USEC_PER_SEC + s->lifetime;
 	s->inbox_path = inbox_path;
 	s->share_path = share_path;
@@ -1372,16 +1369,78 @@ gboolean
 nolphin_phone_server_rotate_token (NolphinPhoneServer *server, GError **error)
 {
 	gchar *fresh = make_token (error);
+	gchar *cert_pem = NULL, *key_pem = NULL, *old_key, *old_cert, *fp;
+	GTlsCertificate *cert, *old;
 
 	if (fresh == NULL) {
 		return FALSE;
 	}
+	/* Mit dem Schlüssel wechselt auch das Zertifikat: ein alter QR-Code ist damit in jeder Hinsicht wertlos. */
+	if (!nolphin_phone_tls_generate (server->bind_address, &cert_pem, &key_pem, error)) {
+		g_free (fresh);
+		return FALSE;
+	}
+	cert = load_certificate (cert_pem, key_pem, error);
+	if (cert == NULL) {
+		g_free (fresh);
+		g_free (cert_pem);
+		g_free (key_pem);
+		return FALSE;
+	}
+	fp = nolphin_phone_tls_fingerprint (cert);
 	g_mutex_lock (&server->lock);
 	g_free (server->token);
 	server->token = fresh;
 	server->expires = g_get_real_time () / G_USEC_PER_SEC + server->lifetime;
+	old = server->tls_cert;
+	old_cert = server->cert_pem;
+	old_key = server->key_pem;
+	g_free (server->fingerprint);
+	server->tls_cert = cert;
+	server->cert_pem = cert_pem;
+	server->key_pem = key_pem;
+	server->fingerprint = fp;
 	g_mutex_unlock (&server->lock);
+	g_clear_object (&old);
+	g_free (old_cert);
+	if (old_key != NULL) {
+		memset (old_key, 0, strlen (old_key));
+	}
+	g_free (old_key);
 	return TRUE;
+}
+
+gchar *
+nolphin_phone_server_dup_fingerprint (NolphinPhoneServer *server)
+{
+	gchar *f;
+
+	g_mutex_lock (&server->lock);
+	f = g_strdup (server->fingerprint);
+	g_mutex_unlock (&server->lock);
+	return f;
+}
+
+gchar *
+nolphin_phone_server_dup_certificate_pem (NolphinPhoneServer *server)
+{
+	gchar *c;
+
+	g_mutex_lock (&server->lock);
+	c = g_strdup (server->cert_pem);
+	g_mutex_unlock (&server->lock);
+	return c;
+}
+
+gchar *
+nolphin_phone_server_dup_key_pem (NolphinPhoneServer *server)
+{
+	gchar *k;
+
+	g_mutex_lock (&server->lock);
+	k = g_strdup (server->key_pem);
+	g_mutex_unlock (&server->lock);
+	return k;
 }
 
 gint64

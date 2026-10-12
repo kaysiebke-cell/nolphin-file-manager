@@ -196,7 +196,7 @@ test('GID projects test',
 
 test('Phone exchange test',
   executable('test-nolphin-phone-server',
-    [ 'test-nolphin-phone-server.c', '../src/nolphin-phone-server.c', '../src/nolphin-qr.c' ],
+    [ 'test-nolphin-phone-server.c', '../src/nolphin-phone-server.c', '../src/nolphin-phone-tls.c', '../src/nolphin-qr.c' ],
     include_directories: [ rootInclude, ],
     dependencies: [ gtk ],
     c_args: nolphin_definitions,

@@ -112,3 +112,22 @@ ALTERNATIVE OHNE NEUE ABHÄNGIGKEIT: nur der Weg über den Browser des Handys (o
 | Android SDK | kein Mint-Paket (vom Entwickler selbst installiert, `ANDROID_HOME`, Standard `~/Android/Sdk`) | `platforms/android-34/android.jar`, `build-tools` mit `aapt2`, `d8`, `zipalign`, `apksigner` |
 | Schlüsselbund-Werkzeug | `libsecret-tools` (`secret-tool`) | speichert das Passwort des Signaturschlüssels; `sudo apt install libsecret-tools` |
 | Testwerkzeuge | `gcc`, `libglib2.0-dev` | `nolphin-handy/test.sh` übersetzt den C-Encoder für die Testcodes |
+
+---
+
+## Handy-Austausch: openssl und TLS (zur Laufzeit)
+
+**Freigegeben am 12. Oktober 2026** (Entscheidung des Benutzers: `openssl` benutzen).
+
+NEUE ABHÄNGIGKEIT: das Programm `openssl` (Paket `openssl`) und die TLS-Unterstützung von GLib (Paket `glib-networking`, bei Cinnamon-Systemen ohnehin vorhanden)
+WOFÜR: Der Handy-Austausch läuft nur noch verschlüsselt. Nolphin erzeugt dafür pro Schlüssel ein eigenes, selbstsigniertes Zertifikat (EC P-256, gültig drei Tage) mit `openssl req -x509`; der Aufruf geht ohne Shell, mit festen Argumenten und einer geprüften IPv4-Adresse. Der Fingerabdruck steht im QR-Code, die Handy-App akzeptiert nur dieses Zertifikat.
+PFLICHT ODER OPTIONAL: Pflicht **nur für den Handy-Austausch**. Nolphin baut, startet und läuft ohne beides unverändert; ohne `openssl` oder ohne TLS-Unterstützung startet der Handy-Austausch nicht und nennt den Grund. Es gibt **keinen Rückfall auf unverschlüsselt**.
+OHNE SIE: kein Handy-Austausch
+ALTERNATIVE OHNE NEUE ABHÄNGIGKEIT: keine. GLib kann kein Zertifikat erzeugen. Die Alternative (GnuTLS-Bibliothek direkt) braucht ein Entwicklungspaket zum Bauen und mehr eigenen Code und wurde nicht gewählt.
+
+| Werkzeug | Paket | Bemerkung |
+|---|---|---|
+| Zertifikat erzeugen | `openssl` | Laufzeit, nur beim Start und beim Schlüsselwechsel des Handy-Austauschs |
+| TLS für GIO | `glib-networking` | Laufzeit; stellt `GTlsServerConnection` bereit |
+
+**Wo der private Schlüssel liegt:** Der Zertifikatsschlüssel entsteht in einem privaten Temporärordner (Rechte 0700) und wird sofort wieder gelöscht. Er lebt dann im Speicher des Servers und in `~/.config/nolphin/phone-session` (Rechte 0600, Ordner 0700), damit das Handy den PC nach einem Neustart von Nolphin ohne neuen QR-Code wiederfindet. „Beenden“ und „Neuen QR-Code erzeugen“ löschen oder ersetzen diese Datei.

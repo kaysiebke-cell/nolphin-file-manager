@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "../src/nolphin-phone-server.h"
+#include "../src/nolphin-phone-tls.h"
 #include "../src/nolphin-qr.h"
 
 static gint exit_code = 0;
@@ -35,28 +36,77 @@ on_received (const gchar *name, goffset size, gpointer data)
 	g_mutex_unlock (&received_lock);
 }
 
-/* Schickt @request (Kopf) und @body und gibt die komplette Antwort zurück. */
-static gchar *
-http (guint16 port, const gchar *head, const gchar *body, gsize body_len)
+/* Fingerabdrücke der laufenden Server (Port → Fingerabdruck), wie sie im QR-Code stehen würden. */
+static GHashTable *pins;
+
+static void
+remember_pin (NolphinPhoneServer *server)
+{
+	g_hash_table_insert (pins, GUINT_TO_POINTER ((guint) nolphin_phone_server_get_port (server)),
+			     nolphin_phone_server_dup_fingerprint (server));
+}
+
+/* Wie die App: nur das Zertifikat mit genau diesem Fingerabdruck wird angenommen. */
+static gboolean
+on_accept_certificate (GTlsConnection *conn G_GNUC_UNUSED, GTlsCertificate *peer,
+                       GTlsCertificateFlags errors G_GNUC_UNUSED, gpointer pin)
+{
+	gchar *fp = nolphin_phone_tls_fingerprint (peer);
+	gboolean ok = fp != NULL && g_strcmp0 (fp, (const gchar *) pin) == 0;
+
+	g_free (fp);
+	return ok;
+}
+
+/* Verschlüsselte Verbindung zum Server; NULL, wenn der Fingerabdruck nicht stimmt oder der Handshake scheitert.
+ * @pin NULL: der gemerkte Fingerabdruck des Servers an diesem Port. */
+static GIOStream *
+open_tls (guint16 port, const gchar *pin)
 {
 	GSocketClient *client = g_socket_client_new ();
 	GSocketConnection *conn;
-	GString *answer = g_string_new (NULL);
-	gchar buf[8192];
-	gssize n;
+	GIOStream *tls;
+	const gchar *use = pin != NULL ? pin : g_hash_table_lookup (pins, GUINT_TO_POINTER ((guint) port));
 
 	g_socket_client_set_timeout (client, 10);
 	conn = g_socket_client_connect_to_host (client, "127.0.0.1", port, NULL, NULL);
 	g_object_unref (client);
+	if (conn == NULL || use == NULL) {
+		g_clear_object (&conn);
+		return NULL;
+	}
+	tls = g_tls_client_connection_new (G_IO_STREAM (conn), NULL, NULL);
+	g_object_unref (conn);
+	if (tls == NULL) {
+		return NULL;
+	}
+	g_tls_connection_set_require_close_notify (G_TLS_CONNECTION (tls), FALSE);
+	g_signal_connect (tls, "accept-certificate", G_CALLBACK (on_accept_certificate), (gpointer) use);
+	if (!g_tls_connection_handshake (G_TLS_CONNECTION (tls), NULL, NULL)) {
+		g_object_unref (tls);
+		return NULL;
+	}
+	return tls;
+}
+
+/* Schickt @request (Kopf) und @body und gibt die komplette Antwort zurück (über TLS mit Pin). */
+static gchar *
+http (guint16 port, const gchar *head, const gchar *body, gsize body_len)
+{
+	GIOStream *conn = open_tls (port, NULL);
+	GString *answer = g_string_new (NULL);
+	gchar buf[8192];
+	gssize n;
+
 	if (conn == NULL) {
 		g_string_free (answer, TRUE);
 		return NULL;
 	}
-	g_output_stream_write_all (g_io_stream_get_output_stream (G_IO_STREAM (conn)), head, strlen (head), NULL, NULL, NULL);
+	g_output_stream_write_all (g_io_stream_get_output_stream (conn), head, strlen (head), NULL, NULL, NULL);
 	if (body_len > 0) {
-		g_output_stream_write_all (g_io_stream_get_output_stream (G_IO_STREAM (conn)), body, body_len, NULL, NULL, NULL);
+		g_output_stream_write_all (g_io_stream_get_output_stream (conn), body, body_len, NULL, NULL, NULL);
 	}
-	while ((n = g_input_stream_read (g_io_stream_get_input_stream (G_IO_STREAM (conn)), buf, sizeof buf, NULL, NULL)) > 0) {
+	while ((n = g_input_stream_read (g_io_stream_get_input_stream (conn), buf, sizeof buf, NULL, NULL)) > 0) {
 		g_string_append_len (answer, buf, n);
 	}
 	g_object_unref (conn);
@@ -182,6 +232,10 @@ test_qr (void)
 	       "qr: Suchmuster in den anderen Ecken");
 	check (nolphin_qr_encode ("http://192.168.178.20:45678/?t=0123456789abcdef0123456789abcdef", -1, &qr) && qr.size == 37,
 	       "qr: Verbindungslink ergibt Version 5");
+	check (nolphin_qr_encode ("https://192.168.178.255:65535/?t=0123456789abcdef0123456789abcdef&v=2&f=QULDtffIw8Ed6DmETVJ7zA", -1, &qr)
+	       && qr.size == 41, "qr: längster Verbindungslink (Version 2, 94 Zeichen) passt in Version 6");
+	check (!nolphin_qr_encode ("https://192.168.178.255:65535/?t=0123456789abcdef0123456789abcdef&v=2&f=QULDtffIw8Ed6DmETVJ7zA&e=1791769130", -1, &qr),
+	       "qr: mit Ablaufzeit (107 Zeichen) wäre der Link zu lang");
 	check (!nolphin_qr_encode (big, -1, &qr), "qr: zu langer Text wird abgelehnt");
 	g_free (big);
 }
@@ -209,6 +263,7 @@ run_tests (gpointer unused)
 	gsize i;
 
 	received_names = g_ptr_array_new_with_free_func (g_free);
+	pins = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_free);
 	test_sanitize ();
 	test_qr ();
 
@@ -275,6 +330,7 @@ run_tests (gpointer unused)
 		return NULL;
 	}
 	port = nolphin_phone_server_get_port (server);
+	remember_pin (server);
 	token_owned = nolphin_phone_server_dup_token (server);
 	token = token_owned;
 	check (port > 0 && strlen (token) == 32, "Port und Schlüssel vorhanden");
@@ -290,9 +346,7 @@ run_tests (gpointer unused)
 	g_free (r);
 	target = g_strdup_printf ("/?%s", token_q);
 	r = get (port, target);
-	check (status_of (r) == 200 && strstr (r, "<script>") != NULL && strstr (r, "@@") == NULL,
-	       "Startseite mit Schlüssel: 200, ohne offene Platzhalter");
-	check (strstr (r, "Content-Security-Policy") != NULL, "Startseite mit Content-Security-Policy");
+	check (status_of (r) == 404 && strstr (r, "<script>") == NULL, "keine Webseite für den Browser mehr: 404 auch mit Schlüssel");
 	g_free (r);
 	g_free (target);
 	r = post (port, "/up?t=falsch&n=x.txt", "x", 1);
@@ -307,6 +361,161 @@ run_tests (gpointer unused)
 	check (status_of (r) == 404, "unbekannter Pfad mit Schlüssel: 404");
 	g_free (r);
 	g_free (target);
+
+	/* Verschlüsselung */
+	{
+		gchar *fp = nolphin_phone_server_dup_fingerprint (server);
+		gchar *pem = nolphin_phone_server_dup_certificate_pem (server);
+		gchar *key = nolphin_phone_server_dup_key_pem (server);
+		GIOStream *wrong;
+		gsize k;
+		gboolean charset = fp != NULL;
+
+		check (fp != NULL && strlen (fp) == NOLPHIN_PHONE_FINGERPRINT_LENGTH, "Fingerabdruck hat 22 Zeichen");
+		for (k = 0; fp != NULL && fp[k] != '\0'; k++) {
+			charset = charset && (g_ascii_isalnum (fp[k]) || fp[k] == '-' || fp[k] == '_');
+		}
+		check (charset, "Fingerabdruck besteht nur aus base64url-Zeichen");
+		check (pem != NULL && strstr (pem, "BEGIN CERTIFICATE") != NULL && key != NULL && strstr (key, "PRIVATE KEY") != NULL,
+		       "Zertifikat und privater Schlüssel liegen als PEM vor");
+		{
+			gchar *again = nolphin_phone_tls_fingerprint_of_pem (pem);
+
+			check (g_strcmp0 (again, fp) == 0, "Fingerabdruck aus dem PEM ist derselbe wie der des Servers");
+			g_free (again);
+		}
+		wrong = open_tls (port, "AAAAAAAAAAAAAAAAAAAAAA");
+		check (wrong == NULL, "falscher Fingerabdruck: Verbindung wird abgelehnt");
+		g_clear_object (&wrong);
+		{
+			/* Klartext auf dem TLS-Port: es darf keine HTTP-Antwort im Klartext kommen */
+			GSocketClient *client = g_socket_client_new ();
+			GSocketConnection *conn;
+			GString *got = g_string_new (NULL);
+			gchar buf[512], *plain;
+			gssize n;
+
+			g_socket_client_set_timeout (client, 5);
+			conn = g_socket_client_connect_to_host (client, "127.0.0.1", port, NULL, NULL);
+			g_object_unref (client);
+			check (conn != NULL, "Klartext-Test: Verbindung kommt zustande");
+			if (conn != NULL) {
+				plain = g_strdup_printf ("GET /info?%s HTTP/1.1\r\nHost: x\r\n\r\n", token_q);
+				g_output_stream_write_all (g_io_stream_get_output_stream (G_IO_STREAM (conn)), plain, strlen (plain), NULL, NULL, NULL);
+				while ((n = g_input_stream_read (g_io_stream_get_input_stream (G_IO_STREAM (conn)), buf, sizeof buf, NULL, NULL)) > 0) {
+					g_string_append_len (got, buf, n);
+				}
+				check (strstr (got->str, "HTTP/1.") == NULL && strstr (got->str, "nolphin") == NULL,
+				       "Klartext-Anfrage bekommt keine Klartext-Antwort");
+				g_free (plain);
+				g_object_unref (conn);
+			}
+			g_string_free (got, TRUE);
+		}
+		g_free (fp);
+		g_free (pem);
+		g_free (key);
+	}
+	{
+		/* ohne openssl startet der Server nicht, und es bleibt nichts Unverschlüsseltes übrig */
+		gchar *old_path = g_strdup (g_getenv ("PATH"));
+		GError *e = NULL;
+		NolphinPhoneServer *none;
+
+		g_setenv ("PATH", "/nonexistent-nolphin-test", TRUE);
+		none = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, NULL, &e);
+		check (none == NULL && e != NULL && strstr (e->message, "openssl") != NULL,
+		       "ohne openssl: kein Start, deutliche Meldung");
+		g_clear_error (&e);
+		g_setenv ("PATH", old_path != NULL ? old_path : "/usr/bin:/bin", TRUE);
+		g_free (old_path);
+	}
+	{
+		gchar *c = NULL, *k = NULL;
+		GError *e = NULL;
+
+		check (!nolphin_phone_tls_generate ("127.0.0.1; touch /tmp/nolphin-boese", &c, &k, &e) && c == NULL && k == NULL,
+		       "Zertifikat: ungültige Adresse wird abgelehnt");
+		g_clear_error (&e);
+		check (!nolphin_phone_tls_generate ("::1", &c, &k, &e), "Zertifikat: IPv6 wird abgelehnt");
+		g_clear_error (&e);
+		check (!g_file_test ("/tmp/nolphin-boese", G_FILE_TEST_EXISTS), "Zertifikat: nichts eingeschleust");
+	}
+	{
+		/* Der Temporärordner mit dem privaten Schlüssel bleibt nicht liegen */
+		gchar *c = NULL, *k = NULL;
+		GDir *d;
+		const gchar *name;
+		gint left = 0;
+
+		check (nolphin_phone_tls_generate ("127.0.0.1", &c, &k, NULL), "Zertifikat wird erzeugt");
+		g_free (c);
+		g_free (k);
+		d = g_dir_open (g_get_tmp_dir (), 0, NULL);
+		while (d != NULL && (name = g_dir_read_name (d)) != NULL) {
+			if (g_str_has_prefix (name, "nolphin-tls-")) {
+				left++;
+			}
+		}
+		if (d != NULL) {
+			g_dir_close (d);
+		}
+		check (left == 0, "Zertifikat: kein Temporärordner mit Schlüssel bleibt übrig");
+	}
+	{
+		/* Sitzung weiterverwenden: gleicher Schlüssel UND gleiches Zertifikat; nur Schlüssel allein genügt nicht */
+		gchar *tk = nolphin_phone_server_dup_token (server);
+		gchar *fp = nolphin_phone_server_dup_fingerprint (server);
+		gchar *pem = nolphin_phone_server_dup_certificate_pem (server);
+		gchar *key = nolphin_phone_server_dup_key_pem (server);
+		NolphinPhoneServerOptions opt = { 0 };
+		NolphinPhoneServer *again, *partial;
+
+		opt.resume_token = tk;
+		opt.resume_expires = nolphin_phone_server_get_expires (server);
+		opt.resume_cert_pem = pem;
+		opt.resume_key_pem = key;
+		again = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, &opt, &error);
+		check (again != NULL, "Wiederaufnahme: Server startet");
+		if (again != NULL) {
+			gchar *t2 = nolphin_phone_server_dup_token (again);
+			gchar *f2 = nolphin_phone_server_dup_fingerprint (again);
+
+			check (strcmp (t2, tk) == 0 && strcmp (f2, fp) == 0, "Wiederaufnahme: gleicher Schlüssel und gleicher Fingerabdruck");
+			g_free (t2);
+			g_free (f2);
+			nolphin_phone_server_stop (again);
+		}
+		opt.resume_cert_pem = NULL;
+		opt.resume_key_pem = NULL;
+		partial = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, &opt, &error);
+		check (partial != NULL, "ohne Zertifikat: Server startet trotzdem");
+		if (partial != NULL) {
+			gchar *t3 = nolphin_phone_server_dup_token (partial);
+			gchar *f3 = nolphin_phone_server_dup_fingerprint (partial);
+
+			check (strcmp (t3, tk) != 0 && strcmp (f3, fp) != 0,
+			       "ohne Zertifikat wird nichts wiederaufgenommen: neuer Schlüssel und neues Zertifikat");
+			g_free (t3);
+			g_free (f3);
+			nolphin_phone_server_stop (partial);
+		}
+		opt.resume_cert_pem = "kein Zertifikat";
+		opt.resume_key_pem = "kein Schlüssel";
+		partial = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, &opt, &error);
+		check (partial != NULL, "kaputtes Zertifikat: Server startet mit neuem");
+		if (partial != NULL) {
+			gchar *t4 = nolphin_phone_server_dup_token (partial);
+
+			check (strcmp (t4, tk) != 0, "kaputtes Zertifikat: auch der Schlüssel ist neu");
+			g_free (t4);
+			nolphin_phone_server_stop (partial);
+		}
+		g_free (tk);
+		g_free (fp);
+		g_free (pem);
+		g_free (key);
+	}
 
 	/* Upload */
 	target = g_strdup_printf ("/up?%s&n=hello.txt", token_q);
@@ -449,14 +658,13 @@ run_tests (gpointer unused)
 	}
 	{
 		/* Abbruch mitten im Upload hinterlässt keine Teildatei */
-		GSocketClient *client = g_socket_client_new ();
-		GSocketConnection *conn = g_socket_client_connect_to_host (client, "127.0.0.1", port, NULL, NULL);
+		GIOStream *conn = open_tls (port, NULL);
 		gchar *req = g_strdup_printf ("POST /up?%s&n=abbruch.bin HTTP/1.1\r\nContent-Length: 1000\r\n\r\nnur-ein-teil", token_q);
 
-		g_output_stream_write_all (g_io_stream_get_output_stream (G_IO_STREAM (conn)), req, strlen (req), NULL, NULL, NULL);
-		g_io_stream_close (G_IO_STREAM (conn), NULL, NULL);
+		check (conn != NULL, "Abbruch-Test: verschlüsselte Verbindung steht");
+		g_output_stream_write_all (g_io_stream_get_output_stream (conn), req, strlen (req), NULL, NULL, NULL);
+		g_io_stream_close (conn, NULL, NULL);
 		g_object_unref (conn);
-		g_object_unref (client);
 		g_free (req);
 		g_usleep (500 * 1000);
 		{
@@ -689,9 +897,27 @@ run_tests (gpointer unused)
 		gchar *old_q = g_strdup (token_q);
 		gchar *fresh;
 		gint64 exp_before = nolphin_phone_server_get_expires (server);
+		gchar *old_fp = nolphin_phone_server_dup_fingerprint (server);
+		gchar *old_cert = nolphin_phone_server_dup_certificate_pem (server);
+		GIOStream *probe;
 
 		g_usleep (1100 * 1000);
 		check (nolphin_phone_server_rotate_token (server, NULL), "Schlüsselwechsel");
+		{
+			gchar *new_fp = nolphin_phone_server_dup_fingerprint (server);
+			gchar *new_cert = nolphin_phone_server_dup_certificate_pem (server);
+
+			check (strcmp (new_fp, old_fp) != 0 && strcmp (new_cert, old_cert) != 0,
+			       "Schlüsselwechsel: auch das Zertifikat und der Fingerabdruck sind neu");
+			g_free (new_fp);
+			g_free (new_cert);
+		}
+		probe = open_tls (port, old_fp);
+		check (probe == NULL, "Schlüsselwechsel: Verbindung mit dem alten Fingerabdruck wird abgelehnt");
+		g_clear_object (&probe);
+		g_free (old_fp);
+		g_free (old_cert);
+		remember_pin (server);
 		fresh = nolphin_phone_server_dup_token (server);
 		check (strcmp (fresh, token) != 0 && strlen (fresh) == 32, "neuer Schlüssel unterscheidet sich");
 		check (nolphin_phone_server_get_expires (server) > exp_before, "Ablaufzeit wird beim Wechsel erneuert");
@@ -733,6 +959,9 @@ run_tests (gpointer unused)
 
 		g_setenv ("NOLPHIN_PHONE_TOKEN_LIFETIME", "2", TRUE);
 		shortlived = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, NULL, &error);
+		if (shortlived != NULL) {
+			remember_pin (shortlived);
+		}
 		g_unsetenv ("NOLPHIN_PHONE_TOKEN_LIFETIME");
 		check (shortlived != NULL, "Server mit kurzer Schlüsselzeit startet");
 		if (shortlived != NULL) {
@@ -759,6 +988,7 @@ run_tests (gpointer unused)
 
 		check (small != NULL, "Server mit eigenen Einstellungen startet");
 		if (small != NULL) {
+			remember_pin (small);
 			gchar *tk2 = nolphin_phone_server_dup_token (small);
 			gchar *tq2 = g_strdup_printf ("/up?t=%s&n=zu-gross.bin", tk2);
 			gchar big_body[2048];

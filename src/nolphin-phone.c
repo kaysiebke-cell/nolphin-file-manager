@@ -4,13 +4,15 @@
  *
  * Startet den kleinen Server aus nolphin-phone-server.c im lokalen Netz und
  * zeigt den Verbindungslink als QR-Code. Das Handy scannt ihn mit der
- * Kamera und tauscht Dateien im Browser aus. Keine App, keine Bibliothek.
+ * Handy-App und tauscht Dateien verschlüsselt aus (TLS mit festem Zertifikat, Fingerabdruck im QR-Code).
+ * Kein Browser-Weg, kein unverschlüsselter Weg.
  */
 
 #include <config.h>
 
 #include "nolphin-phone.h"
 #include "nolphin-phone-server.h"
+#include "nolphin-phone-tls.h"
 #include "nolphin-qr.h"
 #include "nolphin-tools.h"
 #include "nolphin-window-menus.h"
@@ -21,7 +23,10 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <fcntl.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 /* Einstellungen (GSettings, Abschnitt 31); ohne Einstellungen gelten diese Vorgaben. */
 static gint
@@ -127,6 +132,8 @@ session_save (const gchar *address, NolphinPhoneServer *server)
 	gchar *path = session_path ();
 	gchar *dir = g_path_get_dirname (path);
 	gchar *token = nolphin_phone_server_dup_token (server);
+	gchar *cert_pem = nolphin_phone_server_dup_certificate_pem (server);
+	gchar *key_pem = nolphin_phone_server_dup_key_pem (server);
 	gchar *data;
 	gsize length;
 
@@ -134,12 +141,37 @@ session_save (const gchar *address, NolphinPhoneServer *server)
 	g_key_file_set_integer (kf, "session", "port", nolphin_phone_server_get_port (server));
 	g_key_file_set_string (kf, "session", "token", token);
 	g_key_file_set_int64 (kf, "session", "expires", nolphin_phone_server_get_expires (server));
+	g_key_file_set_string (kf, "session", "cert", cert_pem != NULL ? cert_pem : "");
+	g_key_file_set_string (kf, "session", "key", key_pem != NULL ? key_pem : "");
 	data = g_key_file_to_data (kf, &length, NULL);
 	g_mkdir_with_parents (dir, 0700);
-	if (g_file_set_contents (path, data, length, NULL)) {
-		g_chmod (path, 0600);
+	g_chmod (dir, 0700);
+	/* Die Datei enthält den privaten Schlüssel: erst mit Rechten 0600 anlegen, dann füllen */
+	{
+		gint fd = g_open (path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+
+		if (fd >= 0) {
+			gsize done = 0;
+
+			while (done < length) {
+				gssize n = write (fd, data + done, length - done);
+
+				if (n <= 0) {
+					break;
+				}
+				done += (gsize) n;
+			}
+			fchmod (fd, 0600);
+			close (fd);
+		}
 	}
+	memset (data, 0, length);
 	g_free (data);
+	if (key_pem != NULL) {
+		memset (key_pem, 0, strlen (key_pem));
+	}
+	g_free (key_pem);
+	g_free (cert_pem);
 	g_free (token);
 	g_free (dir);
 	g_free (path);
@@ -148,7 +180,7 @@ session_save (const gchar *address, NolphinPhoneServer *server)
 
 /* Liefert TRUE und die gemerkten Werte, wenn die Sitzung zu @address passt und noch gilt. */
 static gboolean
-session_load (const gchar *address, guint16 *port, gchar **token, gint64 *expires)
+session_load (const gchar *address, guint16 *port, gchar **token, gint64 *expires, gchar **cert_pem, gchar **key_pem)
 {
 	GKeyFile *kf = g_key_file_new ();
 	gchar *path = session_path ();
@@ -160,10 +192,18 @@ session_load (const gchar *address, guint16 *port, gchar **token, gint64 *expire
 		*token = g_key_file_get_string (kf, "session", "token", NULL);
 		*port = (guint16) g_key_file_get_integer (kf, "session", "port", NULL);
 		*expires = g_key_file_get_int64 (kf, "session", "expires", NULL);
+		*cert_pem = g_key_file_get_string (kf, "session", "cert", NULL);
+		*key_pem = g_key_file_get_string (kf, "session", "key", NULL);
 		ok = saved != NULL && *token != NULL && g_strcmp0 (saved, address) == 0
-		     && *expires > g_get_real_time () / G_USEC_PER_SEC + 60;
+		     && *expires > g_get_real_time () / G_USEC_PER_SEC + 60
+		     && *cert_pem != NULL && **cert_pem != '\0' && *key_pem != NULL && **key_pem != '\0';
 		if (!ok) {
 			g_clear_pointer (token, g_free);
+			g_clear_pointer (cert_pem, g_free);
+			if (*key_pem != NULL) {
+				memset (*key_pem, 0, strlen (*key_pem));
+			}
+			g_clear_pointer (key_pem, g_free);
 		}
 	}
 	g_free (saved);
@@ -455,21 +495,23 @@ on_file_received (const gchar *name, goffset size, gpointer user_data)
 	g_idle_add (received_idle, e);
 }
 
-/* Verbindungslink, Format Version 1:
- *   http://<Adresse>:<Port>/?t=<Schlüssel, 32 Hex-Zeichen>&v=1&e=<Ablauf, Unix-Sekunden>
- * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). */
+/* Verbindungslink, Format Version 2:
+ *   https://<Adresse>:<Port>/?t=<Schlüssel, 32 Hex-Zeichen>&v=2&f=<Fingerabdruck, 22 Zeichen base64url>
+ * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). Der Ablauf (e=) steht nicht
+ * mehr im Link: Er würde den QR-Code über die größte darstellbare Größe treiben, und der Server prüft ihn ohnehin. */
 static void
 phone_refresh_url (PhonePage *d)
 {
 	gchar *token = nolphin_phone_server_dup_token (d->server);
-	gchar *url = g_strdup_printf ("http://%s:%u/?t=%s&v=1&e=%" G_GINT64_FORMAT, d->address,
-				      nolphin_phone_server_get_port (d->server), token,
-				      nolphin_phone_server_get_expires (d->server));
+	gchar *fp = nolphin_phone_server_dup_fingerprint (d->server);
+	gchar *url = g_strdup_printf ("https://%s:%u/?t=%s&v=2&f=%s", d->address,
+				      nolphin_phone_server_get_port (d->server), token, fp);
 
 	d->has_qr = nolphin_qr_encode (url, -1, &d->qr);
 	gtk_entry_set_text (GTK_ENTRY (d->url_entry), url);
 	gtk_widget_queue_draw (d->qr_area);
 	g_free (token);
+	g_free (fp);
 	g_free (url);
 }
 
@@ -491,19 +533,26 @@ phone_start (PhonePage *d)
 	{
 		NolphinPhoneServerOptions options = { 0 };
 		guint16 saved_port = 0;
-		gchar *saved_token = NULL;
+		gchar *saved_token = NULL, *saved_cert = NULL, *saved_key = NULL;
 		gint64 saved_expires = 0;
 
-		if (session_load (address, &saved_port, &saved_token, &saved_expires)) {
+		if (session_load (address, &saved_port, &saved_token, &saved_expires, &saved_cert, &saved_key)) {
 			options.port = saved_port;
 			options.resume_token = saved_token;
 			options.resume_expires = saved_expires;
+			options.resume_cert_pem = saved_cert;
+			options.resume_key_pem = saved_key;
 		}
 		options.token_lifetime = (gint64) setting_int (NOLPHIN_PREFERENCES_PHONE_TOKEN_HOURS, 12) * 3600;
 		options.max_upload = (goffset) setting_int (NOLPHIN_PREFERENCES_PHONE_MAX_UPLOAD_MB, 2048) * 1024 * 1024;
 		d->server = nolphin_phone_server_start (address, d->inbox, d->share, on_file_received,
 							shared_ref (d->shared), shared_unref, &options, &error);
 		g_free (saved_token);
+		g_free (saved_cert);
+		if (saved_key != NULL) {
+			memset (saved_key, 0, strlen (saved_key));
+		}
+		g_free (saved_key);
 	}
 	if (d->server == NULL) {
 		shared_unref (d->shared);   /* der Server hat user_data bei einem Fehler nicht übernommen */
@@ -518,8 +567,8 @@ phone_start (PhonePage *d)
 	session_save (d->address, d->server);
 	phone_refresh_url (d);
 	gtk_label_set_text (GTK_LABEL (d->status),
-			    d->has_qr ? _("Läuft. QR-Code mit der Handy-Kamera scannen (gleiches WLAN).")
-				      : _("Läuft. QR-Code nicht möglich, öffne den Link im Handy-Browser."));
+			    d->has_qr ? _("Läuft, verschlüsselt. In der Handy-App „QR-Code scannen“ wählen und diesen Code scannen (gleiches WLAN).")
+				      : _("Läuft, verschlüsselt. Ein QR-Code ist nicht möglich: Kopiere den Link in die Handy-App."));
 	d->timeout_id = g_timeout_add_seconds (30, on_idle_check, d);
 	phone_update_ui (d);
 }
