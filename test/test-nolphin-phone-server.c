@@ -339,6 +339,40 @@ run_tests (gpointer unused)
 	g_free (r);
 	g_free (target);
 
+	/* Ordner: Unterordner "d" wird im Eingangsordner angelegt */
+	target = g_strdup_printf ("/up?%s&d=Ordner1%%2FUnter&n=b.txt", token_q);
+	r = post (port, target, "tief", 4);
+	check (status_of (r) == 200 && file_has (inbox, "Ordner1/Unter/b.txt", "tief"), "Ordner: Datei im Unterordner angelegt");
+	g_free (r);
+	r = post (port, target, "zwei", 4);
+	check (status_of (r) == 200 && file_has (inbox, "Ordner1/Unter/b.txt", "tief") && file_has (inbox, "Ordner1/Unter/b (1).txt", "zwei"),
+	       "Ordner: gleicher Name im Unterordner wird nummeriert");
+	g_free (r);
+	g_free (target);
+	target = g_strdup_printf ("/up?%s&d=Ordner1&n=oben.txt", token_q);
+	r = post (port, target, "oben", 4);
+	check (status_of (r) == 200 && file_has (inbox, "Ordner1/oben.txt", "oben"), "Ordner: bestehender Ordner wird weiterverwendet");
+	g_free (r);
+	g_free (target);
+	{
+		const gchar *bad[] = { "..%2F..", "%2E%2E", "a%2F..%2Fb", "%2Eversteckt", "a%5C..%5Cb" };
+		guint k;
+
+		for (k = 0; k < G_N_ELEMENTS (bad); k++) {
+			target = g_strdup_printf ("/up?%s&d=%s&n=x.txt", token_q, bad[k]);
+			r = post (port, target, "x", 1);
+			check (status_of (r) == 400, "Ordner: ungültiger Ordnername wird abgelehnt");
+			g_free (r);
+			g_free (target);
+		}
+		{
+			gchar *outside = g_build_filename (root, "x.txt", NULL);
+
+			check (!g_file_test (outside, G_FILE_TEST_EXISTS), "Ordner: nichts außerhalb des Eingangsordners");
+			g_free (outside);
+		}
+	}
+
 	/* größerer Upload über mehrere Lesevorgänge */
 	big = g_malloc (3 * 1024 * 1024);
 	for (i = 0; i < 3 * 1024 * 1024; i++) {
@@ -620,6 +654,7 @@ run_tests (gpointer unused)
 	r = get (port, target);
 	check (status_of (r) == 200 && strstr (r, "\"app\":\"nolphin\"") != NULL && strstr (r, "\"api\":1") != NULL &&
 	       strstr (r, "\"expires\":") != NULL && strstr (r, "\"share\":true") != NULL && strstr (r, "\"home\":true") != NULL, "info: App, API-Version, Ablauf, persönlicher Ordner");
+	check (strstr (r, "\"folders\":true") != NULL, "info meldet Ordner-Upload (folders)");
 	g_free (r);
 	g_free (target);
 	r = get (port, "/info?t=falsch");
@@ -653,7 +688,18 @@ run_tests (gpointer unused)
 
 	/* Meldungen über empfangene Dateien */
 	g_mutex_lock (&received_lock);
-	check (received_names->len == 5, "Rückmeldung für jede empfangene Datei");
+	check (received_names->len == 8, "Rückmeldung für jede empfangene Datei");
+	{
+		guint k;
+		gboolean has_rel = FALSE;
+
+		for (k = 0; k < received_names->len; k++) {
+			if (g_strcmp0 (g_ptr_array_index (received_names, k), "Ordner1/Unter/b.txt") == 0) {
+				has_rel = TRUE;
+			}
+		}
+		check (has_rel, "Rückmeldung nennt bei Ordnern den Pfad (Ordner1/Unter/b.txt)");
+	}
 	g_mutex_unlock (&received_lock);
 
 	/* Ablauf: Schlüssel mit kurzer Lebensdauer wird nach Ablauf abgelehnt, mit Hinweis "expired" */

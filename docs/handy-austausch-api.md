@@ -48,7 +48,7 @@ Prüft Schlüssel und Gegenstelle.
 {"app":"nolphin","api":1,"name":"kaysiebke-ThinkPad","expires":1791769130,"maxUpload":2147483648,"share":true}
 ```
 
-`api` ist die Version der Schnittstelle (hier 1), `expires` die Ablaufzeit des Schlüssels, `maxUpload` die größte erlaubte Datei in Bytes, `share` sagt, ob ein Ausgangsordner (`~/Handy`) vorhanden ist.
+`api` ist die Version der Schnittstelle (hier 1), `expires` die Ablaufzeit des Schlüssels, `maxUpload` die größte erlaubte Datei in Bytes, `share` sagt, ob ein Ausgangsordner (`~/Handy`) vorhanden ist, `folders`, ob `/up` das Feld `d` (Unterordner) versteht.
 
 ### `GET /ls?t=…`
 
@@ -78,11 +78,13 @@ Lädt eine Datei aus dem Ausgangsordner. `n` ist der Dateiname, prozentkodiert (
 
 Mit `r=home` gelten `/dir` und `/dl` für den **persönlichen Ordner** (`~`, für Tests `NOLPHIN_PHONE_HOME`) statt für „Zum Handy“, nur lesend. Ohne `r` bleibt alles wie bisher. Jeder andere Wert von `r` liefert `404`. Es gelten dieselben Schutzregeln wie für den Ausgangsordner: Schlüssel, privates Netz, nur Namen ohne `..` und ohne führenden Punkt (versteckte Dateien und Ordner wie `.ssh` sind weder sichtbar noch ladbar), nur echte Ordner und normale Dateien, keine Symbolischen Verknüpfungen (`O_NOFOLLOW`). `GET /info` meldet die Fähigkeit mit `"home":true`; Apps prüfen das, weil ältere Versionen `r` ignorieren würden.
 
-### `POST /up?t=…&n=<Name>`
+### `POST /up?t=…&n=<Name>[&d=<Ordner>]`
 
 Lädt eine Datei in den Eingangsordner „Vom Handy“ hoch. Der Körper sind die Rohdaten der Datei, `Content-Length` ist Pflicht.
 
 Der Name wird bereinigt: nur der letzte Pfadteil (`/` und `\` trennen), Steuerzeichen und Richtungsumkehr-Zeichen entfernt, führende Punkte und Leerzeichen entfernt, höchstens 200 Bytes (an einer Zeichengrenze gekürzt), leer wird zu „Datei“. Die Datei wird zuerst in eine Temporärdatei geschrieben und dann unter dem Namen abgelegt. **Es wird nie überschrieben**: Gibt es den Namen, wird `Name (1).ext`, `Name (2).ext` usw. verwendet. Bei Abbruch wird die Temporärdatei gelöscht.
+
+**Ordner (`d`, optional):** Mit `d=Ordner1/Unter` kommt die Datei in diesen Unterordner des Eingangsordners. Die Ordner werden bei Bedarf angelegt, bestehende werden weiterverwendet (Dateien darin werden nie überschrieben, siehe oben). `/` trennt die Ebenen (höchstens 32). Jede Ebene muss ein unveränderter, bereinigter Name sein und darf nicht mit einem Punkt beginnen. Sonst gibt es `400` und es wird nichts abgelegt. Ordner, die als Link oder Datei vorhanden sind, werden nicht benutzt. Ob der PC das kann, steht in `/info` als `"folders":true`; fehlt das Feld, schickt die App einen Ordner als ZIP.
 
 Antwort bei Erfolg: `200` mit `{"ok":true,"name":"<endgültiger Name>"}`.
 
@@ -101,6 +103,7 @@ Die Seite für den Browser des Handys (Hochladen, Liste zum Herunterladen, App-A
 | 400 | alle | kaputte Anfrage, Kopfzeilen über 16 KiB |
 | 403 | alle | Schlüssel fehlt, falsch oder widerrufen (Text „Der Link ist ungültig oder wurde widerrufen.“) oder **abgelaufen** (Text „Der Link ist abgelaufen.“) |
 | 404 | `/dl`, `/apk`, sonstige | Datei nicht vorhanden oder nicht erlaubt, unbekannter Weg |
+| 400 | `/up` | ungültiger Ordnername in `d` |
 | 411 | `/up` | `Content-Length` fehlt |
 | 413 | `/up` | Datei größer als 2 GiB |
 | 500 | `/up` | Schreibfehler, Datei kann nicht abgelegt werden |

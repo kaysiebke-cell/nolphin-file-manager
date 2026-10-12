@@ -542,7 +542,7 @@ compare_names (gconstpointer a, gconstpointer b)
 static void
 handle_info (NolphinPhoneServer *s, GOutputStream *out)
 {
-	GString *json = g_string_new ("{\"app\":\"nolphin\",\"api\":1,\"home\":true,\"name\":");
+	GString *json = g_string_new ("{\"app\":\"nolphin\",\"api\":1,\"home\":true,\"folders\":true,\"name\":");
 	gint64 expires;
 
 	json_append_string (json, g_get_host_name () != NULL ? g_get_host_name () : "");
@@ -939,12 +939,63 @@ publish_unique (const gchar *dir, const gchar *tmp, const gchar *name)
 	return result;
 }
 
+/* Legt einen Unterordner im Eingangsordner an ("Ordner/Unter"). Jede Ebene muss ein ungefährlicher Name sein
+ * und ein echter Ordner (kein Link); bestehende Ordner werden weiterverwendet. Gibt den vollen Pfad zurück oder
+ * NULL bei einem ungültigen Namen. Das Ergebnis gehört dem Aufrufer. */
+static gchar *
+ensure_subdir (const gchar *base, const gchar *rel)
+{
+	gchar **parts = g_strsplit (rel, "/", -1);
+	gchar *path = g_strdup (base);
+	guint i, levels = 0;
+
+	for (i = 0; parts[i] != NULL; i++) {
+		gchar *safe, *next;
+		struct stat st;
+		gboolean ok;
+
+		if (parts[i][0] == '\0') {
+			continue;
+		}
+		if (++levels > 32) {
+			g_free (path);
+			path = NULL;
+			break;
+		}
+		safe = nolphin_phone_sanitize_name (parts[i]);
+		ok = strcmp (safe, parts[i]) == 0 && parts[i][0] != '.';
+		g_free (safe);
+		if (!ok) {
+			g_free (path);
+			path = NULL;
+			break;
+		}
+		next = g_build_filename (path, parts[i], NULL);
+		g_free (path);
+		path = next;
+		if (g_lstat (path, &st) == 0) {
+			if (!S_ISDIR (st.st_mode)) {
+				g_free (path);
+				path = NULL;
+				break;
+			}
+		} else if (g_mkdir (path, 0755) != 0 && errno != EEXIST) {
+			g_free (path);
+			path = NULL;
+			break;
+		}
+	}
+	g_strfreev (parts);
+	return path;
+}
+
 static void
 handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutputStream *out,
 	       const gchar *body, gsize body_have)
 {
 	const gchar *raw_name = g_hash_table_lookup (r->query, "n");
-	gchar *name, *tmpl, *final_name;
+	const gchar *raw_dir = g_hash_table_lookup (r->query, "d");
+	gchar *name, *tmpl, *final_name, *target_dir;
 	gint fd;
 	goffset remaining, total;
 	gchar *buf;
@@ -966,6 +1017,15 @@ handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutpu
 		g_free (msg);
 		return;
 	}
+	if (raw_dir != NULL && raw_dir[0] != '\0') {
+		target_dir = ensure_subdir (s->inbox_path, raw_dir);
+		if (target_dir == NULL) {
+			send_error (out, 400, "Bad Request", _("Ungültiger Ordnername."));
+			return;
+		}
+	} else {
+		target_dir = g_strdup (s->inbox_path);
+	}
 	name = nolphin_phone_sanitize_name (raw_name);
 	tmpl = g_build_filename (s->inbox_path, ".nolphin-XXXXXX", NULL);
 	fd = g_mkstemp_full (tmpl, O_WRONLY | O_CLOEXEC, 0644);
@@ -973,6 +1033,7 @@ handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutpu
 		send_error (out, 500, "Internal Server Error", _("Die Datei kann am PC nicht angelegt werden."));
 		g_free (tmpl);
 		g_free (name);
+		g_free (target_dir);
 		return;
 	}
 	if (r->expect_continue) {
@@ -1036,14 +1097,16 @@ handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutpu
 		/* bei abgebrochener Verbindung gibt es niemanden mehr, der antwortet */
 		g_free (tmpl);
 		g_free (name);
+		g_free (target_dir);
 		return;
 	}
-	final_name = publish_unique (s->inbox_path, tmpl, name);
+	final_name = publish_unique (target_dir, tmpl, name);
 	g_unlink (tmpl);
 	g_free (tmpl);
 	if (final_name == NULL) {
 		send_error (out, 500, "Internal Server Error", _("Die Datei kann am PC nicht abgelegt werden."));
 		g_free (name);
+		g_free (target_dir);
 		return;
 	}
 	{
@@ -1055,10 +1118,24 @@ handle_upload (NolphinPhoneServer *s, const Request *r, GInputStream *in, GOutpu
 		g_string_free (json, TRUE);
 	}
 	if (s->received != NULL && !is_stopped (s)) {
-		s->received (final_name, total, s->user_data);
+		if (strcmp (target_dir, s->inbox_path) == 0) {
+			s->received (final_name, total, s->user_data);
+		} else {
+			/* mit Ordnerpfad relativ zum Eingangsordner, damit klar ist, wohin die Datei kam */
+			const gchar *rel = target_dir + strlen (s->inbox_path);
+			gchar *shown;
+
+			while (*rel == G_DIR_SEPARATOR) {
+				rel++;
+			}
+			shown = g_strdup_printf ("%s/%s", rel, final_name);
+			s->received (shown, total, s->user_data);
+			g_free (shown);
+		}
 	}
 	g_free (final_name);
 	g_free (name);
+	g_free (target_dir);
 }
 
 /* --- Verbindung ------------------------------------------------------------------- */
