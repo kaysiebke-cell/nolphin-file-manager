@@ -24,10 +24,10 @@ meson test -C build
 Für den Handy-Austausch gibt es eine kleine Android-App. Sie wird **vor** dem Installieren gebaut und dann mitinstalliert:
 
 ```bash
-android/build.sh
+../nolphin-handy/build.sh
 ```
 
-Voraussetzungen: JDK und das Android-SDK (`ANDROID_HOME`, standardmäßig `~/Android/Sdk`). Ohne die App läuft der Handy-Austausch weiter im Browser des Handys. Mehr in `android/README.md`.
+Voraussetzungen: JDK und das Android-SDK (`ANDROID_HOME`, standardmäßig `~/Android/Sdk`). Ohne die App läuft der Handy-Austausch weiter im Browser des Handys. Die App liegt in einem eigenen Projekt (`../nolphin-handy`, GitHub: kaysiebke-cell/nolphin-handy); mehr in dessen README.
 
 ## Installieren
 

@@ -22,9 +22,9 @@ extraMans = [
 install_subdir('hilfe', install_dir: join_paths(nolphinDataPath, 'help'))
 install_subdir('bilder', install_dir: join_paths(nolphinDataPath, 'help'))
 
-# Handy-App (APK): wird nur mitinstalliert, wenn sie vorher mit android/build.sh gebaut wurde.
+# Handy-App (APK): wird nur mitinstalliert, wenn sie vorher im Projekt nolphin-handy (Nachbarordner) gebaut wurde.
 # Nolphin bietet sie im Handy-Austausch zum Installieren an; ohne APK läuft alles im Browser des Handys.
-phoneApk = join_paths(meson.project_source_root(), 'android', 'build', 'nolphin-handy.apk')
+phoneApk = join_paths(meson.project_source_root(), '..', 'nolphin-handy', 'build', 'nolphin-handy.apk')
 if run_command('test', '-f', phoneApk, check: false).returncode() == 0
   install_data(phoneApk, install_dir: join_paths(nolphinDataPath, 'phone'))
 endif

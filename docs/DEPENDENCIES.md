@@ -98,10 +98,10 @@ implementiert behauptet, die nicht geprüft wurde).
 
 ## Handy-App für Android (nur zum Bauen der App)
 
-**Freigegeben am 11. Oktober 2026** (Entscheidung des Benutzers). Die App im Verzeichnis `android/` wird nur gebaut, wenn der Entwickler `android/build.sh` aufruft. Nolphin selbst braucht nichts davon; liegt die APK nicht vor, läuft der Handy-Austausch über den Browser des Handys.
+**Freigegeben am 11. Oktober 2026** (Entscheidung des Benutzers). Die App liegt im eigenen Projekt `nolphin-handy` und wird nur gebaut, wenn der Entwickler dort `build.sh` aufruft. Nolphin selbst braucht nichts davon; liegt die APK nicht vor, läuft der Handy-Austausch über den Browser des Handys.
 
 NEUE ABHÄNGIGKEIT: JDK (`javac`, `keytool`), Android SDK (`android.jar`, `aapt2`, `d8`, `zipalign`, `apksigner`), `secret-tool`
-WOFÜR: Bau und Signatur der Handy-App (APK), Test des QR-Lesers der App (`android/test.sh`), Passwort des Signaturschlüssels im Systemschlüsselbund (Abschnitt 53.4)
+WOFÜR: Bau und Signatur der Handy-App (APK), Test des QR-Lesers der App (`nolphin-handy/test.sh`), Passwort des Signaturschlüssels im Systemschlüsselbund (Abschnitt 53.4)
 PFLICHT ODER OPTIONAL: optional, nur für den Bau der App; nicht Teil von Nolphin
 OHNE SIE: Nolphin baut, startet und läuft unverändert; der Handy-Austausch funktioniert im Browser des Handys, nur ohne App
 ALTERNATIVE OHNE NEUE ABHÄNGIGKEIT: nur der Weg über den Browser des Handys (ohne App)
@@ -111,4 +111,4 @@ ALTERNATIVE OHNE NEUE ABHÄNGIGKEIT: nur der Weg über den Browser des Handys (o
 | JDK | `openjdk-17-jdk-headless` (oder neuer) | `javac`, `keytool` |
 | Android SDK | kein Mint-Paket (vom Entwickler selbst installiert, `ANDROID_HOME`, Standard `~/Android/Sdk`) | `platforms/android-34/android.jar`, `build-tools` mit `aapt2`, `d8`, `zipalign`, `apksigner` |
 | Schlüsselbund-Werkzeug | `libsecret-tools` (`secret-tool`) | speichert das Passwort des Signaturschlüssels; `sudo apt install libsecret-tools` |
-| Testwerkzeuge | `gcc`, `libglib2.0-dev` | `android/test.sh` übersetzt den C-Encoder für die Testcodes |
+| Testwerkzeuge | `gcc`, `libglib2.0-dev` | `nolphin-handy/test.sh` übersetzt den C-Encoder für die Testcodes |
