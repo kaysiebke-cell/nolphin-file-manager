@@ -496,17 +496,19 @@ on_file_received (const gchar *name, goffset size, gpointer user_data)
 }
 
 /* Verbindungslink, Format Version 2:
- *   nolphin://<Adresse>:<Port>/?t=<Schlüssel, 32 Hex-Zeichen>&v=2&f=<Fingerabdruck, 22 Zeichen base64url>
- * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). Mit dem Schema nolphin:// öffnet die
- * Kamera des Handys direkt die App (kein Browser, keine Zertifikatswarnung); die App verbindet sich dann verschlüsselt
- * über https mit genau dem Zertifikat dieses Fingerabdrucks. Der Ablauf (e=) steht nicht mehr im Link: Er würde den
- * QR-Code über die größte darstellbare Größe treiben, und der Server prüft ihn ohnehin. */
+ *   https://<Adresse>:<Port>/?t=<Schlüssel, 32 Hex-Zeichen>&v=2&f=<Fingerabdruck, 22 Zeichen base64url>
+ * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). Als Webadresse (https://) erkennt der
+ * Scanner des Handys ihn als Link und gibt ihn an die App zurück; mit einem eigenen Schema (nolphin://) zeigt der
+ * Xiaomi-Scanner nur „Text“ und die App verbindet sich nicht von selbst. Ein Browser kann mit dem Link nichts
+ * anfangen (selbst erstelltes Zertifikat, keine Seite). Die App verbindet sich über https mit genau dem Zertifikat dieses
+ * Fingerabdrucks. Der Ablauf (e=) steht nicht im Link: Er würde den QR-Code über die größte darstellbare Größe treiben,
+ * und der Server prüft ihn ohnehin. */
 static void
 phone_refresh_url (PhonePage *d)
 {
 	gchar *token = nolphin_phone_server_dup_token (d->server);
 	gchar *fp = nolphin_phone_server_dup_fingerprint (d->server);
-	gchar *url = g_strdup_printf ("nolphin://%s:%u/?t=%s&v=2&f=%s", d->address,
+	gchar *url = g_strdup_printf ("https://%s:%u/?t=%s&v=2&f=%s", d->address,
 				      nolphin_phone_server_get_port (d->server), token, fp);
 
 	d->has_qr = nolphin_qr_encode (url, -1, &d->qr);

@@ -232,10 +232,10 @@ test_qr (void)
 	       "qr: Suchmuster in den anderen Ecken");
 	check (nolphin_qr_encode ("http://192.168.178.20:45678/?t=0123456789abcdef0123456789abcdef", -1, &qr) && qr.size == 37,
 	       "qr: Verbindungslink ergibt Version 5");
-	check (nolphin_qr_encode ("nolphin://192.168.178.255:65535/?t=0123456789abcdef0123456789abcdef&v=2&f=QULDtffIw8Ed6DmETVJ7zA", -1, &qr)
-	       && qr.size == 41, "qr: längster Verbindungslink (nolphin://, Version 2, 96 Zeichen) passt in Version 6");
-	check (!nolphin_qr_encode ("nolphin://192.168.178.255:65535/?t=0123456789abcdef0123456789abcdef&v=2&f=QULDtffIw8Ed6DmETVJ7zA&e=1791769130", -1, &qr),
-	       "qr: mit Ablaufzeit (109 Zeichen) wäre der Link zu lang");
+	check (nolphin_qr_encode ("https://192.168.178.255:65535/?t=0123456789abcdef0123456789abcdef&v=2&f=QULDtffIw8Ed6DmETVJ7zA", -1, &qr)
+	       && qr.size == 41, "qr: längster Verbindungslink (https://, Version 2, 94 Zeichen) passt in Version 6");
+	check (!nolphin_qr_encode ("https://192.168.178.255:65535/?t=0123456789abcdef0123456789abcdef&v=2&f=QULDtffIw8Ed6DmETVJ7zA&e=1791769130", -1, &qr),
+	       "qr: mit Ablaufzeit (107 Zeichen) wäre der Link zu lang");
 	check (!nolphin_qr_encode (big, -1, &qr), "qr: zu langer Text wird abgelehnt");
 	g_free (big);
 }
