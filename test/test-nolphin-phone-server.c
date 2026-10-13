@@ -230,7 +230,7 @@ test_qr (void)
 	       "qr: Suchmuster oben links");
 	check (nolphin_qr_get (&qr, qr.size - 1, 0) && nolphin_qr_get (&qr, 0, qr.size - 1),
 	       "qr: Suchmuster in den anderen Ecken");
-	check (nolphin_qr_encode ("http://192.168.178.20:45678/?t=0123456789abcdef0123456789abcdef", -1, &qr) && qr.size == 37,
+	check (nolphin_qr_encode ("http://192.168.100.10:40000/?t=0123456789abcdef0123456789abcdef", -1, &qr) && qr.size == 37,
 	       "qr: Verbindungslink ergibt Version 5");
 	check (nolphin_qr_encode ("nolphin://192.168.178.255:65535/?t=0123456789abcdef0123456789abcdef&v=2&f=QULDtffIw8Ed6DmETVJ7zA", -1, &qr)
 	       && qr.size == 41, "qr: längster Verbindungslink (nolphin://, Version 2, 96 Zeichen) passt in Version 6");
