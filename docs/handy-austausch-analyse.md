@@ -12,12 +12,13 @@ Stand: 11. Oktober 2026. Dieses Dokument beantwortet die Phasen 1 bis 4 des Entw
 | ------- | ----- | ----------------- |
 | QR-Code erzeugen | `src/nolphin-qr.c` | `nolphin_qr_encode ()` (Byte-Modus, Fehlerkorrektur M, Version 1 bis 6) |
 | QR-Code zeichnen | `src/nolphin-phone.c` | `on_qr_draw ()` (immer schwarz auf weiß) |
-| Verbindungslink bauen | `src/nolphin-phone.c` | `phone_refresh_url ()`: `http://<Adresse>:<Port>/?t=<Schlüssel>&v=1&e=<Ablauf>` |
+| Verbindungslink bauen | `src/nolphin-phone.c` | `phone_refresh_url ()`: `nolphin://<Adresse>:<Port>/?t=<Schlüssel>&v=2&f=<Fingerabdruck>` |
+| Zertifikat erzeugen, Fingerabdruck | `src/nolphin-phone-tls.c` | `nolphin_phone_tls_generate ()` (ruft `openssl req -x509` mit festen Argumenten auf, privater Temporärordner, danach gelöscht), `nolphin_phone_tls_fingerprint ()` |
 | Schlüssel erzeugen | `src/nolphin-phone-server.c` | `make_token ()`: 16 Zufallsbytes aus `/dev/urandom`, als 32 Hex-Zeichen |
 | Schlüssel prüfen | `src/nolphin-phone-server.c` | `check_token ()` (Vergleich ohne frühen Abbruch, Ablaufzeit) |
 | Schlüssel wechseln (Widerruf) | `src/nolphin-phone-server.c` | `nolphin_phone_server_rotate_token ()`; Knopf in `src/nolphin-phone.c` (`on_rotate_clicked ()`) |
-| HTTP-Server starten und beenden | `src/nolphin-phone-server.c` | `nolphin_phone_server_start ()`, `nolphin_phone_server_stop ()` |
-| Anfragen verteilen | `src/nolphin-phone-server.c` | `on_run ()` (Arbeitsthreads über `GThreadedSocketService`) |
+| HTTPS-Server starten und beenden | `src/nolphin-phone-server.c` | `nolphin_phone_server_start ()`, `nolphin_phone_server_stop ()` |
+| Anfragen verteilen | `src/nolphin-phone-server.c` | `on_run ()` (Arbeitsthreads über `GThreadedSocketService`; jede Verbindung wird mit `g_tls_server_connection_new ()` verschlüsselt) |
 | Port | `src/nolphin-phone-server.c` | vom System gewählt (`g_inet_socket_address_new (inet, 0)`), bei jedem Start anders; kein fester Port |
 | Netzwerkadresse wählen | `src/nolphin-phone.c` | `local_addresses ()` (private IPv4-Adressen aktiver, nicht virtueller Schnittstellen) |
 | Start, Ende, Selbstabschaltung | `src/nolphin-phone.c` | `phone_start ()`, `phone_stop ()`, `on_idle_check ()` (15 Minuten ohne Anfrage) |
@@ -81,53 +82,71 @@ Die vorhandene Schnittstelle genügt für Dateiübertragungen in beide Richtunge
 | `GET /info` | Die App prüft vor dem Speichern, dass unter der Adresse wirklich Nolphin läuft, der Schlüssel gilt und die Schnittstellenversion passt. |
 | Ablaufzeit des Schlüssels (12 Stunden) | Zeitliche Begrenzung. |
 | Schlüsselwechsel (`rotate_token`, Knopf „Neuen QR-Code erzeugen“) | Widerruf: Der alte Schlüssel ist sofort ungültig. |
-| QR-Format Version 1 mit `v` und `e` | Versionierung und Ablaufzeit im Code. |
+| QR-Format Version 2 mit `v` und `f` (Fingerabdruck) | Versionierung und festes Zertifikat. Die Ablaufzeit `e` steht nicht mehr im Link (QR-Größe), der Server erzwingt sie. |
 | `403` mit dem Text „Der Link ist abgelaufen.“ | Die App kann „abgelaufen“ von „falscher Schlüssel“ unterscheiden. Alle Meldungen des Servers sind deutsch (Spezifikation, Abschnitt 49). |
 
 ### Warum der QR-Code ein Link und kein JSON ist
 
-Der Plan nennt als Beispiel ein JSON-Objekt. Der QR-Code enthält stattdessen einen **Link**, weil die Kamera des Handys einen Link öffnen kann: Beim ersten Scan landet man so auf der Seite von Nolphin, die die App zum Installieren anbietet. Ein JSON-Text würde von der Kamera nur als Text angezeigt. Die Felder sind dieselben wie im Vorschlag: Adresse, Port, Schlüssel, Ablaufzeit, dazu die Version.
+Der Plan nennt als Beispiel ein JSON-Objekt. Der QR-Code enthält stattdessen einen **Link** mit dem Schema `nolphin://`: Er ist kurz (der QR-Encoder fasst höchstens 106 Zeichen, der längste Link hat 96), lässt sich als Text kopieren und einfügen, und **kein Browser** öffnet ihn. Der Fingerabdruck `f` bindet die App an genau das Zertifikat dieses Austauschs.
 
 ```
-http://192.168.1.10:40000/?t=0123456789abcdef0123456789abcdef&v=1&e=1700000000
+nolphin://192.168.1.10:40000/?t=0123456789abcdef0123456789abcdef&v=2&f=QULDtffIw8Ed6DmETVJ7zA
 ```
+
+(Alle Werte sind erfunden. Der erste Entwurf nutzte `http://` und eine Seite im Browser des Handys; die ist mit der Verschlüsselung entfallen.)
 
 ## Verbindungsablauf
 
-### A. App ist installiert
+1. Die App muss auf dem Handy installiert sein. Die **Erstinstallation** geht nicht mehr über den Browser des Handys, sondern von Hand (zum Beispiel per USB oder über eine übertragene Datei). Android erlaubt keine stille Installation und warnt, weil die App nicht aus einem Store kommt. Spätere Aktualisierungen holt die App selbst über die verschlüsselte Verbindung (`GET /apk`).
+2. In Nolphin auf **Handy** klicken: Der Austausch startet (Zertifikat und Schlüssel entstehen), der QR-Code erscheint.
+3. In der App **„QR-Code scannen und verbinden“** tippen und den Code mit der Kamera der App scannen. Der eigene QR-Leser verbindet sofort. Alternativ den Link aus der Zwischenablage einfügen (die App bietet einen frisch kopierten Link von selbst an). Scanner-Apps anderer Hersteller geben das Ergebnis nicht an die App zurück (am Xiaomi-Scanner geprüft).
+4. Die App prüft den Link (nur private IPv4-Adressen, Port, Schlüsselform, Version 2, Fingerabdruck) und fragt `GET /info` über TLS ab, **nur mit dem Zertifikat dieses Fingerabdrucks**. **Erst wenn das gelingt, wird die Verbindung gespeichert.** Jeder Fehler hat eine eigene Meldung.
+5. Der Hintergrunddienst hält die Verbindung (`GET /wait`) und lädt neue Dateien aus dem Ordner „Handy“. Dateien vom Handy gehen über das Teilen-Menü oder die Dateiauswahl.
 
-1. In Nolphin auf **Handy** klicken: Der Austausch startet, der QR-Code erscheint.
-2. In der App **QR-Code scannen** (eigener QR-Leser) oder mit der Kamera des Handys scannen. Im zweiten Fall öffnet die Seite die App über einen `intent://`-Link.
-3. Die App prüft den Link (nur private IPv4-Adressen, Port, Schlüsselform, Version, Ablauf) und fragt `GET /info` am PC ab. **Erst wenn das gelingt, wird die Verbindung gespeichert.** Jeder Fehler hat eine eigene Meldung.
-4. Der Hintergrunddienst hält die Verbindung (`GET /wait`) und lädt neue Dateien aus dem Ordner „Handy“. Dateien vom Handy gehen über das Teilen-Menü oder die Dateiauswahl.
-
-### B. App ist noch nicht installiert
-
-1. Der erste Scan mit der Kamera öffnet die Seite von Nolphin im Browser des Handys.
-2. Die Seite versucht, die App zu öffnen. Fehlt sie, bietet sie **App herunterladen** an. Die APK kommt direkt von Nolphin (`GET /apk`), nicht von einer öffentlichen Adresse.
-3. Nach der Installation scannt man den Code in der App oder noch einmal mit der Kamera.
-
-**Was dieser Ablauf nicht kann:** Er installiert die App nicht von selbst. Android erlaubt das nicht. Es erscheinen Warnungen von Chrome, Google Play Protect und je nach Hersteller weiteren Schutzprogrammen, weil die App nicht aus einem Store kommt (auf dem Handy des Benutzers wurden die Warnungen von Chrome, Play Protect und Mi Protect beobachtet). Eine lokale Adresse wie `192.168.x.x` löst keine App-Installation aus.
-
-**Android App Links** (`https://…` öffnet die App ohne Rückfrage) würden eine **öffentlich erreichbare HTTPS-Domain** mit einer Datei `/.well-known/assetlinks.json` voraussetzen. Das gibt es hier nicht und es wird keine erfundene Domain verwendet. Deshalb nutzt die App ein eigenes Schema (`nolphin://connect`) und den `intent://`-Weg mit Rückfalladresse. Ein Store-Eintrag (Play Store, F-Droid) wäre der saubere Weg zur Installation, ist aber nicht Teil dieses Projekts.
+**Android App Links** (`https://…` öffnet die App ohne Rückfrage) würden eine **öffentlich erreichbare HTTPS-Domain** mit einer Datei `/.well-known/assetlinks.json` voraussetzen. Das gibt es hier nicht, und es wird keine erfundene Domain verwendet.
 
 ## Sicherheit
 
 | Gefahr | Gegenmaßnahme | Rest |
 | ------ | ------------- | ---- |
-| Fremde im Netz verbinden sich | 128-Bit-Schlüssel aus `/dev/urandom`, nur Verbindungen aus privaten Netzen, nur während der Austausch läuft | Wer den Link kennt, hat Zugriff |
+| Fremde im Netz verbinden sich | 128-Bit-Schlüssel aus `/dev/urandom`, nur Verbindungen aus privaten Netzen, nur während der Austausch läuft, nur über TLS. Eine Sperre nach falschen Schlüsseln gibt es bewusst nicht (Raten ist aussichtslos, und sie könnte das eigene Handy aussperren) | Wer den Link kennt, hat Zugriff |
 | Alter Link bleibt gültig | Ablauf nach 12 Stunden, Schlüsselwechsel auf Knopfdruck, Beenden löscht ihn, Selbstabschaltung nach 15 Minuten ohne Anfrage | |
-| Link wird abgehört (WLAN mitlesen) | **keine**: HTTP ist unverschlüsselt | Jeder im selben WLAN, der den Datenverkehr mitschneidet, sieht Schlüssel und Dateien. Nur im eigenen, vertrauenswürdigen WLAN verwenden |
+| Verbindung wird abgehört (WLAN mitlesen) | **TLS 1.3/1.2 mit selbst erstelltem Zertifikat**, pro Schlüssel neu; Klartext bekommt keine Antwort | Wer den **QR-Code sieht** (Bildschirm, Foto), hat den Schlüssel und den Fingerabdruck. Den Code nur dem eigenen Handy zeigen und danach „Beenden“ |
+| Fremder Rechner gibt sich als der PC aus (Man-in-the-Middle) | Die App akzeptiert **nur das Zertifikat mit dem Fingerabdruck aus dem QR-Code** (Pinning), keine Zertifizierungsstelle, kein Namensvergleich | Ein Angreifer, der den QR-Code vor dem Handy sieht, kennt auch den Fingerabdruck |
+| Fremder Link öffnet die App und verbindet mit einem fremden Rechner | Links von außen (Kamera-App, Browser, andere App) verbinden erst nach Bestätigung mit Anzeige der Adresse | Der Nutzer muss die Adresse mit dem PC vergleichen |
+| Die App wird unverschlüsselt ausgeliefert | `/apk` gibt es nur noch über TLS; Android prüft bei Aktualisierungen die Signatur | Die Erstinstallation passiert von Hand und liegt beim Nutzer |
 | Pfadtricks im Dateinamen | Namen werden bereinigt, Downloads nur normaler Dateien im Ausgangsordner, keine Symlinks, keine versteckten Dateien | |
 | Zu große oder abgebrochene Uploads | Grenze 2 GiB, Temporärdatei, bei Abbruch gelöscht | |
-| Falscher Rechner | Die App prüft über `/info`, dass Nolphin antwortet, und akzeptiert nur private Adressen | |
+| Falscher Rechner | Die App prüft über `/info`, dass Nolphin antwortet, und akzeptiert nur private Adressen und das Zertifikat mit dem Fingerabdruck | |
 | Dateien ohne Zustimmung | Zustimmung auf Sitzungsebene (der Nutzer startet den Austausch und zeigt den Code), am Handy zusätzlich abschaltbar „Vor dem Laden fragen“ | Keine Bestätigung pro Datei am PC |
 
-### Mögliche Härtung: HTTPS (noch nicht umgesetzt, braucht eine Entscheidung)
+### Umgesetzt: HTTPS mit festem Zertifikat (12./13. Oktober 2026)
 
-Nolphin (GIO) könnte ein selbstsigniertes Zertifikat erzeugen (`GTlsCertificate`) und den Fingerabdruck im QR-Code mitgeben (`&f=<sha256>`). Die App würde nur dieses Zertifikat annehmen (eigener `TrustManager`, Android-Framework). Beides geht ohne Bibliothek. Der Preis: Die Seite im Browser des Handys zeigt eine Zertifikatswarnung (selbstsigniert), und der erste Scan mit der normalen Kamera landet dort. Der Weg mit der App wäre verschlüsselt, der Weg über die Seite nicht mehr ohne Warnung.
+- Nolphin erzeugt bei jedem neuen Schlüssel ein **selbstsigniertes Zertifikat** (EC P-256, gültig 3 Tage, mit `openssl`, das als Laufzeit-Voraussetzung freigegeben ist, siehe [Abhängigkeiten](DEPENDENCIES.md)). Der private Schlüssel entsteht in einem privaten Temporärordner (0700) und wird sofort gelöscht; er lebt im Speicher des Servers und in `~/.config/nolphin/phone-session` (0600).
+- Der Server spricht nur TLS (`GTlsServerConnection`). Fehlt `openssl` oder `glib-networking`, startet der Austausch nicht; es gibt **keinen Rückfall auf Klartext**.
+- Der Fingerabdruck (die ersten 16 Bytes von SHA-256 über das Zertifikat, 22 Zeichen base64url) steht im QR-Code. Die App prüft ihn mit einem eigenen `X509TrustManager` (Android-Framework, ohne Bibliothek) und lehnt alles andere ab. Die App verbietet Klartext auch auf Systemebene.
+- Die **Webseite für den Browser des Handys ist entfallen** (ein Browser kann den Fingerabdruck nicht prüfen und würde eine Warnung zeigen).
+- **Grenzen:** Das Zertifikat schützt den Weg, nicht den QR-Code: Wer ihn sieht oder fotografiert, hat alles, bis er widerrufen wird (Beenden oder „Neuen QR-Code erzeugen“). Wer am PC selbst Zugriff hat, wird dadurch nicht aufgehalten. Die Erstinstallation der App erfolgt von Hand.
 
 ## Tests (echte Ergebnisse)
+
+### Verschlüsselung (12. und 13. Oktober 2026)
+
+| Test | Ergebnis |
+| ---- | -------- |
+| `meson test` mit echten TLS-Verbindungen (der Test-Client prüft den Fingerabdruck wie die App): richtiger Fingerabdruck angenommen, falscher abgelehnt, Klartext ohne Antwort, ohne `openssl` kein Start, ungültige Adresse nicht in den Aufruf übernommen, kein Temporärordner bleibt liegen, Wiederaufnahme nur mit Schlüssel und Zertifikat, Schlüsselwechsel erneuert das Zertifikat, längster Link passt in den QR-Code | alle bestanden (26 von 26 Tests) |
+| Absichtlich eingebaute Fehler (Test-Client nimmt jedes Zertifikat an; Server ohne TLS; Fingerabdruckprüfung der App entfernt; `http://` erlaubt) | jeweils vom Test erkannt, danach zurückgesetzt |
+| `nolphin-handy/test.sh`: Fingerabdruck-Prüfung der App gegen zwei Zertifikate und einen Klartext-Server | 16 Prüfungen bestanden |
+| `nolphin-handy/test.sh`: App-Seite gegen den **echten Nolphin-Server** (C, GnuTLS): beide Seiten berechnen denselben Fingerabdruck | 7 Prüfungen bestanden |
+| `nolphin-handy/test.sh`: Link-Prüfung (Version 2, alte Links, Fingerabdruck) | 55 Prüfungen bestanden |
+| `nolphin-handy/test.sh`: QR-Leser, auch bei starker Schräglage, mit Mauszeiger auf dem Code, Schatten, Rauschen und Unschärfe | 181 Prüfungen bestanden (der alte Stand scheiterte an 12 von 18 Schräglagen-Bildern) |
+| Am echten Handy (Android 14, Xiaomi): verschlüsselt verbinden über den Scanner der App, Datei vom PC laden, Datei und Ordner mit Unterordner zum PC senden | bestanden |
+| Am echten Handy: falscher Fingerabdruck; alter Link (Version 1) | je mit deutlicher Meldung abgelehnt; eine gute Verbindung bleibt unverändert |
+| Am echten Handy: Scanner von Xiaomi | gibt das Ergebnis nicht an die App zurück (Text oder Browser), deshalb nicht mehr benutzt |
+
+**Nicht geprüft:** ob andere Kamera- und Scanner-Apps `nolphin://`-Links an die App weitergeben; das Panel mit dem Papierkorb von Nolphin auf anderen Desktops; Mitschnitt des Datenverkehrs am Router (der Test mit einer Klartext-Anfrage ersetzt ihn, aber nicht vollständig).
+
+### Stand vor der Verschlüsselung (11. Oktober 2026)
 
 | Test | Ergebnis |
 | ---- | -------- |
@@ -147,6 +166,6 @@ Nolphin (GIO) könnte ein selbstsigniertes Zertifikat erzeugen (`GTlsCertificate
 
 ## Offene Entscheidungen
 
-1. **HTTPS mit angeheftetem Zertifikat** einbauen? (siehe oben)
+1. ~~HTTPS mit angeheftetem Zertifikat~~ — **umgesetzt**, siehe oben.
 2. **Bestätigung pro Übertragung am PC** (nach dem Vorbild von LocalSends `prepare-upload`) einbauen? Heute genügt der Start des Austauschs.
 3. **Prüfsumme** (sha256) für Übertragungen einbauen?

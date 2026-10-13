@@ -2,14 +2,16 @@
 
 # Handy-Austausch: Ist-Zustand und Abnahme
 
-Stand: 11.10.2026. Alles in der Spalte „Beleg“ wurde geprüft; Nicht-Geprüftes ist als offen gekennzeichnet.
+Stand: 11.10.2026 (**vor der Verschlüsselung**). Alles in der Spalte „Beleg“ wurde geprüft; Nicht-Geprüftes ist als offen gekennzeichnet.
+
+> **Überholt in diesen Punkten (seit dem 13.10.2026):** Der Austausch läuft **nur noch verschlüsselt** (HTTPS mit festem Zertifikat, Link `nolphin://…&v=2&f=<Fingerabdruck>`), die Webseite für den Browser des Handys (`GET /`) ist entfallen. Der aktuelle Stand steht in [Schnittstelle](handy-austausch-api.md) und [Analyse](handy-austausch-analyse.md).
 
 ## Dateien und Funktionen (Linux)
 
 | Aufgabe | Datei | Funktion / Stelle |
 | ------- | ----- | ----------------- |
 | QR-Code erzeugen | `src/nolphin-qr.c` | `nolphin_qr_encode ()` |
-| Link und QR im Panel | `src/nolphin-phone.c` | URL `http://<Adresse>:<Port>/?t=<Schlüssel>&v=1&e=<Ablauf>` wird um Zeile 465 gebaut, `nolphin_qr_encode (url, …)` direkt danach |
+| Link und QR im Panel | `src/nolphin-phone.c` | früher URL `http://<Adresse>:<Port>/?t=<Schlüssel>&v=1&e=<Ablauf>`, jetzt `nolphin://<Adresse>:<Port>/?t=<Schlüssel>&v=2&f=<Fingerabdruck>`; er wird in `phone_refresh_url ()` gebaut, `nolphin_qr_encode (url, …)` direkt danach |
 | Schlüssel erzeugen | `src/nolphin-phone-server.c` | 128 Bit aus `/dev/urandom` (Zeile ~158); `nolphin_phone_server_rotate_token ()` widerruft |
 | Server starten / stoppen | `src/nolphin-phone-server.c` | `nolphin_phone_server_start ()`, `nolphin_phone_server_stop ()` |
 | Panel, Sitzung, Lebenszyklus | `src/nolphin-phone.c` | Sitzung in `~/.config/nolphin/phone-session` |
@@ -20,7 +22,7 @@ Stand: 11.10.2026. Alles in der Spalte „Beleg“ wurde geprüft; Nicht-Geprüf
 
 | Methode | Pfad | Zweck |
 | ------- | ---- | ----- |
-| GET | `/` | Seite für den Handy-Browser |
+| GET | `/` | (früher Seite für den Handy-Browser, **entfernt**: antwortet `404`) |
 | GET | `/info` | Name, Version der Schnittstelle, Ablauf, Größtgröße |
 | GET | `/ls` | flache Dateiliste von `~/Handy` |
 | GET | `/dir?r=&p=` | Ordner und Dateien eines Unterordners; `r=home` = persönlicher Ordner |
@@ -49,7 +51,7 @@ Jede Anfrage braucht den Schlüssel `t`. Details in [handy-austausch-api.md](han
 | Fortschritt mit Geschwindigkeit und Restzeit | **offen** | App zeigt Dateiname und Prozent; Geschwindigkeit und Restzeit fehlen |
 | Fortschritt auf dem PC | **offen** | Der PC sieht den Download-Fortschritt der App nicht |
 | Statusmeldungen per WebSocket | **nicht vorhanden** | Long-Poll `/wait` statt WebSocket |
-| HTTPS | **nicht vorhanden** | unverschlüsseltes HTTP im eigenen Netz, siehe Analyse |
+| HTTPS | **vorhanden (seit 13.10.2026)** | TLS mit selbst erstelltem Zertifikat und Fingerabdruck im Link, siehe Analyse |
 | Firewall von Linux | **nicht geprüft** | |
 | iOS | nicht vorgesehen | nur Android |
 

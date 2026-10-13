@@ -55,11 +55,15 @@ Die Schlüsselwörter gelten unabhängig von der Groß-/Kleinschreibung; ein Beg
 
 ## Handy-Austausch
 
+Der Austausch läuft **nur verschlüsselt** und braucht die **Handy-App** [Nolphin Handy](https://github.com/kaysiebke-cell/nolphin-handy) (eigenes Projekt, reines Android-Framework, keine Bibliotheken). Für Nolphin selbst ist die App eine **optionale Erweiterung**: Alles andere in Nolphin läuft ohne sie.
+
 * **Einstieg:** Klick auf **Handy** in der Seitenleiste unter „Mein Rechner“ oder Datei ▸ Handy-Austausch. Nolphin startet den Austausch, zeigt den **QR-Code** im Arbeitsbereich und öffnet den Ordner `~/Handy` in der Hauptansicht. Es gibt nichts einzustellen.
-* **Handy → PC:** Das Handy scannt den Code und lädt Bilder und Dateien im Browser hoch. Sie landen in `~/Handy/Vom Handy`. Eine App ist nicht nötig; es gibt keine Fremdabhängigkeit.
-* **PC → Handy:** Dateien auf **Handy** in der Seitenleiste ziehen oder Rechtsklick ▸ **An Handy senden**. Beides kopiert nach `~/Handy/Zum Handy`; das Handy lädt sie auf der Seite im Browser.
-* **Optionale Erweiterung: Android-App [Nolphin Handy](https://github.com/kaysiebke-cell/nolphin-handy):** Der Austausch oben funktioniert ohne sie. Die App ist ein eigenes Projekt (reines Android-Framework, keine Bibliotheken). Der erste Scan des QR-Codes (mit der Kamera des Handys) bietet sie zum Installieren an; danach scannt man in der App („QR-Code scannen“, eigener QR-Leser) oder wieder mit der Kamera, um sie zu verbinden. Sie lädt neue Dateien aus „Zum Handy“ von selbst nach `Download/Nolphin`, sendet Dateien und Ordner über das Teilen-Menü oder den eigenen Dateimanager an den PC (Ordner mit Unterordnern kommen als Ordner in `~/Handy/Vom Handy`) und ist zugleich ein Dateimanager für das Handy. Eine Beschreibung aller Funktionen steht in der README des Projekts.
-* **Sicherheit:** Schlüssel im Link, nur Verbindungen aus privaten Netzen, nie überschreiben, Selbstabschaltung nach 15 Minuten ohne Anfrage. Die Verbindung ist nicht verschlüsselt, nur im eigenen WLAN verwenden.
+* **Verbinden:** In der App auf **„QR-Code scannen und verbinden“** tippen und den Code mit der Kamera der App scannen. Die App verbindet sich sofort verschlüsselt und prüft dabei, dass es genau dieser PC ist (Fingerabdruck im QR-Code). Das Handy hält ruhig und **gerade** vor den Bildschirm (etwa 15 bis 30 Zentimeter). Hilfreich ist ein großer, heller QR-Code.
+* **Handy → PC:** Die App sendet Dateien und ganze Ordner (mit Unterordnern). Sie landen in `~/Handy/Vom Handy`, nichts wird überschrieben.
+* **PC → Handy:** Dateien auf **Handy** in der Seitenleiste ziehen oder Rechtsklick ▸ **An Handy senden**. Beides kopiert nach `~/Handy/Zum Handy`; die App lädt neue Dateien von selbst nach `Download/Nolphin`.
+* **Dateimanager auf dem Handy:** Die App ist zugleich ein Dateimanager für das Handy (Kopieren, Verschieben, Umbenennen, ZIP, Papierkorb, Speicheranalyse). Eine Beschreibung steht in der README des Projekts.
+* **Voraussetzungen am PC:** `openssl` und `glib-networking` (siehe [Abhängigkeiten](DEPENDENCIES.md)). Fehlt eines, startet der Austausch nicht und sagt es; es gibt keinen Rückfall auf unverschlüsselt. Die Erstinstallation der App auf dem Handy erfolgt von Hand (zum Beispiel per USB), Aktualisierungen holt die App selbst.
+* **Sicherheit:** TLS mit einem selbst erstellten Zertifikat, pro Schlüssel neu; die App akzeptiert nur genau dieses Zertifikat (Fingerabdruck im Link). Dazu ein 128-Bit-Schlüssel, nur Verbindungen aus privaten Netzen, nie überschreiben, Selbstabschaltung nach 15 Minuten ohne Anfrage, Schlüsselwechsel und Beenden widerrufen alles. **Den QR-Code nur dem eigenen Handy zeigen**: Er enthält den Schlüssel. Die Verbindung ist verschlüsselt, ein Mitlesen im WLAN nützt nichts.
 
 ## GID-Projekte
 

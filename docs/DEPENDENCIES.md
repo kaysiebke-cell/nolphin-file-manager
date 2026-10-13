@@ -98,13 +98,13 @@ implementiert behauptet, die nicht geprüft wurde).
 
 ## Handy-App für Android (nur zum Bauen der App)
 
-**Freigegeben am 11. Oktober 2026** (Entscheidung des Benutzers). Die App liegt im eigenen Projekt `nolphin-handy` und wird nur gebaut, wenn der Entwickler dort `build.sh` aufruft. Nolphin selbst braucht nichts davon; liegt die APK nicht vor, läuft der Handy-Austausch über den Browser des Handys.
+**Freigegeben am 11. Oktober 2026** (Entscheidung des Benutzers). Die App liegt im eigenen Projekt `nolphin-handy` und wird nur gebaut, wenn der Entwickler dort `build.sh` aufruft. Nolphin selbst braucht nichts davon; liegt die APK nicht vor, kann die App nicht über Nolphin aktualisiert werden (der Handy-Austausch selbst braucht die App ohnehin).
 
 NEUE ABHÄNGIGKEIT: JDK (`javac`, `keytool`), Android SDK (`android.jar`, `aapt2`, `d8`, `zipalign`, `apksigner`), `secret-tool`
 WOFÜR: Bau und Signatur der Handy-App (APK), Test des QR-Lesers der App (`nolphin-handy/test.sh`), Passwort des Signaturschlüssels im Systemschlüsselbund (Abschnitt 53.4)
 PFLICHT ODER OPTIONAL: optional, nur für den Bau der App; nicht Teil von Nolphin
-OHNE SIE: Nolphin baut, startet und läuft unverändert; der Handy-Austausch funktioniert im Browser des Handys, nur ohne App
-ALTERNATIVE OHNE NEUE ABHÄNGIGKEIT: nur der Weg über den Browser des Handys (ohne App)
+OHNE SIE: Nolphin baut, startet und läuft unverändert; es gibt dann keinen Handy-Austausch (die App ist seit der Verschlüsselung der einzige Weg)
+ALTERNATIVE OHNE NEUE ABHÄNGIGKEIT: keine (der unverschlüsselte Weg über den Browser des Handys ist entfallen)
 
 | Werkzeug | Paket | Bemerkung |
 |---|---|---|

@@ -27,7 +27,7 @@ Für den Handy-Austausch gibt es eine kleine Android-App. Sie wird **vor** dem I
 ../nolphin-handy/build.sh
 ```
 
-Voraussetzungen: JDK und das Android-SDK (`ANDROID_HOME`, standardmäßig `~/Android/Sdk`). Ohne die App läuft der Handy-Austausch weiter im Browser des Handys. Die App liegt in einem eigenen Projekt (`../nolphin-handy`, GitHub: kaysiebke-cell/nolphin-handy); mehr in dessen README.
+Voraussetzungen: JDK und das Android-SDK (`ANDROID_HOME`, standardmäßig `~/Android/Sdk`). Ohne die App gibt es **keinen Handy-Austausch** (der Weg über den Browser des Handys ist entfallen); alles andere in Nolphin läuft unverändert. Die App liegt in einem eigenen Projekt (`../nolphin-handy`, GitHub: kaysiebke-cell/nolphin-handy); mehr in dessen README.
 
 ## Installieren
 
