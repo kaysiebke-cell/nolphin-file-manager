@@ -23,7 +23,7 @@ Einstellungen nie mehr aufgerufen.
 ## 1. Nolphin bauen und systemweit installieren
 
 ```bash
-cd /home/kaysiebke/nolphin-file-manager-master
+cd ~/nolphin-file-manager-master
 meson setup build
 ninja -C build
 sudo ninja -C build install
@@ -43,7 +43,7 @@ Dadurch werden u. a. folgende Dateien auf dem System angelegt/aktualisiert:
 # Nolphins Autostart-Eintrag an die Stelle kopieren, die beim Login
 # tatsächlich ausgewertet wird
 mkdir -p ~/.config/autostart
-cp /home/kaysiebke/nolphin-file-manager-master/data/nolphin-autostart.desktop \
+cp ~/nolphin-file-manager-master/data/nolphin-autostart.desktop \
    ~/.config/autostart/nolphin-autostart.desktop
 
 # Nemos Desktop-Icon-Verwaltung abschalten (Einstellung, keine Deinstallation)
