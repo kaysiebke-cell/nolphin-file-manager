@@ -571,8 +571,8 @@ phone_start (PhonePage *d)
 	session_save (d->address, d->server);
 	phone_refresh_url (d);
 	gtk_label_set_text (GTK_LABEL (d->status),
-			    d->has_qr ? _("Läuft, verschlüsselt. In der Handy-App „QR-Code scannen“ tippen und den Code scannen.")
-				      : _("Läuft, verschlüsselt. Ein QR-Code ist nicht möglich: Link in die Handy-App einfügen."));
+			    d->has_qr ? _("Läuft, verschlüsselt. Code mit der Handy-App scannen.")
+				      : _("Läuft, verschlüsselt. Link in die Handy-App einfügen."));
 	d->timeout_id = g_timeout_add_seconds (30, on_idle_check, d);
 	phone_update_ui (d);
 }
@@ -605,7 +605,7 @@ on_rotate_clicked (GtkButton *button, gpointer data)
 		session_save (d->address, d->server);
 		phone_refresh_url (d);
 		gtk_label_set_text (GTK_LABEL (d->status),
-				    _("Neuer QR-Code. Der alte Code und alle damit verbundenen Handys sind ungültig; scanne den neuen Code."));
+				    _("Neuer QR-Code. Der alte ist ungültig."));
 	} else {
 		gtk_label_set_text (GTK_LABEL (d->status), error->message);
 		g_clear_error (&error);
