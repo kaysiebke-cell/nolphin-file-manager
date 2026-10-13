@@ -497,10 +497,12 @@ on_file_received (const gchar *name, goffset size, gpointer user_data)
 
 /* Verbindungslink, Format Version 2:
  *   nolphin://<Adresse>:<Port>/?t=<Schlüssel, 32 Hex-Zeichen>&v=2&f=<Fingerabdruck, 22 Zeichen base64url>
- * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). Mit dem Schema nolphin:// öffnet die
- * Kamera des Handys direkt die App (kein Browser, keine Zertifikatswarnung); die App verbindet sich dann verschlüsselt
- * über https mit genau dem Zertifikat dieses Fingerabdrucks. Der Ablauf (e=) steht nicht mehr im Link: Er würde den
- * QR-Code über die größte darstellbare Größe treiben, und der Server prüft ihn ohnehin. */
+ * Er steht im QR-Code und im Eingabefeld (siehe docs/handy-austausch-api.md). Gescannt wird in der Handy-App; ihre
+ * eigene Kamera liest den Code und verbindet sofort. Das Schema nolphin:// sorgt dafür, dass kein Browser den Link
+ * öffnet (er hätte nur ein selbst erstelltes Zertifikat und keine Seite). Kamera-Apps anderer Hersteller zeigen den
+ * Link nur als Text oder öffnen ihn nicht in der App; die App liest ihn auch aus der Zwischenablage. Sie verbindet sich
+ * über https mit genau dem Zertifikat dieses Fingerabdrucks. Der Ablauf (e=) steht nicht im Link: Er würde den QR-Code
+ * über die größte darstellbare Größe treiben, und der Server prüft ihn ohnehin. */
 static void
 phone_refresh_url (PhonePage *d)
 {
