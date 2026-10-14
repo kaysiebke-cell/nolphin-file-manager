@@ -727,6 +727,16 @@ stream_fd (NolphinPhoneServer *s, GOutputStream *out, gint fd, const GStatBuf *s
 	close (fd);
 }
 
+gboolean
+nolphin_phone_is_cable_interface (const gchar *name)
+{
+	if (name == NULL) {
+		return FALSE;
+	}
+	return g_str_has_prefix (name, "usb") || g_str_has_prefix (name, "enx") ||
+	       g_str_has_prefix (name, "rndis") || g_str_has_prefix (name, "ncm");
+}
+
 /* Ort der Handy-App (APK): NOLPHIN_PHONE_APK (Tests) oder ein Datenverzeichnis des Systems. */
 static gchar *
 find_apk (void)

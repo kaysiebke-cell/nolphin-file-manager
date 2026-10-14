@@ -51,6 +51,10 @@ NolphinPhoneServer *nolphin_phone_server_start (const gchar              *bind_a
 						GError                  **error);
 
 guint16      nolphin_phone_server_get_port          (NolphinPhoneServer *server);
+
+/* Ist das eine USB-Kabelschnittstelle (USB-Tethering vom Handy: usb0, enx…, rndis…, ncm…)? Für die Adressauswahl:
+ * Gibt es ein Kabelnetz, nimmt der Handy-Austausch dessen Adresse zuerst. */
+gboolean     nolphin_phone_is_cable_interface       (const gchar *name);
 /* Fingerabdruck des aktuellen Zertifikats (22 Zeichen, steht im Link als f=) und das Zertifikat samt
  * Schlüssel als PEM (zum Merken der Sitzung). Neu zugewiesen, mit g_free () freizugeben. */
 gchar       *nolphin_phone_server_dup_fingerprint   (NolphinPhoneServer *server);

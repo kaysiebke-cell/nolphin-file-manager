@@ -274,11 +274,13 @@ is_private_ipv4 (guint32 host_order)
 	       (host_order >> 16) == (192u << 8 | 168);
 }
 
-/* Private IPv4-Adressen aktiver Schnittstellen, ohne virtuelle (Docker, VM, Tunnel). */
+/* Private IPv4-Adressen aktiver Schnittstellen, ohne virtuelle (Docker, VM, Tunnel). Adressen eines USB-Kabelnetzes
+ * (USB-Tethering vom Handy) stehen vorn, damit der Austausch sie zuerst nimmt, wenn das Kabel steckt. */
 static GPtrArray *
 local_addresses (void)
 {
 	GPtrArray *list = g_ptr_array_new_with_free_func (g_free);
+	guint cable_count = 0;
 	struct ifaddrs *all = NULL, *it;
 
 	if (getifaddrs (&all) != 0) {
@@ -300,11 +302,41 @@ local_addresses (void)
 			continue;
 		}
 		if (inet_ntop (AF_INET, &sin->sin_addr, text, sizeof text) != NULL) {
-			g_ptr_array_add (list, g_strdup (text));
+			if (nolphin_phone_is_cable_interface (it->ifa_name)) {
+				g_ptr_array_insert (list, (gint) cable_count++, g_strdup (text));
+			} else {
+				g_ptr_array_add (list, g_strdup (text));
+			}
 		}
 	}
 	freeifaddrs (all);
 	return list;
+}
+
+/* Gehört diese Adresse zu einem USB-Kabelnetz? */
+static gboolean
+address_is_cable (const gchar *address)
+{
+	struct ifaddrs *all = NULL, *it;
+	gboolean found = FALSE;
+
+	if (address == NULL || getifaddrs (&all) != 0) {
+		return FALSE;
+	}
+	for (it = all; it != NULL && !found; it = it->ifa_next) {
+		gchar text[INET_ADDRSTRLEN];
+
+		if (it->ifa_addr == NULL || it->ifa_addr->sa_family != AF_INET ||
+		    !nolphin_phone_is_cable_interface (it->ifa_name)) {
+			continue;
+		}
+		if (inet_ntop (AF_INET, &((struct sockaddr_in *) it->ifa_addr)->sin_addr, text, sizeof text) != NULL &&
+		    strcmp (text, address) == 0) {
+			found = TRUE;
+		}
+	}
+	freeifaddrs (all);
+	return found;
 }
 
 static void
@@ -570,9 +602,15 @@ phone_start (PhonePage *d)
 	live_servers = g_slist_prepend (live_servers, d->server);
 	session_save (d->address, d->server);
 	phone_refresh_url (d);
-	gtk_label_set_text (GTK_LABEL (d->status),
-			    d->has_qr ? _("Läuft, verschlüsselt. Code mit der Handy-App scannen.")
-				      : _("Läuft, verschlüsselt. Link in die Handy-App einfügen."));
+	if (address_is_cable (d->address)) {
+		gtk_label_set_text (GTK_LABEL (d->status),
+				    d->has_qr ? _("Läuft über das USB-Kabel, verschlüsselt. Code mit der Handy-App scannen.")
+					      : _("Läuft über das USB-Kabel, verschlüsselt. Link in die Handy-App einfügen."));
+	} else {
+		gtk_label_set_text (GTK_LABEL (d->status),
+				    d->has_qr ? _("Läuft, verschlüsselt. Code mit der Handy-App scannen.")
+					      : _("Läuft, verschlüsselt. Link in die Handy-App einfügen."));
+	}
 	d->timeout_id = g_timeout_add_seconds (30, on_idle_check, d);
 	phone_update_ui (d);
 }

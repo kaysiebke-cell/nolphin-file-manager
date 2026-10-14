@@ -242,12 +242,30 @@ test_qr (void)
 
 static GMainLoop *loop;
 
+/* Kabelnetz (USB-Tethering): nur Schnittstellen eines USB-Netzes zaehlen als Kabel */
+static void
+test_cable_interface (void)
+{
+	check (nolphin_phone_is_cable_interface ("usb0"), "usb0 ist ein Kabelnetz");
+	check (nolphin_phone_is_cable_interface ("enxc2ad84522b0c"), "enx... (USB-Netz am Linux-PC) ist ein Kabelnetz");
+	check (nolphin_phone_is_cable_interface ("rndis0"), "rndis0 ist ein Kabelnetz");
+	check (nolphin_phone_is_cable_interface ("ncm0"), "ncm0 ist ein Kabelnetz");
+	check (!nolphin_phone_is_cable_interface ("wlp0s20f3"), "WLAN ist kein Kabelnetz");
+	check (!nolphin_phone_is_cable_interface ("enp0s31f6"), "die Netzwerkbuchse (enp...) ist kein Kabelnetz");
+	check (!nolphin_phone_is_cable_interface ("eth0"), "eth0 ist kein Kabelnetz");
+	check (!nolphin_phone_is_cable_interface ("tailscale0"), "tailscale0 ist kein Kabelnetz");
+	check (!nolphin_phone_is_cable_interface ("lo"), "lo ist kein Kabelnetz");
+	check (!nolphin_phone_is_cable_interface (""), "leerer Name ist kein Kabelnetz");
+	check (!nolphin_phone_is_cable_interface (NULL), "NULL ist kein Kabelnetz");
+}
+
 /* GSocketService nimmt Verbindungen in der Hauptschleife an. Deshalb läuft die
  * Hauptschleife im Hauptthread und alle Prüfungen in diesem Arbeitsthread. */
 static gpointer
 run_tests (gpointer unused)
 {
 	(void) unused;
+	test_cable_interface ();
 	gchar *root = g_dir_make_tmp ("nolphin-phone-test-XXXXXX", NULL);
 	gchar *inbox = g_build_filename (root, "eingang", NULL);
 	gchar *share = g_build_filename (root, "frei", NULL);
