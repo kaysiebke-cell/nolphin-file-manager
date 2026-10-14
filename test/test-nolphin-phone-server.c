@@ -259,6 +259,62 @@ test_cable_interface (void)
 	check (!nolphin_phone_is_cable_interface (NULL), "NULL ist kein Kabelnetz");
 }
 
+/* Auf allen Netzen hoeren (USB-Kabelnetz): ohne die Option antwortet der Server nur auf seiner Adresse, mit ihr auch auf
+ * anderen Adressen des Rechners (hier 127.0.0.2, ebenfalls Loopback). */
+static gboolean
+tcp_reachable (const gchar *host, guint16 port)
+{
+	GSocketClient *client = g_socket_client_new ();
+	GSocketConnection *conn;
+
+	g_socket_client_set_timeout (client, 3);
+	conn = g_socket_client_connect_to_host (client, host, port, NULL, NULL);
+	g_object_unref (client);
+	if (conn == NULL) {
+		return FALSE;
+	}
+	g_object_unref (conn);
+	return TRUE;
+}
+
+static void
+test_listen_all (void)
+{
+	gchar *root = g_dir_make_tmp ("nolphin-phone-listen-XXXXXX", NULL);
+	gchar *inbox = g_build_filename (root, "eingang", NULL);
+	GFile *inbox_file = g_file_new_for_path (inbox);
+	GError *error = NULL;
+	NolphinPhoneServer *only, *all;
+	NolphinPhoneServerOptions opt = { 0 };
+
+	only = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, NULL, &error);
+	check (only != NULL, "ohne listen_all: Server startet");
+	if (only != NULL) {
+		guint16 port = nolphin_phone_server_get_port (only);
+
+		check (tcp_reachable ("127.0.0.1", port), "ohne listen_all: auf der eigenen Adresse erreichbar");
+		check (!tcp_reachable ("127.0.0.2", port), "ohne listen_all: auf einer anderen Adresse des Rechners nicht erreichbar");
+		nolphin_phone_server_stop (only);
+	}
+	g_clear_error (&error);
+	opt.listen_all = TRUE;
+	all = nolphin_phone_server_start ("127.0.0.1", inbox_file, NULL, NULL, NULL, NULL, &opt, &error);
+	check (all != NULL, "mit listen_all: Server startet");
+	if (all != NULL) {
+		guint16 port = nolphin_phone_server_get_port (all);
+		gchar *tk = nolphin_phone_server_dup_token (all);
+
+		check (tcp_reachable ("127.0.0.1", port), "mit listen_all: auf der eigenen Adresse erreichbar");
+		check (tcp_reachable ("127.0.0.2", port), "mit listen_all: auch auf einer anderen Adresse des Rechners erreichbar");
+		check (tk != NULL && strlen (tk) == 32, "mit listen_all: Schluessel wie sonst (32 Zeichen)");
+		g_free (tk);
+		nolphin_phone_server_stop (all);
+	}
+	g_object_unref (inbox_file);
+	g_free (inbox);
+	g_free (root);
+}
+
 /* GSocketService nimmt Verbindungen in der Hauptschleife an. Deshalb läuft die
  * Hauptschleife im Hauptthread und alle Prüfungen in diesem Arbeitsthread. */
 static gpointer
@@ -266,6 +322,7 @@ run_tests (gpointer unused)
 {
 	(void) unused;
 	test_cable_interface ();
+	test_listen_all ();
 	gchar *root = g_dir_make_tmp ("nolphin-phone-test-XXXXXX", NULL);
 	gchar *inbox = g_build_filename (root, "eingang", NULL);
 	gchar *share = g_build_filename (root, "frei", NULL);

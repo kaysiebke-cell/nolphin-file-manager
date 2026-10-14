@@ -1322,6 +1322,10 @@ nolphin_phone_server_start (const gchar *bind_address, GFile *inbox, GFile *shar
 
 	s->service = G_THREADED_SOCKET_SERVICE (g_threaded_socket_service_new (MAX_THREADS));
 	g_object_set_data_full (G_OBJECT (s->service), "nolphin-phone-server", s, server_free);
+	if (options != NULL && options->listen_all) {
+		g_object_unref (inet);   /* Adresse und Zertifikat gehören weiter zu bind_address; gehört wird auf allen Netzen */
+		inet = g_inet_address_new_any (G_SOCKET_FAMILY_IPV4);
+	}
 	address = g_inet_socket_address_new (inet, options != NULL ? options->port : 0);
 	if (options == NULL || options->port == 0
 	    || !g_socket_listener_add_address (G_SOCKET_LISTENER (s->service), address, G_SOCKET_TYPE_STREAM,

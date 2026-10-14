@@ -579,6 +579,7 @@ phone_start (PhonePage *d)
 			options.resume_cert_pem = saved_cert;
 			options.resume_key_pem = saved_key;
 		}
+		options.listen_all = TRUE;   /* WLAN und USB-Kabelnetz (USB-Tethering) mit derselben Sitzung */
 		options.token_lifetime = (gint64) setting_int (NOLPHIN_PREFERENCES_PHONE_TOKEN_HOURS, 12) * 3600;
 		options.max_upload = (goffset) setting_int (NOLPHIN_PREFERENCES_PHONE_MAX_UPLOAD_MB, 2048) * 1024 * 1024;
 		d->server = nolphin_phone_server_start (address, d->inbox, d->share, on_file_received,

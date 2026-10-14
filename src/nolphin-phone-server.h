@@ -35,6 +35,9 @@ typedef struct {
 	gint64  resume_expires;   /* Ablauf des früheren Schlüssels (Unix-Zeit); nur gültig, wenn noch in der Zukunft */
 	const gchar *resume_cert_pem;  /* früheres Zertifikat und Schlüssel (PEM): nur zusammen mit resume_token gültig, */
 	const gchar *resume_key_pem;   /* sonst werden beide neu erzeugt */
+	gboolean listen_all;      /* auf allen Netzen hören (0.0.0.0) statt nur auf der Adresse: so erreicht das Handy den PC auch über ein
+				   * USB-Kabelnetz (USB-Tethering) mit derselben Sitzung. Verbindungen von außerhalb privater Netze lehnt der
+				   * Server weiter ab, jede Anfrage braucht Schlüssel und Zertifikat. */
 } NolphinPhoneServerOptions;
 
 /* Startet den Server auf @bind_address (IPv4, Port wird vom System gewählt).
